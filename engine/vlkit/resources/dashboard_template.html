@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VietLeap Insight Dashboard (static)</title>
+<style>
+:root{--bg:#fff;--fg:#0a0a0a;--muted:#737373;--border:#e5e5e5;--card:#fff;--accent:#3b82f6;--soft:#fafafa}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,Helvetica,Arial,sans-serif;background:var(--soft);color:var(--fg);font-size:14px}
+header{background:#fff;border-bottom:1px solid var(--border);padding:14px 28px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0}header span{color:var(--muted);font-size:13px}
+main{max-width:1280px;margin:0 auto;padding:24px 28px;display:grid;gap:20px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.grid4,.grid2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.kpi .l{color:var(--muted);font-size:13px}.kpi .v{font-size:28px;font-weight:600;margin:6px 0;font-variant-numeric:tabular-nums}.kpi .f{font-size:12.5px;color:var(--muted)}
+.badge{display:inline-block;border:1px solid var(--border);border-radius:6px;padding:1px 7px;font-size:12px;margin-left:6px}
+h2{font-size:15px;margin:0 0 4px}.sub{color:var(--muted);font-size:13px;margin-bottom:10px}
+select,input[type=range]{font:inherit}select{border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:#fff}
+.ins{border-left:3px solid var(--accent)}.ins p{margin:6px 0;line-height:1.45}.vi{color:var(--muted);font-size:13px}
+.rec{display:grid;grid-template-columns:28px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--border)}.rec:first-child{border-top:none}
+.num{font-weight:700;color:var(--accent)}.big{font-size:26px;font-weight:600}
+ul{margin:6px 0;padding-left:18px}li{margin:3px 0;color:#404040}
+</style><script>/*PLOTLY*/</script></head>
+<body><header><h1 id="title"></h1><span id="subtitle"></span></header>
+<main>
+<section class="grid4" id="kpis"></section>
+<section class="grid2">
+ <div class="card"><h2>Trend</h2><div class="sub" id="tsub"></div><div id="trend" style="height:300px"></div></div>
+ <div class="card"><h2>Segment comparison</h2><div class="sub">Median target by <select id="segsel"></select></div><div id="seg" style="height:300px"></div></div>
+</section>
+<section class="card"><h2>Ranked insights</h2><div class="sub">Score = effect size × significance × business relevance</div><div id="ins" class="grid2"></div></section>
+<section class="grid2">
+ <div class="card"><h2>What-if</h2><div class="sub" id="wsub">Change a driver and see the model-based change in the target (bootstrap 90% interval)</div>
+  <div><select id="wfeat"></select> <input type="range" id="wpct" min="-30" max="30" step="1" value="10"> <b id="wpctl">+10%</b></div>
+  <p class="big" id="wout"></p><p class="sub" id="wci"></p><p class="sub">Association from observational data, holding other features fixed — not a causal guarantee.</p></div>
+ <div class="card"><h2>Recommendations</h2><div id="recs"></div></div>
+</section>
+<section class="card"><h2>Caveats &amp; limitations</h2><ul id="cav"></ul></section>
+</main>
+<script>
+const D=/*DATA*/;
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+document.getElementById('title').textContent=`Insight dashboard — ${D.meta.target}`;
+document.getElementById('subtitle').textContent=`${D.meta.source_file} · ${D.meta.rows.toLocaleString()} rows · ${D.meta.domain.replace('_',' ')}`;
+document.getElementById('kpis').innerHTML=D.kpis.map(k=>`<div class="card kpi"><div class="l">${esc(k.label)}${k.delta_pct!=null?`<span class="badge">${k.delta_pct>0?'▲':'▼'} ${k.delta_pct.toFixed(1)}%</span>`:''}</div><div class="v">${esc(k.value)}</div><div class="f">${esc(k.footer)}</div><div class="f">${esc(k.description)}</div></div>`).join('');
+const L={margin:{l:50,r:10,t:10,b:50},font:{family:'Inter,Helvetica,Arial',size:12},plot_bgcolor:'#fff',paper_bgcolor:'#fff',yaxis:{gridcolor:'#f4f4f5'}};
+const cfg={displayModeBar:false,responsive:true};
+if(D.ts&&D.ts.length){Plotly.newPlot('trend',[{x:D.ts.map(p=>p.period),y:D.ts.map(p=>p.value),type:'scatter',mode:'lines',fill:'tozeroy',line:{color:'#3b82f6',width:2},fillcolor:'rgba(59,130,246,.12)'}],L,cfg);document.getElementById('tsub').textContent=`${D.meta.time_col} · aggregated`;}
+else{document.getElementById('trend').innerHTML='<p class="sub">No time column detected.</p>'}
+const ss=document.getElementById('segsel');Object.keys(D.seg).forEach(k=>ss.add(new Option(k,k)));
+function drawSeg(){const s=D.seg[ss.value];if(!s)return;Plotly.newPlot('seg',[{x:s.x,y:s.median,type:'bar',marker:{color:'#18181b'},text:s.n.map(n=>'n='+n),hovertemplate:'%{x}<br>%{y}<br>%{text}<extra></extra>'}],L,cfg)}
+ss.onchange=drawSeg;drawSeg();
+document.getElementById('ins').innerHTML=D.insights.map(i=>`<div class="card ins"><div class="sub">#${i.rank} · ${esc(i.type)} · score ${i.score.toFixed(2)}</div><h2>${esc(i.title_en)}</h2><p>${esc(i.sentence_en)}</p><p class="vi">${esc(i.sentence_vi)}</p><div id="f_${i.id}" style="height:240px"></div></div>`).join('');
+D.insights.forEach(i=>{const f=D.figs[i.id];if(f){f.layout.height=240;f.layout.margin={l:50,r:10,t:10,b:50};Plotly.newPlot('f_'+i.id,f.data,f.layout,cfg)}});
+document.getElementById('recs').innerHTML=D.recs.map((r,k)=>`<div class="rec"><div class="num">${k+1}</div><div><b>${esc(r.so_what_en)}</b><br>${esc(r.now_what_en)}<br><span class="sub">Impact: ${esc(r.impact_en)}</span></div></div>`).join('');
+document.getElementById('cav').innerHTML=D.caveats.map(c=>`<li>${esc(c)}</li>`).join('');
+const W=D.whatif,wf=document.getElementById('wfeat'),wp=document.getElementById('wpct');
+if(W&&W.features.length){W.features.forEach(f=>wf.add(new Option(f.name,f.name)));
+ const pctl=(a,q)=>{const s=[...a].sort((x,y)=>x-y);return s[Math.floor(q*(s.length-1))]};
+ function calc(){const f=W.features.find(x=>x.name===wf.value),p=+wp.value;document.getElementById('wpctl').textContent=(p>0?'+':'')+p+'%';
+  const dz=(f.mean*p/100)/(f.sd||1);let pt,b=f.boot.map(x=>x*dz);
+  if(W.log){pt=(Math.exp(f.beta*dz)-1)*100;b=b.map(x=>(Math.exp(x)-1)*100)}else{pt=f.beta*dz/W.base*100;b=b.map(x=>x/W.base*100)}
+  document.getElementById('wout').textContent=`${W.target}: ${pt>=0?'+':''}${pt.toFixed(2)}%`;
+  document.getElementById('wci').textContent=`90% interval ${pctl(b,.05).toFixed(2)}% to ${pctl(b,.95).toFixed(2)}%`}
+ wf.onchange=calc;wp.oninput=calc;calc()}else{document.getElementById('wsub').textContent='No driver model available for this dataset.'}
+</script></body></html>
