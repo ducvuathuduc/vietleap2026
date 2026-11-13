@@ -88,6 +88,23 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         models = build_models(wh, ds, main, roles_of[main], out_dir=out)
         timings["model"] = round(time.time() - t0, 2)
 
+        summary = {
+            "dataset": ds, "run_id": run_id, "finished_at": now_iso(), "timings": timings, "steps": steps,
+            "bronze": bronze, "silver": silver, "primary": main,
+            "gold": sorted({t for m in models["models"].values() for t in m["tables"]}),
+            "quality": {k: {"score_before": v["score_before"], "score_after": v["score_after"],
+                            "rows": v["after"]["rows"], "issues": len(v["before"]["issues"])} for k, v in quality.items()},
+            "models": {k: {"tables": m["tables"], "erd": m["erd"]} for k, m in models["models"].items()},
+            "column_plan": models["plan"], "rationale": models["rationale"], "recommended": models["recommended"],
+            "provenance": provenance,
+        }
+        # written before serving so the deck/report built by the insight engine can show pipeline, model,
+        # quality and provenance slides; rewritten below with serving timings + final lineage
+        out.mkdir(parents=True, exist_ok=True)
+        _dump(summary, out / "pipeline.json")
+        _dump(quality, out / "quality.json")
+        _dump(provenance, out / "provenance.json")
+
         # ---------------- Serving: insight engine on gold OBT
         served = None
         if serve:
@@ -101,16 +118,7 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         wh.lineage(ds, f"gold.obt_{ds}", "serving:api+ai_analyst", "serve")
 
         graph = lineage_graph(wh, ds)
-        summary = {
-            "dataset": ds, "run_id": run_id, "finished_at": now_iso(), "timings": timings, "steps": steps,
-            "bronze": bronze, "silver": silver, "primary": main,
-            "gold": sorted({t for m in models["models"].values() for t in m["tables"]}),
-            "quality": {k: {"score_before": v["score_before"], "score_after": v["score_after"],
-                            "rows": v["after"]["rows"], "issues": len(v["before"]["issues"])} for k, v in quality.items()},
-            "models": {k: {"tables": m["tables"], "erd": m["erd"]} for k, m in models["models"].items()},
-            "column_plan": models["plan"], "rationale": models["rationale"], "recommended": models["recommended"],
-            "provenance": provenance,
-        }
+        summary["finished_at"] = now_iso()
         _dump(summary, out / "pipeline.json")
         _dump(quality, out / "quality.json")
         _dump(graph, out / "lineage.json")

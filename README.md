@@ -20,7 +20,7 @@ Máy có proxy: `export NO_PROXY=localhost,127.0.0.1` (Makefile đã tự đặt
 
 | Lệnh | Việc |
 |---|---|
-| `make demo` | Chạy lần lượt các dataset trong `data/practice/` qua toàn bộ pipeline → `out/<tên>/` (insight, deck.pptx, executive_summary, dashboard.html) |
+| `make demo` | Chạy lần lượt các dataset trong `data/practice/` qua toàn bộ pipeline → `out/<tên>/` (insight, deck.pptx 15 slide gồm pipeline/mô hình/chất lượng/provenance, pitch.md Marp, executive_summary, dashboard.html) |
 | `make api` | FastAPI `http://localhost:8000` (tài liệu: `/docs`) — terminal 1 |
 | `make web` | Build + chạy dashboard `http://localhost:3000` — terminal 2 (cần `make api`) |
 | `make web-dev` | Dashboard chế độ dev (hot reload, tốn RAM hơn) |
