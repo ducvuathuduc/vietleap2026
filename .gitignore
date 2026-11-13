@@ -1,0 +1,13 @@
+node_modules/
+.venv/
+.tools/
+out/
+.next/
+__pycache__/
+.pytest_cache/
+data/raw/
+data/cache/
+data/lake/
+data/*.duckdb
+.env
+*.log
