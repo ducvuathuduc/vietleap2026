@@ -25,7 +25,7 @@ Lệnh: `make api` · `make web` · `make demo` · `python de.py file <path> --s
 Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. Máy yếu: không chạy `npm run build` song song với pytest/engine.
 
 ### Còn lại (theo thứ tự)
-1. **T11 docs** — `docs/PLAYBOOK.md` (lịch theo giờ, vai trò đội 4–5 người kể cả người không code), `docs/CONTEXT.md` (bối cảnh, nhà tài trợ → miền đề có thể ra), README quickstart 1 trang.
+1. ✅ **T11 docs** (xong 14/11) — `docs/PLAYBOOK.md` (lịch theo giờ, vai trò đội 4–5 người kể cả người không code), `docs/CONTEXT.md` (bối cảnh, nhà tài trợ → miền đề có thể ra), README quickstart 1 trang.
 2. **AI layer wow/robustness** — tour/inspect không crash khi thiếu phần tử, Esc thoát, chạy mọi trang; nút **"Câu chuyện insight"**: agent (hoặc engine offline) kể top-5 insight, driver.js lần lượt highlight thẻ/biểu đồ tương ứng.
 3. **T10 deck** — slide Data pipeline, Data model (OBT vs Star vs Snowflake vs Data Vault & vì sao), Data quality trước/sau, Provenance, Limitations, Policy recommendation; `slides/pitch.md` (Marp) 7 phút; kiểm tra tràn chữ.
 4. **T9 CV** — `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → `counts.csv`), báo lỗi thân thiện khi thiếu ultralytics; README; test không tải model lớn.
