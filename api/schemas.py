@@ -18,7 +18,7 @@ class DatasetSummary(BaseModel):
 
 class Job(BaseModel):
     id: str
-    status: Literal["queued", "running", "done", "error"]
+    status: Literal["queued", "pipeline", "running", "done", "error"]
     dataset_id: str | None = None
     error: str | None = None
     started: float

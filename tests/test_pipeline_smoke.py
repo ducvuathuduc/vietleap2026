@@ -70,7 +70,7 @@ def test_pipeline_runs(csv_path, tmp_path):
 
 
 def test_auto_domain_detects_property(csv_path, tmp_path):
-    res = pipeline.run(csv_path, out_root=tmp_path, name="auto", reports=False, target="Giá", geo="Tỉnh/Thành phố__province")
+    res = pipeline.run(csv_path, out_root=tmp_path, name="auto", reports=False, target="Giá", geo_col="Tỉnh/Thành phố__province")
     assert res["meta"]["domain"] == "property"
     assert res["meta"]["target"] == "Giá"
 

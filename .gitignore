@@ -11,3 +11,4 @@ data/lake/
 data/*.duckdb
 .env
 *.log
+data/*.duckdb.wal

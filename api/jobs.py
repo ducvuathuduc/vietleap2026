@@ -26,6 +26,15 @@ def submit(path: Path, name: str, **opts) -> dict:
             job["status"] = "running"
             try:
                 s = get_settings()
+                job["status"] = "pipeline"   # Ingestion → bronze → silver → gold (OBT/Star/Snowflake/Data Vault)
+                try:
+                    from vlkit.de.flow import run_file
+                    from .routes.pipeline import _wh_lock
+                    with _wh_lock:
+                        run_file(path, dataset=name, out_root=s.out_dir)
+                except Exception:  # the insight engine still runs if modelling fails on an odd file
+                    traceback.print_exc()
+                job["status"] = "running"
                 res = pipeline.run(path, out_root=s.out_dir, name=name, reports=s.reports_on_upload, **opts)
                 job["dataset_id"] = res["meta"]["name"]
                 job["status"] = "done"

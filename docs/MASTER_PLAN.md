@@ -4,6 +4,32 @@
 
 ---
 
+## 0. TRẠNG THÁI (cập nhật 13/11/2026 16:30) — Codex đọc mục này trước
+
+**ĐÃ XONG & ĐÃ TEST (83 test pass, `pytest -q tests`)** — nền móng Data Engineering, đúng 4 giai đoạn workshop:
+
+| Giai đoạn | File | Đã chạy thật |
+|---|---|---|
+| Ingestion | `engine/vlkit/de/connectors.py` — file (csv/xlsx nhiều sheet/json/parquet/zip), api (paging page/offset/next/worldbank, retry 429/5xx + Retry-After, rate limit, cache đĩa, token qua biến môi trường), sql (SQLAlchemy, chỉ SELECT, ẩn mật khẩu trong provenance), scrape (robots.txt, delay, bảng HTML `largest` hoặc CSS selector + phân trang, Playwright khi `render_js`), social (RSS/Atom, Google Trends tuỳ chọn), cv (CSV đếm hoặc video → count.py) | `scenarios/demo/sources.yaml`: 5 loại nguồn thật (CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress) chạy ~3,5 s |
+| Storage | `engine/vlkit/de/warehouse.py` — DuckDB `data/warehouse.duckdb`, schema bronze/silver/gold/meta (sources, runs, lineage, quality), bản Parquet `data/lake/<layer>/`, `sql()` read-only có chặn DDL/DML/read_csv/COPY | ✓ |
+| Transform | `quality.py` (missing, blank, duplicate dòng + khoá ứng viên, outlier 3×IQR gắn cờ không xoá, số lưu dạng chữ kiểu VN, số âm vô lý, cột hằng; điểm 0–100 trước/sau; cleaning log; `--impute median` có cột cờ) · `modeling.py` sinh SQL DuckDB cho **OBT, Star (dim_date/dim_geo/dim_<category>), Snowflake (tỉnh → tỉnh 2025 → vùng; ngày → tháng → năm), Data Vault 2.0 (hub md5 business key, link, satellite + hashdiff, load_dts, record_source)**, ERD Mermaid, file `out/<ds>/models/*.sql` | Hà Nội 81.681 dòng: điểm 84,9 → 92,4; 4 mô hình, ~20 s |
+| Serving | `flow.py` → `out/<ds>/pipeline.json, quality.json, lineage.json/.mmd, provenance.json`; insight engine cũ chạy trên gold OBT (`--serve`); API `api/routes/pipeline.py` | ✓ |
+
+Lệnh: `python de.py file <path> [--serve]` · `python de.py run scenarios/demo/sources.yaml --primary vn_housing` · `python de.py tables` · `python de.py sql "SELECT ..."`.
+API mới (đã gọi thật qua uvicorn): `GET /api/sources/kinds`, `POST /api/ingest` (job nền) + `GET /api/ingest/{id}`, `GET /api/warehouse/tables`, `GET /api/warehouse/tables/{fq}/columns`, `POST /api/sql`, `GET /api/datasets/{ds}/pipeline|quality|lineage|models|provenance`. Upload cũ `POST /api/datasets` giờ tự chạy pipeline DE trước insight.
+Tham chiếu vùng: `engine/vlkit/resources/province_region.csv` (63 tỉnh → 6 vùng KT-XH, GSO).
+
+Lưu ý môi trường: máy có HTTP_PROXY → khi gọi localhost bằng httpx/curl đặt `NO_PROXY=localhost,127.0.0.1`.
+
+**CODEX LÀM TIẾP THEO THỨ TỰ NÀY** (T1–T5 bên dưới coi như xong; chỉ sửa nếu test lỗi):
+1. **T6 Web** — thêm vào shadcn dashboard-01 các trang: `pipeline` (4 Card Ingestion/Storage/Transform/Serving lấy từ `/api/datasets/{ds}/pipeline`, bảng `steps`, sơ đồ `lineage.mermaid` render bằng npm `mermaid`), `sources` (form thêm nguồn theo `/api/sources/kinds` → `POST /api/ingest`, poll job), `quality` (SectionCards điểm trước/sau, DataTable `cleaning_log` + `issues`), `model` (Tabs OBT/Star/Snowflake/Data Vault: ERD mermaid + SQL trong code block + `rationale`), `sql` (Textarea + DataTable, ví dụ câu SQL join fact–dim), `decision`. Không restyle. `npm run lint && npm run build` phải pass. Trang `web/src/app/(dashboard)/analyst` và `report` trong thư mục làm việc là bản dở dang chưa kiểm tra — viết lại.
+2. **T7 AI Analyst** (Vercel AI SDK, deps đã có trong package.json): tools thêm `listTables` → `/api/warehouse/tables`, `runSql` → `/api/sql`, `getModels`, `getQuality`, `getLineage`.
+3. **T8** dán đề → brief. 4. **T9** CV `scenarios/cv_counting/count.py` (connector `cv` đã gọi sẵn script này với `--video --out` + options). 5. **T10** deck thêm slide Pipeline / Data model / Quality / Provenance. 6. **T11** README, PLAYBOOK, Makefile. 7. T12 tuỳ chọn.
+
+**Việc nhỏ còn mở cho lớp DE:** conformed dimension giữa nhiều nguồn (join theo tỉnh/năm khi ≥2 bảng silver chung khoá — `load_sources` đã đọc `keys:` trong YAML nhưng chưa dùng); dim_geo cho dữ liệu quận/huyện (hiện thành dim_<cột> thường); incremental load theo `_row_hash` (hiện ghi đè).
+
+---
+
 ## 1. Ban tổ chức đã hé lộ gì (và suy ra gì)
 
 | Tín hiệu từ BTC | Nguồn | Suy ra cho đề thi | Kit phải có |
