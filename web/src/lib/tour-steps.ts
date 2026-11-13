@@ -12,6 +12,21 @@ const INSPECT: TourStep = {
   description: "Bật chế độ này, rê chuột lên KPI, biểu đồ, dòng bảng, giai đoạn pipeline… rồi bấm để AI Analyst giải thích bằng số liệu thật từ engine (Esc để thoát).",
 }
 
+const STORY: TourStep = {
+  selector: '[data-tour="story-button"]',
+  title: "Câu chuyện insight",
+  description: "Một cú bấm: AI (hoặc engine khi offline) kể 5 insight mạnh nhất, lần lượt làm nổi bật từng thẻ — dùng thẳng khi pitch. Mũi tên ←/→ để chuyển, Esc để thoát.",
+}
+
+const DATASET: TourStep = {
+  selector: '[data-tour="dataset-select"]',
+  title: "Chọn dataset",
+  description: "Mọi trang đọc dữ liệu của dataset đang chọn; tải dataset mới bằng nút Upload ở thanh bên.",
+}
+
+/** Header steps shown after the page steps on every route. */
+const COMMON: TourStep[] = [INSPECT, STORY]
+
 const PAGES: Record<string, TourStep[]> = {
   "/": [
     { selector: '[data-insight-target^="kpi:"]', title: "Thẻ KPI", description: "Chỉ số chính của dataset (trung vị, quy mô mẫu, xu hướng) do engine tính trên bảng gold." },
@@ -52,7 +67,32 @@ const PAGES: Record<string, TourStep[]> = {
   ],
 }
 
-/** Steps for a route, keeping only elements present on the page. */
-export function tourSteps(pathname: string, exists: (selector: string) => boolean): TourStep[] {
-  return [...(PAGES[pathname] ?? []), INSPECT].filter((s) => exists(s.selector))
+/** An inspectable element found on the page (used when a route has no hand-written steps). */
+export interface DiscoveredTarget {
+  selector: string
+  label: string
+}
+
+const MAX_DISCOVERED = 5
+
+/**
+ * Steps for a route, keeping only elements present on the page. Routes without hand-written steps get a tour
+ * built from the inspectable elements actually rendered (`discovered`), so "Hướng dẫn" works on every page.
+ */
+export function tourSteps(pathname: string, exists: (selector: string) => boolean, discovered: DiscoveredTarget[] = []): TourStep[] {
+  let page = (PAGES[pathname] ?? []).filter((s) => exists(s.selector))
+  if (page.length === 0) {
+    const seen = new Set<string>()
+    page = discovered
+      .filter((d) => !seen.has(d.selector) && seen.add(d.selector))
+      .slice(0, MAX_DISCOVERED)
+      .map((d) => ({ selector: d.selector, title: d.label, description: "Phần tử có thể hỏi AI: bật “Hỏi AI” rồi bấm vào đây để được giải thích bằng số liệu thật." }))
+    if (page.length === 0) page = [DATASET].filter((s) => exists(s.selector))
+  }
+  return [...page, ...COMMON.filter((s) => exists(s.selector))]
+}
+
+/** CSS selector for one tagged element (attribute value escaped for quotes/backslashes). */
+export function targetSelector(target: string): string {
+  return `[data-insight-target="${target.replace(/["\\]/g, "\\$&")}"]`
 }

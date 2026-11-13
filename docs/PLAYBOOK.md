@@ -31,8 +31,9 @@ Giờ Việt Nam (Asia/Saigon). Đội ngẫu nhiên 4–5 người, chưa chắ
 3. **Pipeline / Chất lượng / Mô hình**: lấy số cho slide Data pipeline, Data quality trước/sau, Data model (vì sao OBT phục vụ dashboard, Star để trình bày).
 4. **Insight → Drivers & What-if → Phân khúc**: chọn insight có effect size lớn, p nhỏ, liên quan trực tiếp tới quyết định. What-if cho con số "nếu tăng X 10% thì Y ±…".
 5. **Hỏi AI** (toggle ở thanh trên): bật, bấm vào bất kỳ KPI/biểu đồ/dòng bảng → AI giải thích bằng số liệu thật từ engine. Esc để thoát. **Hướng dẫn** chạy tour từng trang cho người mới.
-6. **Quyết định** (`/decision`): khuyến nghị + mức tin cậy + caveat → chỉnh lời cho đúng ngữ cảnh chính sách.
-7. **Exports → deck.pptx**, `executive_summary.html`, `dashboard.html`; lời pitch trong `slides/pitch.md`.
+6. **Câu chuyện** (nút ở thanh trên): một cú bấm → AI (hoặc engine khi offline) kể 5 insight mạnh nhất, tự chuyển sang trang Insight và lần lượt làm nổi bật từng thẻ/biểu đồ (←/→ chuyển, Esc thoát). Lời dẫn của AI chỉ được giữ khi mọi con số khớp với engine — dùng thẳng làm phần demo khi pitch.
+7. **Quyết định** (`/decision`): khuyến nghị + mức tin cậy + caveat → chỉnh lời cho đúng ngữ cảnh chính sách.
+8. **Exports → deck.pptx**, `executive_summary.html`, `dashboard.html`; lời pitch trong `slides/pitch.md`.
 
 ## 3. Lịch theo giờ (20–21/11)
 
@@ -53,7 +54,7 @@ Giờ Việt Nam (Asia/Saigon). Đội ngẫu nhiên 4–5 người, chưa chắ
 
 ## 4. Câu chuyện pitch 7 phút (chi tiết trong `slides/pitch.md`)
 
-Vấn đề (0:45) → Dữ liệu & pipeline (1:15) → 3 insight (2:00) → Quyết định đề xuất (1:00) → Tác động/what-if (0:45) → Hạn chế (0:30) → Demo "Hỏi AI" (0:45).
+Vấn đề (0:45) → Dữ liệu & pipeline (1:15) → 3 insight (2:00) → Quyết định đề xuất (1:00) → Tác động/what-if (0:45) → Hạn chế (0:30) → Demo "Câu chuyện" + "Hỏi AI" (0:45).
 
 ## 5. Quy tắc vàng
 

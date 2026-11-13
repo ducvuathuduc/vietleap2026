@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 
-import { CompassIcon, ScanSearchIcon } from "lucide-react"
+import { BookOpenTextIcon, CompassIcon, ScanSearchIcon } from "lucide-react"
 
 import { useDataset } from "@/components/dataset-provider"
 import { useInsightInspector } from "@/components/insight-inspector"
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Spinner } from "@/components/ui/spinner"
 import { Toggle } from "@/components/ui/toggle"
 
 const TITLES: Record<string, string> = {
@@ -33,7 +34,7 @@ const TITLES: Record<string, string> = {
 export function SiteHeader() {
   const pathname = usePathname()
   const { datasets, datasetId, select, detail } = useDataset()
-  const { inspecting, setInspecting, startTour } = useInsightInspector()
+  const { inspecting, setInspecting, startTour, startStory, storyLoading } = useInsightInspector()
   const items = datasets.map((d) => ({ label: d.name, value: d.id }))
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -47,6 +48,16 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => startTour(pathname)} data-tour="tour-button">
             <CompassIcon /> <span className="hidden md:inline">Hướng dẫn</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={startStory}
+            disabled={storyLoading || !datasetId}
+            data-tour="story-button"
+            aria-label="Câu chuyện insight: AI kể 5 insight mạnh nhất và làm nổi bật từng thẻ"
+          >
+            {storyLoading ? <Spinner /> : <BookOpenTextIcon />} <span className="hidden md:inline">Câu chuyện</span>
           </Button>
           <Toggle
             variant="outline"
@@ -64,7 +75,7 @@ export function SiteHeader() {
             </Badge>
           )}
           <Select value={datasetId ?? ""} onValueChange={(v) => v && select(v)} items={items}>
-            <SelectTrigger size="sm" className="w-52 **:data-[slot=select-value]:truncate" aria-label="Dataset">
+            <SelectTrigger size="sm" className="w-52 **:data-[slot=select-value]:truncate" aria-label="Dataset" data-tour="dataset-select">
               <SelectValue placeholder="Chọn dataset" />
             </SelectTrigger>
             <SelectContent align="end">
