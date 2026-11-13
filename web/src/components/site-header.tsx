@@ -10,13 +10,19 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 const TITLES: Record<string, string> = {
-  "/": "Overview",
-  "/profile": "Data Profile",
-  "/insights": "Insights",
+  "/": "Tổng quan",
+  "/sources": "Nguồn dữ liệu (Ingestion)",
+  "/pipeline": "Pipeline: Ingestion → Storage → Transform → Serving",
+  "/quality": "Chất lượng dữ liệu",
+  "/model": "Mô hình dữ liệu: OBT · Star · Snowflake · Data Vault",
+  "/sql": "SQL Explorer",
+  "/profile": "Hồ sơ dữ liệu",
+  "/insights": "Insight",
   "/drivers": "Drivers & What-if",
-  "/segments": "Segments",
+  "/segments": "Phân khúc",
+  "/decision": "Quyết định & khuyến nghị",
   "/analyst": "AI Analyst",
-  "/report": "Report / Export",
+  "/brief": "Đề bài → kế hoạch phân tích",
 }
 
 export function SiteHeader() {
@@ -35,12 +41,12 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-2">
           {detail && (
             <Badge variant="outline" className="hidden text-muted-foreground sm:inline-flex">
-              {detail.meta.domain.replace("_", " ")} · {detail.meta.rows.toLocaleString()} rows
+              {detail.meta.domain.replace("_", " ")} · {detail.meta.rows.toLocaleString("vi-VN")} dòng
             </Badge>
           )}
           <Select value={datasetId ?? ""} onValueChange={(v) => v && select(v)} items={items}>
             <SelectTrigger size="sm" className="w-52 **:data-[slot=select-value]:truncate" aria-label="Dataset">
-              <SelectValue placeholder="Select a dataset" />
+              <SelectValue placeholder="Chọn dataset" />
             </SelectTrigger>
             <SelectContent align="end">
               <SelectGroup>

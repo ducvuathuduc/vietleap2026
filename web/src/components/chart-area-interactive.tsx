@@ -53,13 +53,8 @@ export function ChartAreaInteractive({
   metricLabel: string
 }) {
   const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("all")
-
-  React.useEffect(() => {
-    if (isMobile) {
-      setTimeRange("6")
-    }
-  }, [isMobile])
+  const [userRange, setTimeRange] = React.useState<string | null>(null)
+  const timeRange = userRange ?? (isMobile ? "6" : "all")
 
   const chartConfig = {
     value: {

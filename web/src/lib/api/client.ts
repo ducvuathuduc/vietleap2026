@@ -3,6 +3,16 @@ import type {
   AgentConfig,
   AgentEvent,
   ChatMessage,
+  IngestJob,
+  IngestRequest,
+  LineageResponse,
+  ModelsResponse,
+  PipelineSummary,
+  Provenance,
+  QualityResponse,
+  SourceKindsResponse,
+  SqlResult,
+  WarehouseTable,
   DatasetDetail,
   DatasetSummary,
   DriversResponse,
@@ -79,6 +89,20 @@ export const api = {
   upload: (form: FormData) => request<Job>("/api/datasets", { method: "POST", body: form }),
   job: (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
   agentConfig: () => request<AgentConfig>("/api/agent/config"),
+  // data-engineering layer
+  sourceKinds: () => request<SourceKindsResponse>("/api/sources/kinds"),
+  ingest: (body: IngestRequest) =>
+    request<IngestJob>("/api/ingest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+  ingestJob: (id: string) => request<IngestJob>(`/api/ingest/${encodeURIComponent(id)}`),
+  tables: () => request<WarehouseTable[]>("/api/warehouse/tables"),
+  columns: (fq: string) => request<{ name: string; type: string }[]>(`/api/warehouse/tables/${encodeURIComponent(fq)}/columns`),
+  sql: (query: string, limit = 500) =>
+    request<SqlResult>("/api/sql", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, limit }) }),
+  pipeline: (id: string) => request<PipelineSummary>(`${ds(id)}/pipeline`),
+  quality: (id: string) => request<QualityResponse>(`${ds(id)}/quality`),
+  lineage: (id: string) => request<LineageResponse>(`${ds(id)}/lineage`),
+  models: (id: string) => request<ModelsResponse>(`${ds(id)}/models`),
+  provenance: (id: string) => request<Provenance[]>(`${ds(id)}/provenance`),
   fileUrl: (id: string, kind: "deck" | "dashboard" | "summary_pdf" | "summary_md" | "results" | "clean_csv") => `${BASE}${ds(id)}/files/${kind}`,
 }
 

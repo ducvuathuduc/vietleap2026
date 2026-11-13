@@ -18,8 +18,9 @@ const SEV: Record<string, "destructive" | "secondary" | "outline"> = { high: "de
 export default function ProfilePage() {
   const { datasetId } = useDataset()
   const { data, error, loading } = useAsync(() => (datasetId ? api.profile(datasetId) : null), [datasetId])
-  const [col, setCol] = React.useState<ColumnProfile | null>(null)
-  React.useEffect(() => setCol(data?.profile.column_profiles.find((c) => c.hist) ?? null), [data])
+  const [picked, setCol] = React.useState<ColumnProfile | null>(null)
+  const cols = data?.profile.column_profiles
+  const col = picked && cols?.includes(picked) ? picked : (cols?.find((c) => c.hist) ?? null)
   if (error) return <PageShell><ErrorState error={error} /></PageShell>
   if (loading || !data) return <PageShell><LoadingState /></PageShell>
   const p = data.profile

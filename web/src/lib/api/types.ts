@@ -244,3 +244,178 @@ export interface ChatMessage {
   role: "user" | "assistant"
   content: string
 }
+
+// ── Data-engineering layer (api/routes/pipeline.py) ─────────────────────────────
+
+export type SourceKind = "file" | "api" | "sql" | "scrape" | "social" | "cv"
+export type Layer = "bronze" | "silver" | "gold" | "meta"
+export type ModelKind = "obt" | "star" | "snowflake" | "data_vault"
+
+export interface SourceKindsResponse {
+  kinds: SourceKind[]
+  examples: Partial<Record<SourceKind, { uri: string; options?: Record<string, unknown> }>>
+}
+
+export interface SourceIn {
+  name: string
+  kind: SourceKind
+  uri: string
+  options: Record<string, unknown>
+  license_note: string
+}
+
+export interface IngestRequest {
+  dataset: string
+  sources: SourceIn[]
+  primary?: string | null
+  impute?: "median" | null
+  serve?: boolean
+}
+
+export interface PipelineStep {
+  step: string
+  status: string
+  tables?: string[]
+  [key: string]: unknown
+}
+
+export interface QualityScore {
+  score_before: number
+  score_after: number
+  rows: number
+  issues: number
+}
+
+export interface IngestJob {
+  id: string
+  status: "queued" | "running" | "done" | "error"
+  dataset: string
+  error: string | null
+  started: number
+  finished: number | null
+  summary: {
+    dataset: string
+    run_id: string
+    timings: Record<string, number>
+    steps: PipelineStep[]
+    gold: string[]
+    quality: Record<string, QualityScore>
+  } | null
+}
+
+export interface WarehouseTable {
+  layer: Layer
+  name: string
+  rows: number
+  cols: number
+}
+
+export interface SqlResult {
+  columns: string[]
+  rows: (string | number | boolean | null)[][]
+  row_count: number
+}
+
+export interface Provenance {
+  source: string
+  kind: SourceKind
+  uri: string
+  options: Record<string, unknown>
+  fetched_at: string
+  license_note: string
+  tables: Record<string, { rows: number; cols: number; fingerprint: string }>
+  read_log?: string[]
+  bytes?: number
+  [key: string]: unknown
+}
+
+export interface ModelInfo {
+  tables: string[]
+  erd: string
+}
+
+export interface ColumnPlan {
+  time: string | null
+  time_is_date: boolean
+  province: string | null
+  cats: string[]
+  measures: string[]
+  ids: string[]
+}
+
+export interface PipelineSummary {
+  dataset: string
+  run_id: string
+  finished_at: string
+  timings: Record<string, number>
+  steps: PipelineStep[]
+  bronze: string[]
+  silver: string[]
+  primary: string | null
+  gold: string[]
+  quality: Record<string, QualityScore>
+  models: Partial<Record<ModelKind, ModelInfo>>
+  column_plan: ColumnPlan
+  rationale: Partial<Record<ModelKind, string>>
+  recommended: { serving: ModelKind; semantic: ModelKind }
+  provenance: Provenance[]
+}
+
+export interface DqIssue {
+  type: string
+  column?: string
+  detail?: string
+  count?: number
+  pct?: number
+  unparseable?: number
+  [key: string]: unknown
+}
+
+export interface QualityColumn {
+  dtype: string
+  missing_pct: number
+  distinct: number
+  min?: number
+  max?: number
+  outliers_3iqr?: number
+  numeric_as_text?: boolean
+  invalid_values?: number
+}
+
+export interface QualitySnapshot {
+  rows: number
+  cols: number
+  missing_cells: number
+  invalid_cells: number
+  duplicate_rows: number
+  candidate_key: string[] | null
+  duplicate_keys: number | null
+  score: number
+  columns: Record<string, QualityColumn>
+  issues: DqIssue[]
+}
+
+export interface TableQuality {
+  before: QualitySnapshot
+  after: QualitySnapshot
+  cleaning_log: string[]
+  score_before: number
+  score_after: number
+}
+
+export type QualityResponse = Record<string, TableQuality>
+
+export interface LineageResponse {
+  dataset: string
+  nodes: { id: string; label: string; layer: string; stage: string }[]
+  edges: { from: string; to: string; step: string }[]
+  mermaid: string | null
+}
+
+export interface ModelsResponse {
+  models: Partial<Record<ModelKind, ModelInfo>>
+  sql: Partial<Record<ModelKind, string>>
+  rationale: Partial<Record<ModelKind, string>>
+  recommended: { serving: ModelKind; semantic: ModelKind }
+  column_plan: ColumnPlan
+}

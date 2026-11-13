@@ -106,3 +106,59 @@ def test_api_routes(tmp_path, monkeypatch, kit_root):
     c = TestClient(app)
     assert "api" in c.get("/api/sources/kinds").json()["kinds"]
     assert c.post("/api/sql", json={"query": "DROP TABLE x"}).status_code == 403
+
+
+def test_api_ingest_validation(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setenv("KIT_OUT_DIR", str(tmp_path / "out"))
+    from api.main import app
+    c = TestClient(app)
+    ok_src = {"name": "a", "kind": "file", "uri": "x.csv"}
+    bad = [
+        {"dataset": "d", "sources": []},                                                    # no sources
+        {"dataset": " ", "sources": [ok_src]},                                              # blank dataset
+        {"dataset": "d", "sources": [{**ok_src, "kind": "ftp"}]},                           # unknown kind
+        {"dataset": "d", "sources": [{**ok_src, "name": "bad name!"}]},                     # invalid name
+        {"dataset": "d", "sources": [{**ok_src, "uri": "   "}]},                            # blank uri
+        {"dataset": "d", "sources": [ok_src, ok_src]},                                      # duplicate names
+        {"dataset": "d", "sources": [ok_src], "primary": "zzz"},                            # unknown primary
+        {"dataset": "d", "sources": [ok_src], "impute": "mean"},                            # unsupported impute
+    ]
+    for body in bad:
+        assert c.post("/api/ingest", json=body).status_code == 422, body
+    assert c.post("/api/sql", json={"query": "SELECT 1", "limit": 0}).status_code == 422
+    assert c.post("/api/sql", json={"query": ""}).status_code == 422
+    assert c.get("/api/ingest/nope").status_code == 404
+    assert c.get("/api/datasets/does_not_exist/pipeline").status_code == 404
+
+
+def test_api_ingest_job_and_dataset_endpoints(tmp_path, monkeypatch, kit_root):
+    """Runs a real (small) ingest job through the API and reads every per-dataset DE endpoint."""
+    import time
+    from fastapi.testclient import TestClient
+    from vlkit.de.warehouse import Warehouse
+    monkeypatch.setenv("KIT_OUT_DIR", str(tmp_path / "out"))
+    from api.main import app
+    from api.routes import pipeline as routes
+    monkeypatch.setattr(routes, "Warehouse", lambda: Warehouse(tmp_path / "wh.duckdb", tmp_path / "lake"))
+    c = TestClient(app)
+    src = {"name": "firms", "kind": "file", "uri": str(kit_root / "data/practice/wdi_asia_fiscal_panel.csv")}
+    r = c.post("/api/ingest", json={"dataset": "api_t", "sources": [src], "serve": False})
+    assert r.status_code == 202
+    job_id = r.json()["id"]
+    for _ in range(240):
+        j = c.get(f"/api/ingest/{job_id}").json()
+        if j["status"] in ("done", "error"):
+            break
+        time.sleep(0.5)
+    assert j["status"] == "done", j["error"]
+    p = c.get("/api/datasets/api_t/pipeline").json()
+    assert p["bronze"] and p["silver"] and p["gold"]
+    q = c.get("/api/datasets/api_t/quality").json()
+    t = next(iter(q.values()))
+    assert {"before", "after", "cleaning_log", "score_before", "score_after"} <= set(t)
+    lin = c.get("/api/datasets/api_t/lineage").json()
+    assert lin["nodes"] and lin["edges"] and lin["mermaid"].startswith("flowchart")
+    m = c.get("/api/datasets/api_t/models").json()
+    assert set(m["models"]) == {"obt", "star", "snowflake", "data_vault"} and m["sql"]
+    assert c.get("/api/datasets/api_t/provenance").json()[0]["source"] == "firms"

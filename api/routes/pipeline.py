@@ -9,7 +9,9 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from vlkit.de.flow import run_flow, slugify
 from vlkit.de.sources import KINDS, Source
@@ -23,24 +25,49 @@ _jobs: dict[str, dict] = {}
 
 
 class SourceIn(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=60, pattern=r"^[A-Za-z0-9_]+$")
     kind: str = Field(description=f"one of {KINDS}")
-    uri: str
+    uri: str = Field(min_length=1, max_length=2000)
     options: dict = {}
-    license_note: str = ""
+    license_note: str = Field("", max_length=500)
+
+    @field_validator("kind")
+    @classmethod
+    def _kind(cls, v: str) -> str:
+        if v not in KINDS:
+            raise ValueError(f"kind must be one of {KINDS}")
+        return v
+
+    @field_validator("uri")
+    @classmethod
+    def _uri(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("uri must not be blank")
+        return v.strip()
 
 
 class IngestIn(BaseModel):
-    dataset: str
-    sources: list[SourceIn]
+    dataset: str = Field(min_length=1, max_length=60)
+    sources: list[SourceIn] = Field(min_length=1, max_length=20)
     primary: str | None = None
-    impute: str | None = None
+    impute: Literal["median"] | None = None
     serve: bool = True
+
+    @model_validator(mode="after")
+    def _consistent(self):
+        if not self.dataset.strip():
+            raise ValueError("dataset name must not be blank")
+        names = [s.name for s in self.sources]
+        if len(set(names)) != len(names):
+            raise ValueError("source names must be unique")
+        if self.primary is not None and self.primary not in names:
+            raise ValueError(f"primary '{self.primary}' is not one of the source names {names}")
+        return self
 
 
 class SqlIn(BaseModel):
-    query: str
-    limit: int = 500
+    query: str = Field(min_length=1, max_length=10_000)
+    limit: int = Field(500, ge=1, le=5000)
 
 
 def _out(ds: str) -> Path:
@@ -68,10 +95,7 @@ def source_kinds():
 
 @router.post("/ingest", status_code=202)
 def ingest(body: IngestIn):
-    try:
-        sources = [Source(**s.model_dump()) for s in body.sources]
-    except ValueError as e:
-        raise HTTPException(422, str(e))
+    sources = [Source(**s.model_dump()) for s in body.sources]
     job = {"id": uuid.uuid4().hex[:12], "status": "queued", "dataset": slugify(body.dataset), "error": None,
            "started": time.time(), "finished": None, "summary": None}
     _jobs[job["id"]] = job
@@ -128,7 +152,7 @@ def sql(body: SqlIn):
     with _wh_lock:
         wh = Warehouse()
         try:
-            df = wh.sql(body.query, limit=min(max(body.limit, 1), 5000))
+            df = wh.sql(body.query, limit=body.limit)
         except PermissionError as e:
             raise HTTPException(403, str(e))
         except Exception as e:

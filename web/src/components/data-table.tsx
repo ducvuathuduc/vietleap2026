@@ -322,7 +322,11 @@ export function DataTable({
   datasetId: string
 }) {
   const [data, setData] = React.useState<InsightRow[]>(() => toRows(insights))
-  React.useEffect(() => setData(toRows(insights)), [insights])
+  const [prevInsights, setPrevInsights] = React.useState(insights)
+  if (insights !== prevInsights) {
+    setPrevInsights(insights)
+    setData(toRows(insights))
+  }
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<ColumnVisibilityState>({})

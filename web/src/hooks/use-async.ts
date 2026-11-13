@@ -9,26 +9,38 @@ export interface AsyncState<T> {
   reload: () => void
 }
 
-/** Run an async loader whenever `deps` change; ignores stale responses. */
+const sameDeps = (a: React.DependencyList, b: React.DependencyList) =>
+  a.length === b.length && a.every((v, i) => Object.is(v, b[i]))
+
+/**
+ * Run an async loader whenever `deps` change; ignores stale responses.
+ * A loader returning null means "nothing to load" (loading=false, data=undefined).
+ * Results are tagged with the deps "token", so loading is derived instead of set inside the effect.
+ */
 export function useAsync<T>(loader: () => Promise<T> | null, deps: React.DependencyList): AsyncState<T> {
-  const [state, setState] = React.useState<{ data?: T; error?: Error; loading: boolean }>({ loading: true })
   const [tick, setTick] = React.useState(0)
+  // new token whenever deps/tick change (render-time state adjustment, see react.dev "you might not need an effect")
+  const [gen, setGen] = React.useState<{ deps: React.DependencyList; tick: number; token: object }>(() => ({ deps, tick, token: {} }))
+  if (gen.tick !== tick || !sameDeps(gen.deps, deps)) setGen({ deps, tick, token: {} })
+  const token = gen.token
+  const [res, setRes] = React.useState<{ token: object; data?: T; error?: Error } | null>(null)
   React.useEffect(() => {
     let alive = true
-    const p = loader()
-    if (!p) {
-      setState({ loading: false })
-      return
-    }
-    setState((s) => ({ data: s.data, loading: true }))
+    const p: Promise<T | undefined> = loader() ?? Promise.resolve(undefined)
     p.then(
-      (data) => alive && setState({ data, loading: false }),
-      (error: Error) => alive && setState({ error, loading: false })
+      (data) => alive && setRes({ token, data }),
+      (error: Error) => alive && setRes({ token, error })
     )
     return () => {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, tick])
-  return { ...state, reload: () => setTick((t) => t + 1) }
+  }, [token])
+  const current = res?.token === token
+  return {
+    data: res?.data, // previous data stays visible while reloading
+    error: current ? res?.error : undefined,
+    loading: !current,
+    reload: () => setTick((t) => t + 1),
+  }
 }

@@ -15,8 +15,9 @@ import { fmtNum, fmtP } from "@/lib/format"
 
 export default function SegmentsPage() {
   const { datasetId } = useDataset()
-  const [by, setBy] = React.useState<string | undefined>(undefined)
-  React.useEffect(() => setBy(undefined), [datasetId])
+  const [picked, setPicked] = React.useState<{ ds: string | null; by: string } | null>(null)
+  const by = picked && picked.ds === datasetId ? picked.by : undefined
+  const setBy = (v: string) => setPicked({ ds: datasetId, by: v })
   const { data, error, loading } = useAsync(() => (datasetId ? api.segments(datasetId, { by }) : null), [datasetId, by])
   if (error) return <PageShell><ErrorState error={error} /></PageShell>
   if (loading && !data) return <PageShell><LoadingState /></PageShell>

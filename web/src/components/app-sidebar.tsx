@@ -16,10 +16,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
-import { LayoutDashboardIcon, ChartBarIcon, Settings2Icon, CircleHelpIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, LightbulbIcon, SlidersHorizontalIcon, SparklesIcon, PresentationIcon, ChartNoAxesCombinedIcon } from "lucide-react"
+import { LayoutDashboardIcon, ChartBarIcon, Settings2Icon, DatabaseIcon, FileChartColumnIcon, FileIcon, GavelIcon, LightbulbIcon, NetworkIcon, ShieldCheckIcon, SlidersHorizontalIcon, PresentationIcon, ChartNoAxesCombinedIcon, TerminalSquareIcon, UploadCloudIcon, WorkflowIcon } from "lucide-react"
 
 import { useDataset } from "@/components/dataset-provider"
 import { api } from "@/lib/api/client"
+
+const API_DOCS = process.env.NEXT_PUBLIC_API_DOCS_URL ?? "http://localhost:8000/docs"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { datasetId } = useDataset()
@@ -31,22 +33,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       avatar: "",
     },
     navMain: [
-      { title: "Overview", url: "/", icon: <LayoutDashboardIcon /> },
-      { title: "Data Profile", url: "/profile", icon: <DatabaseIcon /> },
-      { title: "Insights", url: "/insights", icon: <LightbulbIcon /> },
+      { title: "Tổng quan", url: "/", icon: <LayoutDashboardIcon /> },
+      { title: "Nguồn dữ liệu", url: "/sources", icon: <UploadCloudIcon /> },
+      { title: "Pipeline", url: "/pipeline", icon: <WorkflowIcon /> },
+      { title: "Chất lượng dữ liệu", url: "/quality", icon: <ShieldCheckIcon /> },
+      { title: "Mô hình dữ liệu", url: "/model", icon: <NetworkIcon /> },
+      { title: "SQL Explorer", url: "/sql", icon: <TerminalSquareIcon /> },
+      { title: "Hồ sơ dữ liệu", url: "/profile", icon: <DatabaseIcon /> },
+      { title: "Insight", url: "/insights", icon: <LightbulbIcon /> },
       { title: "Drivers & What-if", url: "/drivers", icon: <SlidersHorizontalIcon /> },
-      { title: "Segments", url: "/segments", icon: <ChartBarIcon /> },
-      { title: "AI Analyst", url: "/analyst", icon: <SparklesIcon /> },
-      { title: "Report / Export", url: "/report", icon: <FileChartColumnIcon /> },
+      { title: "Phân khúc", url: "/segments", icon: <ChartBarIcon /> },
+      { title: "Quyết định", url: "/decision", icon: <GavelIcon /> },
     ],
     navSecondary: [
-      { title: "API docs", url: "/api-docs", icon: <Settings2Icon /> },
-      { title: "Get Help", url: "/report#help", icon: <CircleHelpIcon /> },
+      { title: "Tài liệu API", url: `${API_DOCS}`, icon: <Settings2Icon /> },
     ],
     documents: [
       { name: "Pitch deck (.pptx)", url: file("deck"), icon: <PresentationIcon /> },
-      { name: "Static dashboard", url: file("dashboard"), icon: <FileChartColumnIcon /> },
-      { name: "Executive summary", url: file("summary_pdf"), icon: <FileIcon /> },
+      { name: "Dashboard tĩnh (HTML)", url: file("dashboard"), icon: <FileChartColumnIcon /> },
+      { name: "Tóm tắt điều hành (PDF)", url: file("summary_pdf"), icon: <FileIcon /> },
     ],
   }
   return (

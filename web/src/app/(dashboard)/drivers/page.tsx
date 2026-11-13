@@ -19,15 +19,17 @@ import { fmtNum, fmtPct } from "@/lib/format"
 export default function DriversPage() {
   const { datasetId } = useDataset()
   const { data, error, loading } = useAsync(() => (datasetId ? api.drivers(datasetId) : null), [datasetId])
-  const [feature, setFeature] = React.useState<string | null>(null)
+  const [picked, setPicked] = React.useState<{ ds: string | null; feature: string } | null>(null)
   const [pct, setPct] = React.useState(10)
   const [result, setResult] = React.useState<WhatIfResult | null>(null)
   const [wiErr, setWiErr] = React.useState<string | null>(null)
-  React.useEffect(() => {
-    if (!data) return
+  const defaultFeature = React.useMemo(() => {
+    if (!data) return null
     const stable = data.drivers?.coefficients.find((c) => c.stable && data.whatif_features.some((f) => f.name === c.feature))
-    setFeature(stable?.feature ?? data.whatif_features[0]?.name ?? null)
+    return stable?.feature ?? data.whatif_features[0]?.name ?? null
   }, [data])
+  const feature = picked && picked.ds === datasetId ? picked.feature : defaultFeature
+  const setFeature = (f: string) => setPicked({ ds: datasetId, feature: f })
   const curve = useAsync(() => (datasetId && feature ? api.whatIfCurve(datasetId, feature) : null), [datasetId, feature])
   React.useEffect(() => {
     if (!datasetId || !feature) return

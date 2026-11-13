@@ -25,23 +25,28 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
 
-  const refresh = React.useCallback(async () => {
-    try {
-      const list = await api.datasets()
-      setDatasets(list)
-      setError(null)
-      setDatasetId((cur) => {
-        const fromUrl = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ds") : null
-        const saved = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null
-        const wanted = [cur, fromUrl, saved].find((x) => x && list.some((d) => d.id === x))
-        return wanted ?? list[0]?.id ?? null
-      })
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // setState only runs in promise callbacks, never synchronously inside an effect
+  const refresh = React.useCallback(
+    () =>
+      api.datasets().then(
+        (list) => {
+          setDatasets(list)
+          setError(null)
+          setDatasetId((cur) => {
+            const fromUrl = new URLSearchParams(window.location.search).get("ds")
+            const saved = window.localStorage.getItem(KEY)
+            const wanted = [cur, fromUrl, saved].find((x) => x && list.some((d) => d.id === x))
+            return wanted ?? list[0]?.id ?? null
+          })
+          setLoading(false)
+        },
+        (e: Error) => {
+          setError(e.message)
+          setLoading(false)
+        }
+      ),
+    []
+  )
 
   React.useEffect(() => {
     void refresh()
