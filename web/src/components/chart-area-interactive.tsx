@@ -32,6 +32,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { fmtNum } from "@/lib/format"
 import type { TimePoint } from "@/lib/api/types"
+import { insightTarget } from "@/lib/insight-target"
 
 export const description = "An interactive area chart of the main time trend"
 
@@ -71,7 +72,7 @@ export function ChartAreaInteractive({
   const filteredData = (points ?? []).filter((p) => p.value !== null).slice(Number.isFinite(n) ? -n : 0)
 
   return (
-    <Card className="@container/card">
+    <Card className="@container/card" {...insightTarget("chart", "timeseries", title, { title, subtitle, metric: metricLabel, points: points?.slice(-24) })}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>

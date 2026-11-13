@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAsync } from "@/hooks/use-async"
 import { api } from "@/lib/api/client"
 import type { ModelKind } from "@/lib/api/types"
+import { insightTarget } from "@/lib/insight-target"
 
 const ORDER: { key: ModelKind; label: string; role: string }[] = [
   { key: "obt", label: "OBT", role: "One Big Table — phục vụ dashboard/ML" },
@@ -40,7 +41,7 @@ export default function ModelPage() {
   return (
     <PageShell>
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @5xl/main:grid-cols-2">
-        <Card>
+        <Card data-tour="model-choice">
           <CardHeader>
             <CardTitle>Chọn mô hình theo quy mô hackathon</CardTitle>
             <CardDescription>Cả 4 mô hình được sinh tự động từ cùng bảng silver; số bảng lấy từ warehouse.</CardDescription>
@@ -83,7 +84,7 @@ export default function ModelPage() {
             const sql = m.sql[o.key]
             return (
               <TabsContent key={o.key} value={o.key} className="flex flex-col gap-4">
-                <Card>
+                <Card {...insightTarget("model", o.key, `Mô hình ${o.label}`, { tables: info.tables, rationale: m.rationale[o.key], recommended: recBadges(o.key) })}>
                   <CardHeader>
                     <CardTitle>{o.label}</CardTitle>
                     <CardDescription>{m.rationale[o.key] ?? o.role}</CardDescription>

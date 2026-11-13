@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAsync } from "@/hooks/use-async"
 import { api } from "@/lib/api/client"
 import { fmtNum, fmtP } from "@/lib/format"
+import { insightTarget } from "@/lib/insight-target"
 
 export default function SegmentsPage() {
   const { datasetId } = useDataset()
@@ -27,7 +28,7 @@ export default function SegmentsPage() {
   return (
     <PageShell>
       <div className="grid gap-4 px-4 lg:px-6 @5xl/main:grid-cols-3">
-        <Card className="@5xl/main:col-span-2">
+        <Card className="@5xl/main:col-span-2" {...insightTarget("segment", data.by, `${data.metric} theo ${data.by}`, { by: data.by, metric: data.metric, groups: data.groups.slice(0, 10), test: data.test })}>
           <CardHeader>
             <CardTitle>Median {data.metric} by {data.by}</CardTitle>
             <CardDescription>Top {data.groups.length} of {data.groups_total} groups</CardDescription>

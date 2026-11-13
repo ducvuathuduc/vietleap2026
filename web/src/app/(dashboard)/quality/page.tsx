@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { useAsync } from "@/hooks/use-async"
 import { api } from "@/lib/api/client"
 import type { DqIssue, QualitySnapshot } from "@/lib/api/types"
+import { insightTarget } from "@/lib/insight-target"
 
 /** Workshop cleaning categories → engine issue types (engine/vlkit/de/quality.py). */
 const CATEGORY: Record<string, string> = {
@@ -75,14 +76,14 @@ export default function QualityPage() {
       </div>
       <StatCards
         items={[
-          { label: "Điểm chất lượng (0–100)", value: `${q.score_before.toFixed(1)} → ${q.score_after.toFixed(1)}`, badge: `${q.score_after - q.score_before >= 0 ? "+" : ""}${(q.score_after - q.score_before).toFixed(1)}`, footer: `${before.rows.toLocaleString("vi-VN")} → ${after.rows.toLocaleString("vi-VN")} dòng`, hint: "Trước / sau làm sạch" },
+          { label: "Điểm chất lượng (0–100)", value: `${q.score_before.toFixed(1)} → ${q.score_after.toFixed(1)}`, badge: `${q.score_after - q.score_before >= 0 ? "+" : ""}${(q.score_after - q.score_before).toFixed(1)}`, footer: `${before.rows.toLocaleString("vi-VN")} → ${after.rows.toLocaleString("vi-VN")} dòng`, hint: "Trước / sau làm sạch", target: insightTarget("quality", table, `Điểm chất lượng ${table}`, { score_before: q.score_before, score_after: q.score_after, rows: [before.rows, after.rows] }) },
           { label: "Ô thiếu (missing)", value: `${before.missing_cells.toLocaleString("vi-VN")} → ${after.missing_cells.toLocaleString("vi-VN")}`, footer: `${before.invalid_cells.toLocaleString("vi-VN")} → ${after.invalid_cells.toLocaleString("vi-VN")} ô sai định dạng`, hint: "Ô không đọc được thành missing, không đoán" },
           { label: "Dòng trùng (duplicate)", value: `${before.duplicate_rows.toLocaleString("vi-VN")} → ${after.duplicate_rows.toLocaleString("vi-VN")}`, footer: after.candidate_key ? `Khoá ứng viên: ${after.candidate_key.join(" + ")}` : "Không tìm thấy khoá ứng viên", hint: after.duplicate_keys !== null ? `${after.duplicate_keys} khoá trùng sau làm sạch` : undefined },
           { label: "Ngoại lai gắn cờ (outlier)", value: sumOutliers(after).toLocaleString("vi-VN"), footer: "Quy tắc 3×IQR theo cột số", hint: "Giữ lại để phân tích độ nhạy" },
         ]}
       />
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @5xl/main:grid-cols-2">
-        <Card>
+        <Card {...insightTarget("chart", "missing", `% thiếu theo cột — ${table}`, { table, columns: missingCols })}>
           <CardHeader>
             <CardTitle>% thiếu theo cột</CardTitle>
             <CardDescription>Trước và sau làm sạch (tối đa 15 cột thiếu nhiều nhất).</CardDescription>
@@ -116,7 +117,7 @@ export default function QualityPage() {
         </Card>
       </div>
       <div className="px-4 lg:px-6">
-        <Card>
+        <Card data-tour="cleaning-log">
           <CardHeader>
             <CardTitle>Nhật ký làm sạch (cleaning log)</CardTitle>
             <CardDescription>Mọi biến đổi bronze → silver, theo thứ tự đã chạy — để giám khảo audit.</CardDescription>

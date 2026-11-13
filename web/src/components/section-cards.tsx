@@ -12,6 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import type { Kpi } from "@/lib/api/types"
 import { TrendingUpIcon, TrendingDownIcon } from "lucide-react"
+import { insightTarget } from "@/lib/insight-target"
 
 export function SectionCards({ kpis }: { kpis: Kpi[] | undefined }) {
   return (
@@ -22,7 +23,7 @@ export function SectionCards({ kpis }: { kpis: Kpi[] | undefined }) {
             const up = (k.delta_pct ?? 0) >= 0
             const Icon = up ? TrendingUpIcon : TrendingDownIcon
             return (
-              <Card key={k.label} className="@container/card">
+              <Card key={k.label} className="@container/card" {...insightTarget("kpi", k.label, k.label_vi || k.label, k)}>
                 <CardHeader>
                   <CardDescription className="truncate">{k.label}</CardDescription>
                   <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">

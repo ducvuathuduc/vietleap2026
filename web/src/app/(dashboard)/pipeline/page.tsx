@@ -11,6 +11,7 @@ import { useAsync } from "@/hooks/use-async"
 import { api } from "@/lib/api/client"
 import type { ModelKind } from "@/lib/api/types"
 import { SOURCE_KINDS, fmtSeconds } from "@/lib/source-kinds"
+import { insightTarget } from "@/lib/insight-target"
 
 const MODEL_LABEL: Record<ModelKind, string> = { obt: "OBT", star: "Star", snowflake: "Snowflake", data_vault: "Data Vault" }
 
@@ -47,6 +48,7 @@ export default function PipelinePage() {
             badge: kinds.map((k) => SOURCE_KINDS[k]?.label ?? k).join(" · "),
             footer: `Thời gian ${fmtSeconds(p.timings.ingest)}`,
             hint: "DB/JDBC · Public API · File · Scraping · Social",
+            target: insightTarget("pipeline-stage", "ingestion", "Ingestion — thu thập", { sources: p.provenance.map((s) => ({ source: s.source, kind: s.kind, fetched_at: s.fetched_at })), seconds: p.timings.ingest }),
           },
           {
             label: "2 · Storage — DuckDB + Parquet",
@@ -54,6 +56,7 @@ export default function PipelinePage() {
             badge: "medallion",
             footer: "Giữ dữ liệu thô + _src, _ingested_at, _row_hash",
             hint: "bronze → silver → gold, meta.lineage",
+            target: insightTarget("pipeline-stage", "storage", "Storage — DuckDB + Parquet", { bronze: p.bronze }),
           },
           {
             label: "3 · Transform — làm sạch & mô hình",
@@ -61,6 +64,7 @@ export default function PipelinePage() {
             badge: Number.isFinite(before) ? `điểm TB ${before.toFixed(1)} → ${after.toFixed(1)}` : undefined,
             footer: `Làm sạch ${fmtSeconds(p.timings.clean)} · mô hình ${fmtSeconds(p.timings.model)}`,
             hint: "Missing · Duplicate · Outlier (gắn cờ, không xoá)",
+            target: insightTarget("pipeline-stage", "transform", "Transform — làm sạch & mô hình", { quality: p.quality }),
           },
           {
             label: "4 · Serving — gold & dashboard",
@@ -68,12 +72,13 @@ export default function PipelinePage() {
             badge: models.join(" · "),
             footer: `Phục vụ ${fmtSeconds(p.timings.serve)}`,
             hint: `Dashboard dùng ${MODEL_LABEL[p.recommended.serving]}, ngữ nghĩa ${MODEL_LABEL[p.recommended.semantic]}`,
+            target: insightTarget("pipeline-stage", "serving", "Serving — gold & dashboard", { gold: p.gold, recommended: p.recommended }),
           },
         ]}
       />
 
       <div className="px-4 lg:px-6">
-        <Card>
+        <Card data-tour="lineage">
           <CardHeader>
             <CardTitle>Sơ đồ lineage</CardTitle>
             <CardDescription>Nguồn → bronze → silver → gold, mỗi cạnh là một bước biến đổi đã chạy thật.</CardDescription>

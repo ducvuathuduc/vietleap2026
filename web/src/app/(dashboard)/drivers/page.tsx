@@ -15,6 +15,7 @@ import { useAsync } from "@/hooks/use-async"
 import { api } from "@/lib/api/client"
 import type { WhatIfResult } from "@/lib/api/types"
 import { fmtNum, fmtPct } from "@/lib/format"
+import { insightTarget } from "@/lib/insight-target"
 
 export default function DriversPage() {
   const { datasetId } = useDataset()
@@ -77,7 +78,7 @@ export default function DriversPage() {
           </CardContent>
           <CardFooter className="text-xs text-muted-foreground">{d.note}</CardFooter>
         </Card>
-        <Card>
+        <Card {...insightTarget("whatif", feature ?? "none", `What-if: ${feature ?? ""} ${pct > 0 ? "+" : ""}${pct}%`, { feature, pct_change: pct, result })}>
           <CardHeader>
             <CardTitle>What-if scenario</CardTitle>
             <CardDescription>Change one driver for every record; bootstrapped ridge (200 resamples) gives the 90% interval</CardDescription>
@@ -153,7 +154,7 @@ export default function DriversPage() {
               </TableHeader>
               <TableBody>
                 {d.coefficients.slice(0, 15).map((c) => (
-                  <TableRow key={c.feature}>
+                  <TableRow key={c.feature} {...insightTarget("driver", c.feature, `Yếu tố ${c.feature}`, c)}>
                     <TableCell className="max-w-72 truncate font-medium">{c.feature}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">{c.coef_std.toFixed(4)}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">[{c.ci90[0].toFixed(3)}, {c.ci90[1].toFixed(3)}]</TableCell>

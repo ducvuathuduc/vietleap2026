@@ -93,6 +93,7 @@ import { api } from "@/lib/api/client"
 import type { Insight, Recommendation, RowsResponse } from "@/lib/api/types"
 import { fmtNum, fmtP } from "@/lib/format"
 import { GripVerticalIcon, CircleCheckIcon, LoaderIcon, EllipsisVerticalIcon, Columns3Icon, ChevronDownIcon, PlusIcon, ChevronsLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsRightIcon, TrendingUpIcon } from "lucide-react"
+import { insightTarget } from "@/lib/insight-target"
 
 // New in v9: declare the features this table uses — anything you don't
 // register is tree-shaken out of the bundle.
@@ -293,6 +294,13 @@ function DraggableRow({
   })
   return (
     <TableRow
+      {...insightTarget("table-row", row.original.insight.id, row.original.insight.title_vi, {
+        title: row.original.insight.title_vi,
+        finding: row.original.insight.sentence_vi,
+        test: row.original.insight.test,
+        p_value: row.original.insight.p_value,
+        effect: row.original.insight.effect,
+      })}
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
@@ -468,7 +476,7 @@ export function DataTable({
         value="outline"
         className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
       >
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-lg border" data-tour="insights-table">
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}

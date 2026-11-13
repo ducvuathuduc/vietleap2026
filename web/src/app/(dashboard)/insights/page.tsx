@@ -12,6 +12,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useAsync } from "@/hooks/use-async"
 import { api } from "@/lib/api/client"
 import { fmtP } from "@/lib/format"
+import { insightTarget } from "@/lib/insight-target"
 
 export default function InsightsPage() {
   const { datasetId } = useDataset()
@@ -36,7 +37,7 @@ export default function InsightsPage() {
           const rec = recBy[i.id]
           const sig = i.p_value !== null && i.p_value < 0.05
           return (
-            <Card key={i.id} className="@container/card">
+            <Card key={i.id} className="@container/card" {...insightTarget("insight", i.id, i.title_vi, { title: i.title_vi, finding: i.sentence_vi, test: i.test, p_value: i.p_value, effect: i.effect, columns: i.columns })}>
               <CardHeader>
                 <CardDescription>#{i.rank} · {i.type.replace("_", " ")}</CardDescription>
                 <CardTitle className="text-lg">{lang === "en" ? i.title_en : i.title_vi}</CardTitle>

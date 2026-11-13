@@ -10,6 +10,7 @@ import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader,
 import { useAsync } from "@/hooks/use-async"
 import { api } from "@/lib/api/client"
 import { fmtP } from "@/lib/format"
+import { insightTarget } from "@/lib/insight-target"
 
 const CONFIDENCE = { high: "Tin cậy cao", medium: "Tin cậy trung bình" } as const
 
@@ -40,7 +41,7 @@ export default function DecisionPage() {
           {recs.map((rec, idx) => {
             const ins = byId[rec.from_insight]
             return (
-              <Card key={`${rec.from_insight}-${idx}`} className="@container/card">
+              <Card key={`${rec.from_insight}-${idx}`} className="@container/card" {...insightTarget("decision", rec.from_insight, `Khuyến nghị ${idx + 1}`, { so_what: rec.so_what_vi, now_what: rec.now_what_vi, impact: rec.impact_vi, confidence: rec.confidence })}>
                 <CardHeader>
                   <CardDescription>Khuyến nghị {idx + 1}{ins ? ` · từ insight #${ins.rank}` : ""}</CardDescription>
                   <CardTitle className="text-lg">{ins?.title_vi ?? rec.type}</CardTitle>
