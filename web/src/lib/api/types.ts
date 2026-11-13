@@ -221,30 +221,6 @@ export interface Job {
   finished: number | null
 }
 
-export interface AgentConfig {
-  mode: "llm" | "offline"
-  model: string | null
-  base_url: string | null
-  tools: string[]
-}
-
-export type AgentEvent =
-  | { type: "status" | "plan"; text: string }
-  | { type: "tool_call"; name: string; args: Record<string, unknown> }
-  | { type: "tool_result"; name: string; ok: boolean; summary: string }
-  | { type: "chart"; spec: ChartSpec; source: string }
-  | { type: "table"; columns: string[]; rows: (string | number | null)[][]; source: string }
-  | { type: "token"; text: string }
-  | { type: "replace" }
-  | { type: "verification"; verified: string[]; unverified: string[]; ok: boolean; mode: "llm" | "fallback" }
-  | { type: "error"; text: string }
-  | { type: "done"; text: string }
-
-export interface ChatMessage {
-  role: "user" | "assistant"
-  content: string
-}
-
 // ── Data-engineering layer (api/routes/pipeline.py) ─────────────────────────────
 
 export type SourceKind = "file" | "api" | "sql" | "scrape" | "social" | "cv"

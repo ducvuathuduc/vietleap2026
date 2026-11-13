@@ -1,8 +1,5 @@
 // Typed API client. All calls go through Next.js rewrites (/api/* → FastAPI), so no CORS in the browser.
 import type {
-  AgentConfig,
-  AgentEvent,
-  ChatMessage,
   IngestJob,
   IngestRequest,
   LineageResponse,
@@ -88,7 +85,6 @@ export const api = {
   whatIfCurve: (id: string, feature: string) => request<WhatIfCurve>(`${ds(id)}/whatif/curve${q({ feature })}`),
   upload: (form: FormData) => request<Job>("/api/datasets", { method: "POST", body: form }),
   job: (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
-  agentConfig: () => request<AgentConfig>("/api/agent/config"),
   // data-engineering layer
   sourceKinds: () => request<SourceKindsResponse>("/api/sources/kinds"),
   ingest: (body: IngestRequest) =>
@@ -104,35 +100,4 @@ export const api = {
   models: (id: string) => request<ModelsResponse>(`${ds(id)}/models`),
   provenance: (id: string) => request<Provenance[]>(`${ds(id)}/provenance`),
   fileUrl: (id: string, kind: "deck" | "dashboard" | "summary_pdf" | "summary_md" | "results" | "clean_csv") => `${BASE}${ds(id)}/files/${kind}`,
-}
-
-/** Stream AI-analyst events (Server-Sent Events over a POST). */
-export async function streamAgent(
-  id: string,
-  body: { message: string; history: ChatMessage[]; auto?: boolean; top_n?: number },
-  onEvent: (e: AgentEvent) => void,
-  signal?: AbortSignal
-): Promise<void> {
-  const res = await fetch(`${BASE}${ds(id)}/agent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-    body: JSON.stringify(body),
-    signal,
-  })
-  if (!res.ok || !res.body) throw new ApiError(res.status, `agent request failed (${res.status})`)
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buf = ""
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buf += decoder.decode(value, { stream: true })
-    let idx: number
-    while ((idx = buf.indexOf("\n\n")) >= 0) {
-      const chunk = buf.slice(0, idx)
-      buf = buf.slice(idx + 2)
-      const line = chunk.split("\n").find((l) => l.startsWith("data:"))
-      if (line) onEvent(JSON.parse(line.slice(5).trim()) as AgentEvent)
-    }
-  }
 }
