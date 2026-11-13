@@ -16,7 +16,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
-import { LayoutDashboardIcon, ChartBarIcon, Settings2Icon, DatabaseIcon, FileChartColumnIcon, FileIcon, GavelIcon, LightbulbIcon, NetworkIcon, ShieldCheckIcon, SlidersHorizontalIcon, SparklesIcon, PresentationIcon, ChartNoAxesCombinedIcon, TerminalSquareIcon, UploadCloudIcon, WorkflowIcon } from "lucide-react"
+import { LayoutDashboardIcon, ChartBarIcon, Settings2Icon, DatabaseIcon, FileChartColumnIcon, FileIcon, FileTextIcon, GavelIcon, LightbulbIcon, NetworkIcon, ShieldCheckIcon, SlidersHorizontalIcon, SparklesIcon, PresentationIcon, ChartNoAxesCombinedIcon, TerminalSquareIcon, UploadCloudIcon, WorkflowIcon } from "lucide-react"
 
 import { useDataset } from "@/components/dataset-provider"
 import { api } from "@/lib/api/client"
@@ -34,6 +34,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
     navMain: [
       { title: "Tổng quan", url: "/", icon: <LayoutDashboardIcon /> },
+      { title: "Đề bài", url: "/brief", icon: <FileTextIcon /> },
       { title: "Nguồn dữ liệu", url: "/sources", icon: <UploadCloudIcon /> },
       { title: "Pipeline", url: "/pipeline", icon: <WorkflowIcon /> },
       { title: "Chất lượng dữ liệu", url: "/quality", icon: <ShieldCheckIcon /> },

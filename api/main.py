@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
 
-from .routes import agent, analysis, datasets, pipeline  # noqa: E402
+from .routes import agent, analysis, brief, datasets, pipeline  # noqa: E402
 from .settings import get_settings  # noqa: E402
 
 app = FastAPI(title="VietLeap Insight API", version="1.0.0",
@@ -25,6 +25,7 @@ app.include_router(datasets.router)
 app.include_router(analysis.router)
 app.include_router(agent.router)
 app.include_router(pipeline.router)
+app.include_router(brief.router)
 
 
 @app.exception_handler(Exception)

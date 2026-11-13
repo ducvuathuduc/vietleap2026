@@ -395,3 +395,53 @@ export interface ModelsResponse {
   recommended: { serving: ModelKind; semantic: ModelKind }
   column_plan: ColumnPlan
 }
+
+// ── Problem statement → plan (api/routes/brief.py, engine/vlkit/brief.py) ─────────
+
+export interface BriefTarget {
+  concept: string
+  label: string
+  column: string | null
+  resolved: string
+  domain: string | null
+  score: number
+}
+
+export interface DecisionTemplate {
+  who: string
+  what: string
+  where: string
+  kpi: string
+  caveat: string
+}
+
+export interface BriefPack {
+  id: string
+  title: string
+  sponsor: string
+  kpis: string[]
+  recipe: string[]
+  decision_template: DecisionTemplate
+  deck_storyline: string[]
+  expected_columns: string[]
+}
+
+export interface Brief {
+  language: "vi" | "en"
+  title: string
+  questions: string[]
+  target: BriefTarget | null
+  alternatives: BriefTarget[]
+  units: string[]
+  segments: string[]
+  time: { years: number[]; range: [number, number] | null }
+  decision_types: { id: string; label: string; hits: number }[]
+  deliverables: string[]
+  data_sources_mentioned: string[]
+  pack: BriefPack | null
+  pack_scores: Record<string, number>
+  run_config: { target: string | null; domain: string; segment_by: string[] }
+  plan: string[]
+  warnings: string[]
+  dataset: string | null
+}

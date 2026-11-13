@@ -1,5 +1,6 @@
 // Typed API client. All calls go through Next.js rewrites (/api/* → FastAPI), so no CORS in the browser.
 import type {
+  Brief,
   IngestJob,
   IngestRequest,
   LineageResponse,
@@ -85,6 +86,9 @@ export const api = {
   whatIfCurve: (id: string, feature: string) => request<WhatIfCurve>(`${ds(id)}/whatif/curve${q({ feature })}`),
   upload: (form: FormData) => request<Job>("/api/datasets", { method: "POST", body: form }),
   job: (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
+  brief: (text: string, dataset: string | null) =>
+    request<Brief>("/api/brief", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, dataset }) }),
+  briefSamples: () => request<{ name: string; text: string }[]>("/api/brief/samples"),
   // data-engineering layer
   sourceKinds: () => request<SourceKindsResponse>("/api/sources/kinds"),
   ingest: (body: IngestRequest) =>

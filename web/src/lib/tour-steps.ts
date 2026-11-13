@@ -34,6 +34,9 @@ const PAGES: Record<string, TourStep[]> = {
     { selector: '[data-tour="model-choice"]', title: "Chọn mô hình", description: "OBT, Star, Snowflake, Data Vault đều được sinh tự động; bảng này nói mô hình nào dùng cho việc gì." },
     { selector: '[data-insight-target^="model:"]', title: "Chi tiết mô hình", description: "Lý do chọn, danh sách bảng gold, ERD và SQL DuckDB đã chạy." },
   ],
+  "/brief": [
+    { selector: '[aria-label="Đề bài"]', title: "Dán đề bài", description: "Dán nguyên văn đề của BTC; kit trích câu hỏi, biến mục tiêu, đơn vị, loại quyết định và chọn gói kịch bản phù hợp." },
+  ],
   "/decision": [
     { selector: '[data-insight-target^="decision:"]', title: "Khuyến nghị", description: "Mỗi khuyến nghị sinh từ một insight đã kiểm định: vấn đề, hành động, tác động ước tính, mức tin cậy." },
   ],

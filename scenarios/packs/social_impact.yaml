@@ -1,0 +1,31 @@
+id: social_impact
+title: Tác động xã hội — y tế, giáo dục, môi trường, wellbeing
+sponsor: Goodenough College — Goodstart Fellow
+domain: generic
+keywords: [y te, benh vien, suc khoe, giao duc, truong hoc, hoc sinh, diem thi, moi truong, o nhiem, chat luong khong khi, pm2 5, nuoc sach, rac thai, wellbeing, hanh phuc, suc khoe tam than, cong dong, tac dong xa hoi, health, education, environment, air quality, pollution, mental health, wellbeing, community, social impact, gender]
+expected_columns:
+  - "Đơn vị: tỉnh/quận/trường/cơ sở y tế × thời gian"
+  - "Chỉ số kết quả: điểm thi, tỷ lệ bỏ học, tỷ lệ mắc bệnh, PM2.5, chỉ số hài lòng"
+  - "Nguồn lực: số giáo viên/bác sĩ, ngân sách, cơ sở vật chất"
+  - "Nhân khẩu: dân số, thu nhập, giới, vùng"
+kpis:
+  - "Chỉ số kết quả trên 1.000 dân / trên học sinh"
+  - "Khoảng cách giữa nhóm thuận lợi và bất lợi (vùng, giới, thu nhập)"
+  - "Nguồn lực trên đầu người"
+recipe:
+  - "Chuẩn hoá theo dân số; kiểm tra missing theo vùng (thiên lệch báo cáo)."
+  - "Khoảng cách nhóm (Mann–Whitney/Kruskal–Wallis + effect size)."
+  - "Drivers: nguồn lực vs kết quả (bootstrap CI); what-if tăng nguồn lực X%."
+  - "Câu chuyện con người: 1 nhóm bị bỏ lại phía sau, có số liệu đi kèm."
+decision_template:
+  who: "Sở Y tế/Giáo dục/TN-MT, tổ chức xã hội"
+  what: "Phân bổ nguồn lực có mục tiêu cho nhóm có kết quả kém nhất"
+  where: "Nhóm/vùng có khoảng cách lớn nhất và có ý nghĩa thống kê"
+  kpi: "Chỉ số kết quả chuẩn hoá theo dân số, đo hằng năm"
+  caveat: "Kết quả xã hội chịu nhiều yếu tố; dữ liệu hành chính có thể thiếu ở vùng khó khăn."
+deck_storyline:
+  - "Một con người/cộng đồng cụ thể → vấn đề"
+  - "Dữ liệu & đạo đức dữ liệu"
+  - "Khoảng cách và yếu tố liên quan"
+  - "Can thiệp đề xuất, chi phí–tác động (what-if)"
+  - "Đo lường & hạn chế"

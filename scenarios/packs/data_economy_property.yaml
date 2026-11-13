@@ -1,0 +1,33 @@
+id: data_economy_property
+title: "Unlocking the Data Economy — dữ liệu mở & bất động sản"
+sponsor: "Viet Nguyen-Tien (LSE) — talk 'Unlocking the Data Economy' 20/11 10:00"
+domain: property
+keywords: [bat dong san, nha o, can ho, dat nen, gia nha, gia ban, gia thue, dien tich, m2, quan, huyen, phap ly, kha nang chi tra, du lieu mo, open data, data economy, gia tri du lieu, scraping, tin dang, property, housing, rent, affordability, listing, real estate]
+expected_columns:
+  - "Mã tin, ngày đăng"
+  - "Tỉnh/TP, quận/huyện"
+  - "Loại BĐS, pháp lý"
+  - "Diện tích (m²), giá bán, giá thuê/tháng"
+  - "Thu nhập hộ (để tính khả năng chi trả)"
+kpis:
+  - "Giá/m² (engine tự sinh price_per_m2)"
+  - "Price-to-income = giá căn / thu nhập hộ năm"
+  - "Lợi suất cho thuê = giá thuê năm / giá bán"
+  - "Độ phủ dữ liệu: % tin có đủ giá, diện tích, vị trí (giá trị của dữ liệu mở)"
+recipe:
+  - "Parse số kiểu VN (\"1,2 tỷ\", \"15tr/m²\"), loại tin trùng, gắn cờ giá ngoại lai 3×IQR."
+  - "Chênh lệch giá/m² theo loại BĐS, tỉnh, vùng (Kruskal–Wallis, ε²)."
+  - "Khả năng chi trả theo vùng; lợi suất thuê theo loại."
+  - "Giá trị dữ liệu: so sánh kết luận khi có/không có nguồn mở bổ sung (scrape/API) — minh hoạ data economy."
+decision_template:
+  who: "Bộ Xây dựng / UBND tỉnh / ngân hàng chính sách"
+  what: "Ưu tiên nhà ở xã hội và công khai dữ liệu giao dịch ở khu vực khả năng chi trả thấp nhất"
+  where: "Vùng/tỉnh có price-to-income cao nhất"
+  kpi: "Price-to-income, số căn NOXH, độ phủ dữ liệu giao dịch"
+  caveat: "Giá tin đăng ≠ giá giao dịch; tin đăng online không đại diện toàn thị trường."
+deck_storyline:
+  - "Dữ liệu là tài sản: nguồn mở nào, chi phí thu thập, độ phủ"
+  - "Pipeline scraping có đạo đức (robots.txt, delay) + provenance"
+  - "Insight giá/m², khả năng chi trả"
+  - "Khuyến nghị chính sách nhà ở + đề xuất mở dữ liệu"
+  - "Hạn chế: thiên lệch tin đăng"

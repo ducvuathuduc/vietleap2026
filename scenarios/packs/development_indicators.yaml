@@ -1,0 +1,31 @@
+id: development_indicators
+title: Chỉ số phát triển & dashboard (World Bank)
+sponsor: "Sacha Dray (World Bank Việt Nam) — workshop dashboard 20/11 11:00"
+domain: public_finance
+keywords: [world bank, wdi, chi so phat trien, ngheo, bat binh dang, gini, tuoi tho, gdp binh quan, dau nguoi, quoc gia, asean, so sanh quoc te, sdg, development indicators, poverty, inequality, life expectancy, country, panel, benchmark]
+expected_columns:
+  - "country, iso3, year"
+  - "GDP/người, tăng trưởng GDP, lạm phát, FDI (% GDP)"
+  - "Thu/chi/thuế/nợ chính phủ (% GDP)"
+  - "Dân số, đô thị hoá, chi giáo dục/y tế (% GDP)"
+kpis:
+  - "Khoảng cách của Việt Nam so với trung vị nhóm so sánh"
+  - "Tăng trưởng kép (CAGR) theo giai đoạn"
+  - "Thu thuế/GDP, nợ/GDP so với ngưỡng tham chiếu"
+recipe:
+  - "Lấy WDI qua connector api (World Bank, paging + cache) hoặc file tải sẵn."
+  - "Panel quốc gia × năm: missing theo quốc gia/chỉ số (báo cáo, không đoán)."
+  - "Benchmark VN vs ASEAN/thu nhập trung bình: xếp hạng, khoảng cách, xu hướng (Spearman với năm)."
+  - "Drivers của thu thuế/GDP: GDP/người, đô thị hoá, FDI (liên đới)."
+decision_template:
+  who: "Chính phủ / nhà tài trợ phát triển"
+  what: "Ưu tiên cải cách ở chỉ số VN tụt hậu xa nhất so với nhóm so sánh"
+  where: "Chỉ số/giai đoạn có khoảng cách lớn và xu hướng xấu đi"
+  kpi: "Chỉ số WDI tương ứng, theo năm"
+  caveat: "WDI có độ trễ và thiếu số liệu; so sánh quốc tế khác định nghĩa."
+deck_storyline:
+  - "VN đang ở đâu so với khu vực"
+  - "Dashboard chỉ số (pipeline API → DuckDB → shadcn)"
+  - "3 khoảng cách lớn nhất"
+  - "Ưu tiên chính sách + KPI theo dõi"
+  - "Giới hạn dữ liệu"

@@ -1,0 +1,37 @@
+id: public_finance_province
+title: Tài chính công & ngân sách tỉnh
+sponsor: UEH School of Public Finance (đồng tổ chức)
+domain: public_finance
+keywords: [ngan sach, thu ngan sach, chi ngan sach, tai khoa, thue, nguon thu, chi thuong xuyen, chi dau tu, bo sung can doi, tu chu ngan sach, du toan, quyet toan, budget, fiscal, tax revenue, public spending, expenditure, transfer, decentralization]
+expected_columns:
+  - "Tỉnh/TP (63 cũ hoặc 34 mới theo NQ 202/2025/QH15)"
+  - "Năm"
+  - "Thu NSNN trên địa bàn / thu nội địa / thu thuế"
+  - "Chi NSĐP: chi đầu tư phát triển, chi thường xuyên"
+  - "Bổ sung cân đối từ NSTW (transfer)"
+  - "Dự toán vs thực hiện"
+  - "Dân số, GRDP (để chuẩn hoá bình quân đầu người, % GRDP)"
+kpis:
+  - "Tỷ lệ tự chủ ngân sách = thu trên địa bàn / chi NSĐP"
+  - "Mức phụ thuộc bổ sung từ TW (%) = bổ sung cân đối / tổng thu NSĐP"
+  - "Tỷ lệ thực hiện dự toán (%) = thực hiện / dự toán"
+  - "Thu, chi bình quân đầu người; thu/GRDP (%)"
+  - "Cơ cấu chi: đầu tư phát triển / tổng chi"
+recipe:
+  - "Chuẩn hoá tỉnh 63→34 và vùng KT-XH (engine có sẵn province_63_to_34.csv, province_region.csv)."
+  - "Tính KPI tự chủ, phụ thuộc, thực hiện dự toán (domain pack public_finance tự sinh cột dẫn xuất)."
+  - "So sánh vùng: Kruskal–Wallis + effect size ε²; xếp hạng tỉnh theo KPI, tách nhóm top/bottom."
+  - "Xu hướng theo năm (Spearman ρ với năm) và độ biến động; phát hiện tỉnh có thực hiện dự toán lệch > 3×IQR."
+  - "Drivers: hồi quy chuẩn hoá thu/đầu người theo GRDP/người, đô thị hoá, FDI (bootstrap CI) — liên đới, không nhân quả."
+decision_template:
+  who: "Bộ Tài chính / HĐND–UBND tỉnh"
+  what: "Điều chỉnh tỷ lệ phân chia nguồn thu và cơ chế bổ sung có mục tiêu cho nhóm tỉnh tự chủ thấp; đặt chỉ tiêu thực hiện dự toán"
+  where: "Nhóm tỉnh/vùng có KPI thấp nhất trong bảng xếp hạng"
+  kpi: "Tỷ lệ tự chủ ngân sách, tỷ lệ thực hiện dự toán, chi đầu tư phát triển/tổng chi"
+  caveat: "Sáp nhập tỉnh 2025 làm gãy chuỗi; số liệu dự toán ≠ quyết toán; tương quan không phải nhân quả."
+deck_storyline:
+  - "Vấn đề: chênh lệch tự chủ ngân sách giữa các tỉnh sau sáp nhập"
+  - "Dữ liệu & pipeline: nguồn (MOF công khai ngân sách, GSO), chuẩn hoá 63→34"
+  - "3 insight: chênh lệch vùng, xu hướng, tỉnh ngoại lai"
+  - "Quyết định: cơ chế phân bổ/bổ sung có mục tiêu"
+  - "Tác động ước tính (what-if) + hạn chế"

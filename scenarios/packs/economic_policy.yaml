@@ -1,0 +1,31 @@
+id: economic_policy
+title: Chính sách kinh tế vĩ mô & tác động chính sách
+sponsor: AVSE Global — Economic Policy Network (đồng tổ chức)
+domain: public_finance
+keywords: [chinh sach, tac dong chinh sach, lam phat, lai suat, tang truong, gdp, fdi, xuat khau, nhap khau, viec lam, that nghiep, tien luong, nang suat, policy, inflation, interest rate, growth, trade, employment, productivity, minimum wage, tariff, stimulus]
+expected_columns:
+  - "Đơn vị: quốc gia/tỉnh/ngành × năm/quý"
+  - "Chỉ số mục tiêu: tăng trưởng GDP/GRDP, việc làm, xuất khẩu, năng suất"
+  - "Biến chính sách: lãi suất, chi tiêu công, thuế, lương tối thiểu, mốc thời gian chính sách"
+  - "Biến kiểm soát: dân số, đô thị hoá, FDI, lạm phát"
+kpis:
+  - "Tăng trưởng (% so với cùng kỳ)"
+  - "Chênh lệch trước/sau chính sách giữa nhóm chịu tác động và nhóm đối chứng"
+  - "Độ co giãn (elasticity) của chỉ số mục tiêu theo biến chính sách"
+recipe:
+  - "Xác định mốc chính sách và nhóm chịu tác động; kiểm tra xu hướng song song trước mốc (biểu đồ)."
+  - "So sánh trước/sau (Mann–Whitney) và chênh lệch-trong-chênh lệch đơn giản; báo cáo CI bằng bootstrap."
+  - "Panel: hồi quy chuẩn hoá có kiểm soát; drivers + what-if với khoảng 90%."
+  - "Kiểm định độ vững: bỏ ngoại lai (đã gắn cờ 3×IQR), đổi khoảng thời gian."
+decision_template:
+  who: "Cơ quan hoạch định chính sách (Bộ/ngành, NHNN, UBND tỉnh)"
+  what: "Giữ/điều chỉnh/mở rộng chính sách theo nhóm có tác động rõ nhất"
+  where: "Nhóm ngành/vùng có chênh lệch lớn và có ý nghĩa thống kê"
+  kpi: "Chỉ số mục tiêu đo theo quý, có nhóm đối chứng"
+  caveat: "Dữ liệu quan sát: DiD cần giả định xu hướng song song; cú sốc đồng thời (COVID, sáp nhập) gây nhiễu."
+deck_storyline:
+  - "Câu hỏi chính sách và mốc thời gian"
+  - "Dữ liệu & cách dựng nhóm đối chứng"
+  - "Kết quả trước/sau + độ vững"
+  - "Khuyến nghị chính sách theo nhóm, KPI giám sát"
+  - "Hạn chế nhân quả"

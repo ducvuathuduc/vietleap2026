@@ -28,6 +28,29 @@ def _print(s):
         print(f"  ✗ {f['step']}: {f['error']}")
 
 
+def _brief(a):
+    import json
+
+    from vlkit.brief import parse_brief
+    from vlkit.de.connectors import ingest
+    from vlkit.de.sources import Source
+    cols = None
+    if a.data:
+        frames = ingest(Source("brief_data", "file", str(Path(a.data).resolve()))).frames
+        cols = list(next(iter(frames.values())).columns)
+    b = parse_brief(Path(a.path).read_text(encoding="utf-8"), columns=cols)
+    out = json.dumps(b, ensure_ascii=False, indent=2)
+    if a.out:
+        Path(a.out).write_text(out, encoding="utf-8")
+    t = b["target"] or {}
+    print(f"target: {t.get('label')} → {t.get('column')}  ({t.get('resolved')})")
+    print(f"pack:   {(b['pack'] or {}).get('id')}   units: {', '.join(b['units'])}   segments: {', '.join(b['segments'])}")
+    for line in b["plan"]:
+        print(f"  • {line}")
+    if not a.out:
+        print(out)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -38,6 +61,8 @@ def main(argv=None):
         p.add_argument("--target"); p.add_argument("--out")
     sub.add_parser("tables")
     q = sub.add_parser("sql"); q.add_argument("query"); q.add_argument("--limit", type=int, default=50)
+    b = sub.add_parser("brief", help="đề bài (.md/.txt) → brief.json"); b.add_argument("path")
+    b.add_argument("--data", help="dataset file to resolve the target column against"); b.add_argument("--out", help="write brief.json here")
     a = ap.parse_args(argv)
     if a.cmd in ("file", "run"):
         sk = {"target": a.target} if a.target else {}
@@ -47,6 +72,8 @@ def main(argv=None):
             ds, sources, _keys = load_sources(a.yaml)
             s = run_flow(ds, sources, impute=a.impute, serve=a.serve, primary=a.primary, serve_kwargs=sk, out_root=a.out)
         _print(s)
+    elif a.cmd == "brief":
+        _brief(a)
     elif a.cmd == "tables":
         wh = Warehouse()
         for t in wh.tables():

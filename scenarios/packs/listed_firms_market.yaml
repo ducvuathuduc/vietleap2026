@@ -1,0 +1,34 @@
+id: listed_firms_market
+title: Doanh nghiệp niêm yết & dữ liệu thị trường
+sponsor: FiinGroup (đối tác dữ liệu thị trường VN)
+domain: firm
+keywords: [doanh nghiep, niem yet, co phieu, ma ck, san, hose, hnx, upcom, nganh, bao cao tai chinh, doanh thu, loi nhuan, roe, roa, eps, p e, von hoa, no vay, thanh khoan, gia co phieu, listed, stock, ticker, sector, financial statements, valuation, market cap, leverage]
+expected_columns:
+  - "Mã CK, Sàn, Ngành (ICB)"
+  - "Kỳ báo cáo (quý/năm)"
+  - "Doanh thu thuần, giá vốn, lợi nhuận gộp, LNST"
+  - "Tổng tài sản, nợ phải trả, vốn chủ sở hữu, hàng tồn kho, tiền"
+  - "Giá đóng cửa, khối lượng, vốn hoá (nếu có dữ liệu thị trường)"
+kpis:
+  - "ROE (%), ROA (%), biên LN gộp/ròng (%) — engine tự sinh (domain firm)"
+  - "Nợ/vốn chủ, nợ/tài sản"
+  - "Tăng trưởng doanh thu/LNST so với cùng kỳ"
+  - "Lợi suất cổ phiếu, P/E, P/B nếu có giá"
+recipe:
+  - "Gộp nhiều sheet/quý (connector file đọc mọi sheet) → OBT theo mã × kỳ."
+  - "Leakage guard: không giải thích ROE bằng chính LNST/vốn chủ."
+  - "So sánh sàn/ngành: Kruskal–Wallis + Mann–Whitney top vs bottom, effect size."
+  - "Drivers của ROE: đòn bẩy, biên LN, vòng quay tài sản (DuPont), bootstrap CI."
+  - "Phân cụm doanh nghiệp (k-means) để tìm nhóm rủi ro/hiệu quả."
+decision_template:
+  who: "Nhà đầu tư / cơ quan quản lý thị trường / ban điều hành doanh nghiệp"
+  what: "Ưu tiên/giám sát nhóm ngành–sàn theo hiệu quả và đòn bẩy"
+  where: "Ngành/sàn có ROE thấp và nợ cao (nhóm rủi ro)"
+  kpi: "ROE, nợ/vốn chủ, biên LN ròng theo quý"
+  caveat: "ROE theo kỳ chưa annualise; ngân hàng/bảo hiểm có cấu trúc BCTC khác; sống sót (survivorship) trên sàn."
+deck_storyline:
+  - "Bối cảnh thị trường & dữ liệu (nguồn, kỳ, license)"
+  - "Pipeline BCTC nhiều quý → OBT/Star"
+  - "Insight: chênh lệch sàn/ngành, drivers ROE (DuPont)"
+  - "Khuyến nghị cho nhà đầu tư/quản lý"
+  - "Hạn chế dữ liệu"

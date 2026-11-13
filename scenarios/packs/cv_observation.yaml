@@ -1,0 +1,30 @@
+id: cv_observation
+title: Từ quan sát đến dữ liệu — computer vision đếm đối tượng
+sponsor: "Chi-Yu Lee (Konstanz) — object tracking, 19/11 15:30"
+domain: generic
+keywords: [video, camera, hinh anh, dem xe, dem nguoi, giao thong, un tac, luu luong, nut giao, theo doi doi tuong, object tracking, computer vision, yolo, counting, traffic, pedestrian, footfall, congestion, observation]
+expected_columns:
+  - "timestamp (theo khung 1 phút/15 phút)"
+  - "class (car, motorcycle, bus, person…)"
+  - "in, out qua vạch đếm; vị trí camera"
+kpis:
+  - "Lưu lượng theo giờ và theo loại phương tiện"
+  - "Giờ cao điểm, tỷ trọng xe máy/ô tô"
+  - "Chênh lệch giữa các điểm quan sát / ngày trong tuần"
+recipe:
+  - "scenarios/cv_counting/count.py (YOLO + ByteTrack + LineZone) → counts.csv; ghi license video."
+  - "Đưa counts.csv vào pipeline (connector cv) → bronze/silver/gold."
+  - "Chuỗi thời gian: cao điểm, so sánh khung giờ (Kruskal–Wallis), xu hướng."
+  - "Kiểm tra độ chính xác: đếm tay 1–2 phút mẫu để báo sai số."
+decision_template:
+  who: "Sở GTVT / UBND quận / ban quản lý khu vực"
+  what: "Điều chỉnh pha đèn, phân luồng, bố trí xe buýt trong giờ cao điểm"
+  where: "Nút/khung giờ có lưu lượng cao nhất"
+  kpi: "Lưu lượng/giờ, thời gian chờ ước tính, tỷ lệ phương tiện công cộng"
+  caveat: "Mẫu video ngắn không đại diện mọi ngày; sai số nhận diện ban đêm/mưa."
+deck_storyline:
+  - "Quan sát → dữ liệu: camera thành bảng đếm"
+  - "Pipeline CV → DuckDB → dashboard"
+  - "Insight cao điểm & cơ cấu phương tiện"
+  - "Đề xuất điều tiết + KPI"
+  - "Sai số mô hình & đạo đức (không lưu khuôn mặt)"
