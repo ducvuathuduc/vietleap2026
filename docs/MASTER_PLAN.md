@@ -4,29 +4,34 @@
 
 ---
 
-## 0. TRẠNG THÁI (cập nhật 13/11/2026 16:30) — Codex đọc mục này trước
+## 0. TRẠNG THÁI (cập nhật 14/11/2026) — đọc mục này trước
 
-**ĐÃ XONG & ĐÃ TEST (83 test pass, `pytest -q tests`)** — nền móng Data Engineering, đúng 4 giai đoạn workshop:
+**Lịch BTC đã xác nhận (giờ Việt Nam):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 15:30** Chi-Yu Lee (Konstanz) *From observation to data* (object tracking CV) · **20/11 09:00** công bố đề + chia đội ngẫu nhiên · **20/11 10:00** Viet Nguyen-Tien (LSE) *Unlocking the Data Economy* · **20/11 11:00** Sacha Dray (World Bank VN) workshop Dashboard · **21/11 13:00** hạn nộp · **21/11 13:15** pitch.
 
-| Giai đoạn | File | Đã chạy thật |
+### Đã xong & đã push (pytest 104 pass; `npm run lint`, `npm test`, `npm run build` pass)
+
+| Task | Nội dung | Commit |
 |---|---|---|
-| Ingestion | `engine/vlkit/de/connectors.py` — file (csv/xlsx nhiều sheet/json/parquet/zip), api (paging page/offset/next/worldbank, retry 429/5xx + Retry-After, rate limit, cache đĩa, token qua biến môi trường), sql (SQLAlchemy, chỉ SELECT, ẩn mật khẩu trong provenance), scrape (robots.txt, delay, bảng HTML `largest` hoặc CSS selector + phân trang, Playwright khi `render_js`), social (RSS/Atom, Google Trends tuỳ chọn), cv (CSV đếm hoặc video → count.py) | `scenarios/demo/sources.yaml`: 5 loại nguồn thật (CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress) chạy ~3,5 s |
-| Storage | `engine/vlkit/de/warehouse.py` — DuckDB `data/warehouse.duckdb`, schema bronze/silver/gold/meta (sources, runs, lineage, quality), bản Parquet `data/lake/<layer>/`, `sql()` read-only có chặn DDL/DML/read_csv/COPY | ✓ |
-| Transform | `quality.py` (missing, blank, duplicate dòng + khoá ứng viên, outlier 3×IQR gắn cờ không xoá, số lưu dạng chữ kiểu VN, số âm vô lý, cột hằng; điểm 0–100 trước/sau; cleaning log; `--impute median` có cột cờ) · `modeling.py` sinh SQL DuckDB cho **OBT, Star (dim_date/dim_geo/dim_<category>), Snowflake (tỉnh → tỉnh 2025 → vùng; ngày → tháng → năm), Data Vault 2.0 (hub md5 business key, link, satellite + hashdiff, load_dts, record_source)**, ERD Mermaid, file `out/<ds>/models/*.sql` | Hà Nội 81.681 dòng: điểm 84,9 → 92,4; 4 mô hình, ~20 s |
-| Serving | `flow.py` → `out/<ds>/pipeline.json, quality.json, lineage.json/.mmd, provenance.json`; insight engine cũ chạy trên gold OBT (`--serve`); API `api/routes/pipeline.py` | ✓ |
+| T1–T5 Lớp DE | Ingestion `engine/vlkit/de/connectors.py` (file csv/xlsx/json/parquet/zip, api có paging/retry/rate-limit/cache, sql SELECT-only, scrape tôn trọng robots.txt, social RSS/Trends, cv) → Storage DuckDB bronze/silver/gold/meta + Parquet lake → Transform `quality.py` (missing/duplicate/outlier 3×IQR gắn cờ, điểm 0–100 trước/sau, cleaning log) + `modeling.py` (OBT, Star, Snowflake, Data Vault 2.0, ERD Mermaid) → Serving `flow.py` (pipeline/quality/lineage/provenance JSON) + API FastAPI | 2e9674c |
+| T6 Web | shadcn dashboard-01 (không restyle): Tổng quan, Nguồn, Pipeline (lineage mermaid), Chất lượng, Mô hình (Tabs 4 mô hình + ERD + SQL), SQL Explorer, Hồ sơ, Insight, Drivers & What-if, Phân khúc, Quyết định | 0e8be9b |
+| T7 AI Analyst | Vercel AI SDK v7 `/api/chat` (streamText + 11 tool gọi FastAPI, Groq hoặc OpenAI-compatible qua env, offline không cần key) + trang Analyst | 953057a |
+| Explain-anything | driver.js tour "Hướng dẫn" + chế độ "Hỏi AI" (rê/bấm phần tử `data-insight-target` → Sheet AI giải thích, offline deterministic có unit test) | b225042 |
+| T8 Đề → brief | `engine/vlkit/brief.py` rule-based VI/EN, 7 scenario pack (`scenarios/packs/`), 11 đề mẫu (`scenarios/briefs/`), `POST /api/brief`, trang Đề bài | 2609808 |
+| Fix + Makefile | không chuẩn hoá tỉnh 2 lần; `make setup/api/web/web-dev/demo/demo-online/brief/test` | 757df0c, a4483a2 |
 
-Lệnh: `python de.py file <path> [--serve]` · `python de.py run scenarios/demo/sources.yaml --primary vn_housing` · `python de.py tables` · `python de.py sql "SELECT ..."`.
-API mới (đã gọi thật qua uvicorn): `GET /api/sources/kinds`, `POST /api/ingest` (job nền) + `GET /api/ingest/{id}`, `GET /api/warehouse/tables`, `GET /api/warehouse/tables/{fq}/columns`, `POST /api/sql`, `GET /api/datasets/{ds}/pipeline|quality|lineage|models|provenance`. Upload cũ `POST /api/datasets` giờ tự chạy pipeline DE trước insight.
-Tham chiếu vùng: `engine/vlkit/resources/province_region.csv` (63 tỉnh → 6 vùng KT-XH, GSO).
+Đã chạy thật: `scenarios/demo/sources.yaml` (5 loại nguồn: CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress); Hà Nội 81.681 tin (điểm chất lượng 84,9 → 92,4); 3 dataset practice (`data/practice/`).
 
-Lưu ý môi trường: máy có HTTP_PROXY → khi gọi localhost bằng httpx/curl đặt `NO_PROXY=localhost,127.0.0.1`.
+Lệnh: `make api` · `make web` · `make demo` · `python de.py file <path> --serve` · `python de.py run <sources.yaml> --primary <ds> --serve` · `python de.py brief <đề.md> --data <file>` · `python de.py sql "SELECT ..."`.
+Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. Máy yếu: không chạy `npm run build` song song với pytest/engine.
 
-**CODEX LÀM TIẾP THEO THỨ TỰ NÀY** (T1–T5 bên dưới coi như xong; chỉ sửa nếu test lỗi):
-1. **T6 Web** — thêm vào shadcn dashboard-01 các trang: `pipeline` (4 Card Ingestion/Storage/Transform/Serving lấy từ `/api/datasets/{ds}/pipeline`, bảng `steps`, sơ đồ `lineage.mermaid` render bằng npm `mermaid`), `sources` (form thêm nguồn theo `/api/sources/kinds` → `POST /api/ingest`, poll job), `quality` (SectionCards điểm trước/sau, DataTable `cleaning_log` + `issues`), `model` (Tabs OBT/Star/Snowflake/Data Vault: ERD mermaid + SQL trong code block + `rationale`), `sql` (Textarea + DataTable, ví dụ câu SQL join fact–dim), `decision`. Không restyle. `npm run lint && npm run build` phải pass. Trang `web/src/app/(dashboard)/analyst` và `report` trong thư mục làm việc là bản dở dang chưa kiểm tra — viết lại.
-2. **T7 AI Analyst** (Vercel AI SDK, deps đã có trong package.json): tools thêm `listTables` → `/api/warehouse/tables`, `runSql` → `/api/sql`, `getModels`, `getQuality`, `getLineage`.
-3. **T8** dán đề → brief. 4. **T9** CV `scenarios/cv_counting/count.py` (connector `cv` đã gọi sẵn script này với `--video --out` + options). 5. **T10** deck thêm slide Pipeline / Data model / Quality / Provenance. 6. **T11** README, PLAYBOOK, Makefile. 7. T12 tuỳ chọn.
+### Còn lại (theo thứ tự)
+1. **T11 docs** — `docs/PLAYBOOK.md` (lịch theo giờ, vai trò đội 4–5 người kể cả người không code), `docs/CONTEXT.md` (bối cảnh, nhà tài trợ → miền đề có thể ra), README quickstart 1 trang.
+2. **AI layer wow/robustness** — tour/inspect không crash khi thiếu phần tử, Esc thoát, chạy mọi trang; nút **"Câu chuyện insight"**: agent (hoặc engine offline) kể top-5 insight, driver.js lần lượt highlight thẻ/biểu đồ tương ứng.
+3. **T10 deck** — slide Data pipeline, Data model (OBT vs Star vs Snowflake vs Data Vault & vì sao), Data quality trước/sau, Provenance, Limitations, Policy recommendation; `slides/pitch.md` (Marp) 7 phút; kiểm tra tràn chữ.
+4. **T9 CV** — `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → `counts.csv`), báo lỗi thân thiện khi thiếu ultralytics; README; test không tải model lớn.
+5. **T12 (tuỳ chọn)** — docker-compose, GitHub Actions.
 
-**Việc nhỏ còn mở cho lớp DE:** conformed dimension giữa nhiều nguồn (join theo tỉnh/năm khi ≥2 bảng silver chung khoá — `load_sources` đã đọc `keys:` trong YAML nhưng chưa dùng); dim_geo cho dữ liệu quận/huyện (hiện thành dim_<cột> thường); incremental load theo `_row_hash` (hiện ghi đè).
+**Việc nhỏ còn mở cho lớp DE:** conformed dimension giữa nhiều nguồn (join theo tỉnh/năm khi ≥2 bảng silver chung khoá — `load_sources` đã đọc `keys:` nhưng chưa dùng); dim_geo cho quận/huyện; incremental load theo `_row_hash` (hiện ghi đè); screenshot `docs/screenshots/` cho T6.
 
 ---
 
@@ -36,15 +41,15 @@ Lưu ý môi trường: máy có HTTP_PROXY → khi gọi localhost bằng httpx
 |---|---|---|---|
 | Tên: *From Data to Decision*; 2 track: **Data & Analytics** (dashboard + data pipeline) và **Presentation** | vietleap2026.com | Chấm cả pipeline lẫn dashboard lẫn câu chuyện ra quyết định | Pipeline có lineage nhìn thấy được, dashboard, trang "Decision" |
 | Workshop 16/11 19:00 online — *Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp* (Lưu Đức Cảnh, Data Engineer – Tasco): **Ingestion → Storage → Transform → Serving**; nguồn **Database/JDBC, Public API, file tải trực tiếp, Web Scraping, Social listening** (quyền truy cập, giới hạn API, chống chặn); làm sạch **missing, duplicate, outlier**; mô hình **OBT / Star Schema / Snowflake / Data Vault** "phù hợp quy mô và thời gian hackathon" | poster BTC | Đề rất có thể cho **dữ liệu rải rác nhiều nguồn/nhiều file**, yêu cầu tự thu thập bổ sung, và giám khảo hỏi "các bạn mô hình dữ liệu thế nào, vì sao" | Connector đủ 5 loại nguồn, DuckDB bronze/silver/gold, nhật ký làm sạch, sinh **OBT + Star schema** tự động, sơ đồ lineage + ERD trên dashboard |
-| Workshop Chi-Yu Lee (Konstanz): *From observation to data — object tracking in computer vision* | agenda | Có thể có đề đếm/đếm luồng (giao thông, người) từ video/ảnh | `scenarios/cv_counting` (YOLO + ByteTrack → CSV đếm theo thời gian → đưa vào pipeline) |
-| Diễn giả Viet Nguyen-Tien (LSE) — open property data | agenda | Dữ liệu BĐS (giá/m², quận, diện tích) | Domain pack BĐS (đã có, Hà Nội 81.681 tin đã chạy) |
-| Diễn giả Sacha Dray (World Bank VN) — dashboard | agenda | Dữ liệu vĩ mô/WDI, chỉ số phát triển | Domain pack vĩ mô (đã có, WDI Asia) |
+| Talk Chi-Yu Lee (Konstanz) **19/11 15:30**: *From observation to data — object tracking in computer vision* | agenda | Có thể có đề đếm/đếm luồng (giao thông, người) từ video/ảnh | `scenarios/cv_counting` (YOLO + ByteTrack → CSV đếm theo thời gian → đưa vào pipeline) |
+| Talk Viet Nguyen-Tien (LSE) **20/11 10:00**: *Unlocking the Data Economy* (dữ liệu mở, kinh tế dữ liệu; từng làm open property data) | agenda | Giá trị của dữ liệu mở/dữ liệu thay thế; có thể là dữ liệu BĐS (giá/m², quận, diện tích) | Domain pack BĐS (đã có, Hà Nội 81.681 tin đã chạy) |
+| Sacha Dray (World Bank VN) **20/11 11:00** — workshop Dashboard | agenda | Dữ liệu vĩ mô/WDI, chỉ số phát triển | Domain pack vĩ mô (đã có, WDI Asia) |
 | Host: UEH **School of Public Finance** + AVSE **Economic Policy Network** | website | Ngôn ngữ chính sách công, tài khóa, ngân sách tỉnh; khuyến nghị phải "evidence-based" | Trang Decision: khuyến nghị + mức tin cậy + caveat nhân quả; chuẩn hoá 63→34 tỉnh (NQ 202/2025/QH15) |
 | Partner **FiinGroup** (dữ liệu thị trường VN), RAF | poster | Có thể là dữ liệu doanh nghiệp niêm yết/tài chính | Domain pack tài chính DN (đã có, HOSE vs UPCoM ROE) |
 | Sponsor Goodenough College / **Goodstart Fellow** (dự án tác động cộng đồng: y tế, giáo dục, môi trường, wellbeing) | website | Đề có thể mang màu "social impact" | Template câu chuyện tác động xã hội trong deck |
 | Bài test đầu vào: tự thu thập Google Trends + ghi **provenance** (nguồn, ngày tải, cài đặt) | bài anh đã nộp | BTC coi trọng **nguồn gốc dữ liệu & minh bạch phương pháp** | Mọi dataset sinh `provenance.json` + trang "Data sources" |
 | Giám khảo: UEH, Western Sydney, Coventry, Roehampton, FiinGroup | website | Hội đồng học thuật → hỏi về kiểm định, nhân quả, hạn chế | Mỗi insight kèm p-value/effect size/CI; slide "Limitations" |
-| Lập đội ngẫu nhiên 20/11; ~28 giờ build; pitch 13:15–15:15 | agenda | Kit phải chạy được trên máy yếu, setup < 10 phút, đồng đội không biết code vẫn dùng được | `make demo`, README 1 trang, UI upload kéo-thả |
+| 20/11 09:00 công bố đề + lập đội ngẫu nhiên; ~28 giờ build; nộp 21/11 13:00, pitch từ 13:15 | agenda | Kit phải chạy được trên máy yếu, setup < 10 phút, đồng đội không biết code vẫn dùng được | `make demo`, README 1 trang, UI upload kéo-thả |
 
 **Kết luận:** đề có xác suất cao là *"đây là dữ liệu (thô, nhiều nguồn) về một vấn đề kinh tế/xã hội VN — hãy xây pipeline + dashboard và đưa ra khuyến nghị quyết định"*. Kit thắng nhờ: (1) pipeline DE chuẩn đúng 4 giai đoạn diễn giả dạy, (2) dashboard shadcn chuyên nghiệp, (3) insight có thống kê, (4) khuyến nghị chính sách rõ ràng, (5) câu chuyện pitch sẵn khung.
 
@@ -185,8 +190,9 @@ Lý do chọn (để trả lời giám khảo):
 
 | Thời điểm | Việc |
 |---|---|
-| 19/11 tối | `git pull`, `make setup`, `make demo` trên laptop thi; tải sẵn model YOLOv8n; kiểm tra wifi UEH |
+| 19/11 | 15:30 nghe Chi-Yu Lee (CV tracking); tối: `git pull`, `make setup`, `make demo` trên laptop thi; tải sẵn model YOLOv8n; kiểm tra wifi UEH |
 | 20/11 09:00 | Nghe briefing, chụp đề. Dán đề vào trang **Brief** |
+| 20/11 10:00–12:00 | Talk LSE *Unlocking the Data Economy* (10:00) + workshop Dashboard World Bank (11:00): 1–2 người nghe & ghi ý giám khảo, phần còn lại chạy pipeline |
 | +30' | Thả dataset (Upload) → pipeline chạy bronze/silver/gold + insight. Đọc Quality & Data Model |
 | +2h | Bổ sung nguồn ngoài (API/scrape) nếu đề cho phép → join conformed dim |
 | Chiều 20/11 | Chọn 3 insight mạnh nhất (effect size lớn, p nhỏ, liên quan quyết định); what-if; viết khuyến nghị |
