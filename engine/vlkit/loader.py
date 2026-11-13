@@ -249,6 +249,11 @@ def clean(df: pd.DataFrame, log: list[str] | None = None) -> CleanResult:
     roles = {c: guess_role(c, df[c], len(df)) for c in df.columns}
     # province normalisation for geo columns
     for c in [c for c, r in roles.items() if r == "geo"]:
+        if c.endswith(("__province", "__province_2025")):
+            continue  # already normalised upstream (DE silver/gold layer) — don't re-suffix to '__province__province'
+        if f"{c}__province" in df.columns:
+            roles[c] = "geo_raw"
+            continue
         if not is_texty(df[c]):
             continue
         norm = df[c].map(vn.normalize_province)

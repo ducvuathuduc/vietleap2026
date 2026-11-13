@@ -51,3 +51,17 @@ def test_merger_csv_complete(kit_root):
 
 def test_to_new_province_none():
     assert to_new_province(None) is None
+
+
+def test_already_normalised_province_columns_are_not_resuffixed(tmp_path):
+    """Gold OBT already carries 'X__province'; the insight loader must not create 'X__province__province'."""
+    import pandas as pd
+    from vlkit.loader import load_and_clean
+    df = pd.DataFrame({"Tỉnh/TP": ["Hà Nội", "TP.HCM", "Đà Nẵng"] * 20,
+                       "Tỉnh/TP__province": ["Hà Nội", "Hồ Chí Minh", "Đà Nẵng"] * 20,
+                       "Giá": list(range(60))})
+    p = tmp_path / "x.csv"
+    df.to_csv(p, index=False)
+    out = load_and_clean(p)
+    cols = out.df.columns
+    assert not any(c.endswith("__province__province") for c in cols), list(cols)
