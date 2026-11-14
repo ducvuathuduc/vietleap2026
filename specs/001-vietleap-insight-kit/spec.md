@@ -16,6 +16,35 @@ be reachable from the browser (tour, Hỏi AI, Câu chuyện, one-click export).
 fiscal policy ~30%, listed firms / capital markets ~20%, WDI Vietnam vs ASEAN ~15%, energy / EV / data economy ~15%, social ~10%,
 traffic CV ~10%. Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). Pitch may be judged in English → bilingual deck/pitch.
 
+## Business workflow
+Full version with mermaid flow, per-stage input→output→owner, collection notes and model decision matrix: [docs/WORKFLOW.md](../../docs/WORKFLOW.md).
+Based on the organizer workshop *"Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp"* (Lưu Đức Cảnh, Tasco, 16/11/2026 19:00)
+and Sacha Dray's (World Bank) dashboard workshop (20/11 11:00).
+
+1. **Policy question first** — đề → `brief.json` → one-line decision question (who decides what, measured by which KPI).
+2. **Ingestion** by situation — Database/JDBC (read-only account, SELECT only), Public API (rate limit, pagination, retry/backoff, cache,
+   keys in env), direct file download (encoding/sheets, record URL + licence), Web scraping (robots.txt, throttling, User-Agent, cache,
+   bounded retries, ToS, no captcha/login bypass), Social listening (RSS/Trends, headlines only, sampling bias).
+3. **Storage** — DuckDB bronze + Parquet lake with provenance; incremental reloads by `_row_hash`.
+4. **Transform** — cleaning (missing, duplicates, outliers flagged not deleted, quality score before/after) → modelling chosen by data
+   scale × hackathon time: OBT serves dashboard/insights, Star is the semantic model to present, Snowflake for geographic hierarchies,
+   Data Vault to show auditability trade-offs; conformed dims when sources share province/year.
+5. **Analysis** — tested insights, drivers, what-if with CI, forecast; association ≠ causation.
+6. **Serving** — decision-oriented KPIs (3–5, each with comparison), **one question per view**, uncertainty shown, sources traceable;
+   dashboard, AI Analyst, Câu chuyện, deck/pitch.
+
+### User Story 0 — Economist judge evaluates the decision (Priority: P1)
+**As** an economist judge (UEH School of Public Finance, World Bank, LSE, FiinGroup) **I want** the policy question first, then
+tested evidence (n, p, effect, CI) with causal limits, then the recommendation and KPI, **so that** I can trust the decision.
+**Acceptance**: **Given** a finished run, **When** the judge opens the deck or dashboard, **Then** the policy question is stated
+up front, every insight shows test/p/effect/n, a Limitations slide exists, and any number can be re-derived with SQL in ≤ 30 s.
+
+### User Story 0b — Non-coder teammate builds the story (Priority: P1)
+**As** a business/social-science teammate who does not code **I want** to understand every chart and take numbers for slides from the
+browser only, **so that** I contribute without a terminal.
+**Acceptance**: **Given** the dashboard, **When** the teammate uses Hướng dẫn, Hỏi AI, Câu chuyện and Export, **Then** every step
+works without CLI, in Vietnamese, offline if needed.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Actors: **Analyst** (thành viên đội biết code), **Presenter** (thành viên không code, điều khiển dashboard khi pitch),
