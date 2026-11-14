@@ -328,7 +328,9 @@ def ingest_cv(src: Source) -> IngestResult:
         args = [sys.executable, str(script), "--video", str(p), "--out", str(out)]
         for k, v in src.options.items():
             args += [f"--{k}", str(v)]
-        subprocess.run(args, check=True)
+        r = subprocess.run(args, capture_output=True, text=True)
+        if r.returncode != 0:  # e.g. 2 = ultralytics/supervision not installed (count.py explains how to fix)
+            raise RuntimeError(f"count.py failed (exit {r.returncode}): {(r.stderr or r.stdout).strip()[-800:]}")
         p = out
     frames = {src.name: pd.read_csv(p)}
     return IngestResult(src, frames, make_provenance(src, frames))

@@ -8,7 +8,7 @@
 
 **Lịch BTC đã xác nhận (giờ Việt Nam):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 15:30** Chi-Yu Lee (Konstanz) *From observation to data* (object tracking CV) · **20/11 09:00** công bố đề + chia đội ngẫu nhiên · **20/11 10:00** Viet Nguyen-Tien (LSE) *Unlocking the Data Economy* · **20/11 11:00** Sacha Dray (World Bank VN) workshop Dashboard · **21/11 13:00** hạn nộp · **21/11 13:15** pitch.
 
-### Đã xong & đã push (pytest 104 pass; `npm run lint`, `npm test`, `npm run build` pass)
+### Đã xong & đã push (pytest 116 pass + 1 skip; `npm test` 20 pass; `npm run lint`, `npm run build` pass)
 
 | Task | Nội dung | Commit |
 |---|---|---|
@@ -18,6 +18,10 @@
 | Explain-anything | driver.js tour "Hướng dẫn" + chế độ "Hỏi AI" (rê/bấm phần tử `data-insight-target` → Sheet AI giải thích, offline deterministic có unit test) | b225042 |
 | T8 Đề → brief | `engine/vlkit/brief.py` rule-based VI/EN, 7 scenario pack (`scenarios/packs/`), 11 đề mẫu (`scenarios/briefs/`), `POST /api/brief`, trang Đề bài | 2609808 |
 | Fix + Makefile | không chuẩn hoá tỉnh 2 lần; `make setup/api/web/web-dev/demo/demo-online/brief/test` | 757df0c, a4483a2 |
+| T11 docs | README quickstart, `docs/PLAYBOOK.md`, `docs/CONTEXT.md` | a712972 |
+| AI story | nút "Câu chuyện" (top-5 insight, driver.js lần lượt từng thẻ, kiểm số chống bịa), tour/inspect chống crash | 253f761 |
+| T10 deck | 15 slide (pipeline, mô hình, chất lượng, chính sách, hạn chế, provenance), fit chữ + kiểm tràn, `pitch.md` Marp | d3208b3 |
+| T9 CV | `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → counts.csv, `--events` không cần torch) | (commit này) |
 
 Đã chạy thật: `scenarios/demo/sources.yaml` (5 loại nguồn: CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress); Hà Nội 81.681 tin (điểm chất lượng 84,9 → 92,4); 3 dataset practice (`data/practice/`).
 
@@ -28,7 +32,7 @@ Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. M�
 1. ✅ **T11 docs** (xong 14/11) — `docs/PLAYBOOK.md` (lịch theo giờ, vai trò đội 4–5 người kể cả người không code), `docs/CONTEXT.md` (bối cảnh, nhà tài trợ → miền đề có thể ra), README quickstart 1 trang.
 2. ✅ **AI layer wow/robustness** (xong 14/11: `web/src/lib/analyst/story.ts` + `/api/story`, kiểm số chống bịa, test node) — tour/inspect không crash khi thiếu phần tử, Esc thoát, chạy mọi trang; nút **"Câu chuyện insight"**: agent (hoặc engine offline) kể top-5 insight, driver.js lần lượt highlight thẻ/biểu đồ tương ứng.
 3. ✅ **T10 deck** (xong 14/11: `report.py` fit chữ + `deck_overflow()`, `out/<ds>/pitch.md`, `slides/pitch.md`, `tests/test_deck.py`) — slide Data pipeline, Data model (OBT vs Star vs Snowflake vs Data Vault & vì sao), Data quality trước/sau, Provenance, Limitations, Policy recommendation; `slides/pitch.md` (Marp) 7 phút; kiểm tra tràn chữ.
-4. **T9 CV** — `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → `counts.csv`), báo lỗi thân thiện khi thiếu ultralytics; README; test không tải model lớn.
+4. ✅ **T9 CV** (xong 14/11: `scenarios/cv_counting/count.py` + README, `tests/test_cv_counting.py`; chưa chạy YOLO thật — cần `pip install ultralytics supervision` + video có giấy phép) — `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → `counts.csv`), báo lỗi thân thiện khi thiếu ultralytics; README; test không tải model lớn.
 5. **T12 (tuỳ chọn)** — docker-compose, GitHub Actions.
 
 **Việc nhỏ còn mở cho lớp DE:** conformed dimension giữa nhiều nguồn (join theo tỉnh/năm khi ≥2 bảng silver chung khoá — `load_sources` đã đọc `keys:` nhưng chưa dùng); dim_geo cho quận/huyện; incremental load theo `_row_hash` (hiện ghi đè); screenshot `docs/screenshots/` cho T6.
