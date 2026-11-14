@@ -28,6 +28,7 @@ RATIONALE = {
     "obt": "Một bảng phẳng: truy vấn dashboard/ML nhanh nhất, dễ cho đồng đội không rành SQL. Nhược: lặp dữ liệu, khó cập nhật.",
     "star": "Chuẩn Kimball: fact chứa số đo, dim chứa ngữ cảnh (thời gian, địa lý, phân loại). Dễ hiểu với người ra quyết định, slice/dice nhanh. Đây là mô hình trình bày chính.",
     "snowflake": "Chuẩn hoá dim (tỉnh → tỉnh sau sáp nhập 2025 → vùng; ngày → tháng → năm): bớt lặp, đúng hệ phân cấp hành chính mới. Đổi lại thêm join.",
+    "conformed": "Conformed dimension (Kimball bus matrix): khi ≥2 nguồn chung khoá (tỉnh, năm, ngày, mã CK, quốc gia) thì dùng CHUNG một dim_geo/dim_date/dim_<khoá> có surrogate key; mỗi nguồn thành một fact trỏ vào dim chung, rồi ghép thành OBT tích hợp (tỉnh chuẩn hoá 63→34 + vùng). Có thống kê khớp/không khớp từng nguồn để biết join có mất dữ liệu không.",
     "data_vault": "Hub/Link/Satellite với hash key, load_dts, record_source: truy vết nguồn và lịch sử thay đổi khi ghép nhiều nguồn. Mạnh cho tích hợp dài hạn, nặng cho 28 giờ — dựng để chứng minh khả năng audit.",
 }
 

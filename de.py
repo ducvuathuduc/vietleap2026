@@ -23,6 +23,12 @@ def _print(s):
         print(f"  quality {k}: {q['score_before']} → {q['score_after']}  ({q['rows']:,} rows, {q['issues']} issues found)")
     for k, m in s["models"].items():
         print(f"  {k:<10} {', '.join(m['tables'])}")
+    c = s.get("conformed")
+    if c:
+        print(f"  conformed  keys={','.join(c['shared_keys'])}  → {c['integrated']} ({c['integrated_rows']:,} rows)")
+        for j in c["joins"]:
+            print(f"    join {j['source']:<28} on {','.join(j['keys']) or '-':<12} {j['status']:<15} "
+                  f"{j.get('matched_rows', 0):,} rows matched ({j.get('match_pct', 0)}%)")
     failed = [x for x in s["steps"] if x["status"] != "ok"]
     for f in failed:
         print(f"  ✗ {f['step']}: {f['error']}")
@@ -69,8 +75,9 @@ def main(argv=None):
         if a.cmd == "file":
             s = run_file(a.path, dataset=a.name, impute=a.impute, serve=a.serve, serve_kwargs=sk, out_root=a.out)
         else:
-            ds, sources, _keys = load_sources(a.yaml)
-            s = run_flow(ds, sources, impute=a.impute, serve=a.serve, primary=a.primary, serve_kwargs=sk, out_root=a.out)
+            ds, sources, keys = load_sources(a.yaml)
+            s = run_flow(ds, sources, impute=a.impute, serve=a.serve, primary=a.primary, serve_kwargs=sk, out_root=a.out,
+                         keys=keys)
         _print(s)
     elif a.cmd == "brief":
         _brief(a)

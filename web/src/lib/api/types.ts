@@ -225,7 +225,7 @@ export interface Job {
 
 export type SourceKind = "file" | "api" | "sql" | "scrape" | "social" | "cv"
 export type Layer = "bronze" | "silver" | "gold" | "meta"
-export type ModelKind = "obt" | "star" | "snowflake" | "data_vault"
+export type ModelKind = "obt" | "star" | "snowflake" | "data_vault" | "conformed"
 
 export interface SourceKindsResponse {
   kinds: SourceKind[]

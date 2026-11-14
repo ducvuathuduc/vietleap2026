@@ -13,7 +13,7 @@ import type { ModelKind } from "@/lib/api/types"
 import { SOURCE_KINDS, fmtSeconds } from "@/lib/source-kinds"
 import { insightTarget } from "@/lib/insight-target"
 
-const MODEL_LABEL: Record<ModelKind, string> = { obt: "OBT", star: "Star", snowflake: "Snowflake", data_vault: "Data Vault" }
+const MODEL_LABEL: Record<ModelKind, string> = { obt: "OBT", star: "Star", snowflake: "Snowflake", data_vault: "Data Vault", conformed: "Conformed" }
 
 export default function PipelinePage() {
   const { datasetId, loading: dsLoading, error: dsError } = useDataset()

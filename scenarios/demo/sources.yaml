@@ -1,4 +1,4 @@
-# Demo: 4 source types → one warehouse. Run: python de.py run scenarios/demo/sources.yaml --primary vn_housing
+# Demo: 5 source types → one warehouse; conformed dims (tỉnh, năm, quốc gia) join them into gold.obt_integrated_demo_multi. Run: python de.py run scenarios/demo/sources.yaml --primary vn_housing
 dataset: demo_multi
 sources:
   - name: vn_housing                       # file tải trực tiếp
@@ -9,6 +9,7 @@ sources:
     kind: sql
     uri: sqlite:///scenarios/demo/demo.sqlite
     options: {query: "SELECT * FROM wdi_panel WHERE year >= 2010"}
+    conform: {where: "iso3 = 'VNM'"}       # 14 nước/năm → chỉ giữ Việt Nam khi ghép theo năm
   - name: vn_gdp_pc                        # Public API (World Bank, paging + retry + cache)
     kind: api
     uri: https://api.worldbank.org/v2/country/VN/indicator/NY.GDP.PCAP.CD
@@ -22,3 +23,7 @@ sources:
   - name: vnexpress_kinhdoanh              # Social listening / news (RSS)
     kind: social
     uri: https://vnexpress.net/rss/kinh-doanh.rss
+keys:                                      # conformed keys (auto-detected too; listed here for clarity)
+  province: [Tỉnh/TP, Tỉnh thành]
+  year: [year, date]
+  country: [iso3, countryiso3code]

@@ -15,9 +15,13 @@ A sources.yaml looks like:
         kind: scrape
         uri: https://vi.wikipedia.org/wiki/Tỉnh_thành_Việt_Nam
         options: {table_index: 0}
-    keys:                       # optional business keys used by Data Vault / conformed dims
+    keys:                       # optional business keys for conformed dims (auto-detected when omitted)
       province: [tinh, province]
       year: [nam, year]
+      ticker: [ma ck]           # any other name → gold.<ds>__cdim_<name>
+
+  Per source, ``conform: {where: "iso3 = 'VNM'", agg: mean, geo_level: "2025"}`` tunes how it joins the
+  integrated OBT (see de/conformed.py).
 """
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ class Source:
     uri: str
     options: dict = field(default_factory=dict)
     license_note: str = ""
+    conform: dict = field(default_factory=dict)   # conformed-dimension join options: where / agg / geo_level
 
     def __post_init__(self):
         if self.kind not in KINDS:
@@ -88,5 +93,5 @@ def load_sources(path: str | Path) -> tuple[str, list[Source], dict]:
         if s["kind"] in ("file", "cv") and not Path(uri).is_absolute() and (base / uri).exists():
             uri = str((base / uri).resolve())   # paths in sources.yaml are relative to the yaml file
         out.append(Source(name=s["name"], kind=s["kind"], uri=uri, options=s.get("options", {}) or {},
-                          license_note=s.get("license", "")))
+                          license_note=s.get("license", ""), conform=s.get("conform", {}) or {}))
     return spec.get("dataset", path.stem), out, spec.get("keys", {}) or {}

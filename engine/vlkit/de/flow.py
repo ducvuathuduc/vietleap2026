@@ -16,12 +16,13 @@ import uuid
 from pathlib import Path
 
 from ..vn import ascii_key
+from .conformed import build_conformed
 from .connectors import ingest
 from .lineage import lineage_graph, lineage_mermaid
-from .modeling import build_models
+from .modeling import build_models, erd
 from .quality import quality_step
 from .sources import Source, now_iso
-from .warehouse import KIT, Warehouse
+from .warehouse import KIT, Warehouse, ident
 
 
 def slugify(s: str) -> str:
@@ -35,7 +36,7 @@ def _dump(obj, p: Path):
 
 def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = None, wh: Warehouse | None = None,
              impute: str | None = None, primary: str | None = None, serve: bool = False,
-             serve_kwargs: dict | None = None) -> dict:
+             serve_kwargs: dict | None = None, keys: dict | None = None) -> dict:
     ds = slugify(dataset)
     out = Path(out_root or KIT / "out") / ds
     out.mkdir(parents=True, exist_ok=True)
@@ -44,7 +45,7 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
     run_id, timings, steps = uuid.uuid4().hex[:8], {}, []
     try:
         # ---------------- Ingestion → bronze
-        t0, bronze, provenance = time.time(), [], []
+        t0, bronze, provenance, conform_of = time.time(), [], [], {}
         for src in sources:
             st = now_iso()
             try:
@@ -60,6 +61,7 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
                 tname = f"{ds}__{slugify(name)}"
                 wh.write_bronze(ds, tname, df, {**res.provenance, "source": src.name})
                 bronze.append(f"bronze.{tname}")
+                conform_of[f"silver.{tname}"] = src.conform
             wh.log_run(run_id, ds, f"ingest:{src.name}", "ok", st, {"tables": list(res.frames)})
             steps.append({"step": f"ingest:{src.name}", "status": "ok", "tables": list(res.frames)})
         timings["ingest"] = round(time.time() - t0, 2)
@@ -88,6 +90,43 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         models = build_models(wh, ds, main, roles_of[main], out_dir=out)
         timings["model"] = round(time.time() - t0, 2)
 
+        # ---------------- Transform 3: conformed dimensions + integrated OBT across sources (≥2 tables sharing a key)
+        t0, conformed = time.time(), None
+        if len(silver) >= 2:
+            st = now_iso()
+            try:
+                conformed = build_conformed(wh, ds, silver, roles_of, main, keys_spec=keys, conform_of=conform_of)
+            except Exception as e:  # integration is an add-on: never lose the single-source models
+                wh.log_run(run_id, ds, "conform", "failed", st, {"error": repr(e)})
+                steps.append({"step": "conform", "status": "failed", "error": repr(e)})
+            if conformed:
+                c = conformed["diagnostics"]
+                for t in silver:
+                    for typ in c["detected"].get(t, {}):
+                        if typ in c["dims"]:
+                            wh.lineage(ds, t, c["dims"][typ], "conform")
+                    if t in c["facts"]:
+                        wh.lineage(ds, t, c["facts"][t], "conform")
+                for typ, dim in c["dims"].items():
+                    for t, f in c["facts"].items():
+                        if typ in c["detected"].get(t, {}):
+                            wh.lineage(ds, dim, f, "fk")
+                for f in c["facts"].values():
+                    wh.lineage(ds, f, c["integrated"], "integrate")
+                for tname in conformed["tables"]:
+                    layer, name = tname.split(".", 1)
+                    pq = wh.lake / layer / f"{name}.parquet"
+                    pq.parent.mkdir(parents=True, exist_ok=True)
+                    wh.con.execute(f"COPY {layer}.{ident(name)} TO '{pq.as_posix()}' (FORMAT parquet)")
+                conformed["erd"] = erd(wh, conformed["tables"], strip=f"{ds}__")
+                models["models"]["conformed"] = conformed
+                (out / "models").mkdir(parents=True, exist_ok=True)
+                (out / "models" / "conformed.sql").write_text(";\n\n".join(conformed["sql"]) + ";\n", encoding="utf-8")
+                (out / "models" / "conformed.mmd").write_text(conformed["erd"], encoding="utf-8")
+                wh.log_run(run_id, ds, "conform", "ok", st, {"shared_keys": c["shared_keys"], "integrated_rows": c["integrated_rows"]})
+                steps.append({"step": "conform", "status": "ok", "shared_keys": c["shared_keys"]})
+        timings["conform"] = round(time.time() - t0, 2)
+
         summary = {
             "dataset": ds, "run_id": run_id, "finished_at": now_iso(), "timings": timings, "steps": steps,
             "bronze": bronze, "silver": silver, "primary": main,
@@ -97,6 +136,7 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             "models": {k: {"tables": m["tables"], "erd": m["erd"]} for k, m in models["models"].items()},
             "column_plan": models["plan"], "rationale": models["rationale"], "recommended": models["recommended"],
             "provenance": provenance,
+            "conformed": conformed["diagnostics"] if conformed else None,
         }
         # written before serving so the deck/report built by the insight engine can show pipeline, model,
         # quality and provenance slides; rewritten below with serving timings + final lineage
@@ -104,6 +144,10 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         _dump(summary, out / "pipeline.json")
         _dump(quality, out / "quality.json")
         _dump(provenance, out / "provenance.json")
+        if conformed:
+            _dump(conformed["diagnostics"], out / "conformed.json")
+        elif (out / "conformed.json").exists():
+            (out / "conformed.json").unlink()
 
         # ---------------- Serving: insight engine on gold OBT
         served = None
@@ -121,6 +165,8 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         summary["finished_at"] = now_iso()
         _dump(summary, out / "pipeline.json")
         _dump(quality, out / "quality.json")
+        if conformed:
+            graph["join_coverage"] = {"joins": conformed["diagnostics"]["joins"], "sources": conformed["diagnostics"]["sources"]}
         _dump(graph, out / "lineage.json")
         (out / "lineage.mmd").write_text(lineage_mermaid(graph), encoding="utf-8")
         _dump(provenance, out / "provenance.json")
