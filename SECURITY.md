@@ -19,7 +19,7 @@ Full STRIDE analysis and per-control status: [`docs/security/threat-model.md`](d
 | Control | Status | Where |
 |---|---|---|
 | Read-only SQL: single statement, allowlist, DDL/DML denylist, row limit | ✅ | `engine/vlkit/de/warehouse.py Warehouse.sql`, `api/routes/pipeline.py SqlIn` |
-| SQL cannot read local files (external access off), statement timeout | ❌ → T061 | |
+| SQL cannot read local files (external access off + file/env function denylist), 20 s statement timeout | ✅ | `Warehouse.readonly()`, `Warehouse.sql`, `tests/test_security.py` |
 | SSRF: block private/loopback/link-local/metadata IPs for API-submitted URLs, incl. redirects | ❌ → T062 | |
 | Local path allowlist for API-submitted file/cv/sql sources | ❌ → T063 | |
 | Upload limits (type allowlist, 200 MB, streamed size check) | ⚠ → T064 | `api/routes/datasets.py` |
@@ -27,7 +27,7 @@ Full STRIDE analysis and per-control status: [`docs/security/threat-model.md`](d
 | CORS origin allowlist; methods/headers restricted | ⚠ → T064 | `api/main.py`, `CORS_ORIGINS` |
 | Security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) | ❌ → T065 | |
 | Rate limiting on SQL / ingest / upload / agent / chat | ❌ → T066 | |
-| Prompt-injection: read-only tools, number verification, "tool output is data" rule | ⚠ → T061 | `web/src/lib/analyst/*`, `api/agent/verify.py` |
+| Prompt-injection: read-only tools, number verification, "tool output is data" rule | ✅ | `web/src/lib/analyst/*`, `api/agent/verify.py` |
 | Secrets via env only; `.env*` ignored; gitleaks in CI | ⚠ → T067 | `.gitignore`, `web/.gitignore` |
 | Dependency audit (pip-audit, npm audit) | ❌ → T067 | CI |
 | Run log, lineage, provenance (audit trail) | ✅ | `meta.runs`, `meta.lineage`, `provenance.json` |

@@ -152,11 +152,13 @@ def columns(fq: str):
 @router.post("/sql")
 def sql(body: SqlIn):
     with _wh_lock:
-        wh = Warehouse()
+        wh = Warehouse.readonly()
         try:
             df = wh.sql(body.query, limit=body.limit)
         except PermissionError as e:
             raise HTTPException(403, str(e))
+        except TimeoutError as e:
+            raise HTTPException(408, str(e))
         except Exception as e:
             raise HTTPException(400, f"{type(e).__name__}: {e}")
         finally:

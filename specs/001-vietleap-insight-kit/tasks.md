@@ -46,8 +46,8 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 - [ ] T045 Model page: "Conformed" tab with ERD + SQL + coverage, Hỏi AI offline explanation for conformed/join kinds → T043
 
 ## Phase 5 — Security [NFR-005] (see docs/security/threat-model.md)
-- [x] T060 SECURITY.md + STRIDE threat model with verified control status (this commit)
-- [ ] T061 SQL guard: block file-path string table refs (`FROM 'x.csv'`), external access off on read-only connection, statement timeout → T060
+- [x] T060 SECURITY.md + STRIDE threat model with verified control status (`2444157`)
+- [x] T061 SQL guard (+ prompt-injection rule in both system prompts) (this commit): block file-path string table refs (`FROM 'x.csv'`), external access off on read-only connection, statement timeout → T060
 - [ ] T062 SSRF guard for api/scrape/social sources submitted via API (block private/loopback/link-local/metadata IPs, http(s) only, re-check redirects) → T060
 - [ ] T063 Path guard: API-submitted `file`/`cv`/`sql` sources limited to allowed dirs (data/, scenarios/, uploads) → T060
 - [ ] T064 Upload limits streamed (no full read before size check), CORS methods/headers restricted → T060

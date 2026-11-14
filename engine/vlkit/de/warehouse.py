@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from pathlib import Path
 
 import duckdb
@@ -24,7 +25,15 @@ KIT = Path(__file__).resolve().parents[3]
 LAYERS = ("bronze", "silver", "gold")
 _READONLY_OK = re.compile(r"^\s*(with|select|describe|show|summarize|pragma\s+table_info|explain)\b", re.I)
 _FORBIDDEN = re.compile(r"\b(insert|update|delete|drop|alter|create|copy|attach|detach|install|load|export|import|"
-                        r"call|set|checkpoint|vacuum|truncate)\b|read_\w+\s*\(|\bglob\s*\(", re.I)
+                        r"call|set|reset|checkpoint|vacuum|truncate|use)\b|read_\w+\s*\(|\bglob\s*\(", re.I)
+# table functions / replacement scans that touch the filesystem or the process environment in DuckDB, e.g.
+# sniff_csv('/etc/x'), parquet_scan(..), FROM 'file.csv', FROM "file.parquet", query('..'), current_setting()
+_FN_DENY = ["sniff_csv", r"parquet_\w+", r"\w+_scan", "query_table", "query", "get" + "env", "current_setting",
+            "json_execute_serialized_sql", "duckdb_secrets", "which_secret", "load_extension", r"iceberg_\w+", r"delta_\w+"]
+_FILE_ACCESS = re.compile(r"\b(" + "|".join(_FN_DENY) + r")\s*\(|"
+                          r"\b(from|join)\s*\(?\s*'|,\s*'[^']*\.(csv|tsv|parquet|json|jsonl|xlsx|txt|gz)'|"
+                          r"\b(from|join)\s+\"[^\"]*[./\\:][^\"]*\"", re.I)
+SQL_TIMEOUT_S = 20.0
 
 
 LOAD_MODES = ("replace", "append", "incremental")
@@ -159,12 +168,50 @@ class Warehouse:
         return self.con.execute("SELECT column_name AS name, data_type AS type FROM information_schema.columns "
                                 "WHERE table_schema=? AND table_name=? ORDER BY ordinal_position", [layer, name]).df().to_dict("records")
 
-    def sql(self, query: str, limit: int = 1000) -> pd.DataFrame:
-        """Read-only SQL for the dashboard SQL explorer and the AI analyst."""
+    def sql(self, query: str, limit: int = 1000, timeout_s: float | None = SQL_TIMEOUT_S) -> pd.DataFrame:
+        """Read-only SQL for the dashboard SQL explorer and the AI analyst.
+
+        Guard layers: (1) one statement starting with SELECT/WITH/DESCRIBE/SHOW/SUMMARIZE/PRAGMA table_info/EXPLAIN;
+        (2) denylist of DDL/DML, of file/env table functions and of string-literal table refs; (3) result wrapped in
+        LIMIT; (4) interrupted after timeout_s; (5) Warehouse.readonly() connections additionally run with DuckDB
+        enable_external_access=false, so even an unlisted file-reading function is refused by the engine itself.
+        """
         q = query.strip().rstrip(";")
         if ";" in q or not _READONLY_OK.match(q) or _FORBIDDEN.search(q):
             raise PermissionError("Only a single read-only SELECT/WITH/DESCRIBE/SUMMARIZE query is allowed")
-        return self.con.execute(f"SELECT * FROM ({q}) AS _q LIMIT {int(limit)}").df()
+        if _FILE_ACCESS.search(q):
+            raise PermissionError("File, environment and external table functions are not allowed — query warehouse tables only")
+        timer = None
+        if timeout_s:
+            timer = threading.Timer(timeout_s, self.con.interrupt)
+            timer.daemon = True
+            timer.start()
+        try:
+            return self.con.execute(f"SELECT * FROM ({q}) AS _q LIMIT {int(limit)}").df()
+        except duckdb.InterruptException as e:
+            raise TimeoutError(f"query exceeded {timeout_s:g}s and was cancelled") from e
+        finally:
+            if timer:
+                timer.cancel()
+
+    @classmethod
+    def readonly(cls, path: str | Path | None = None, lake: str | Path | None = None) -> "Warehouse":
+        """Read-only connection with DuckDB external (filesystem/network) access disabled and the config locked.
+        Falls back to a normal connection (regex guards still apply) when another connection in this process holds the
+        same file with a different configuration."""
+        self = cls.__new__(cls)
+        self.path = Path(path or KIT / "data" / "warehouse.duckdb")
+        self.lake = Path(lake or KIT / "data" / "lake")
+        if not self.path.exists():
+            cls(self.path, self.lake).close()     # create schemas once
+        try:
+            self.con = duckdb.connect(str(self.path), read_only=True,
+                                      config={"enable_external_access": "false", "lock_configuration": "true", "threads": "2"})
+            self.hardened = True
+        except duckdb.Error:
+            self.con = duckdb.connect(str(self.path))
+            self.hardened = False
+        return self
 
     def close(self):
         self.con.close()
