@@ -27,6 +27,15 @@ _FORBIDDEN = re.compile(r"\b(insert|update|delete|drop|alter|create|copy|attach|
                         r"call|set|checkpoint|vacuum|truncate)\b|read_\w+\s*\(|\bglob\s*\(", re.I)
 
 
+LOAD_MODES = ("replace", "append", "incremental")
+
+
+def row_hash(df: pd.DataFrame) -> pd.Series:
+    """Stable per-row hash of the source columns (meta columns starting with '_' excluded) as text."""
+    cols = [c for c in df.columns if not str(c).startswith(("_row_hash", "_src", "_ingested_at"))]
+    return pd.util.hash_pandas_object(df[cols].astype(str), index=False).astype("uint64").astype(str)
+
+
 def ident(s: str) -> str:
     return '"' + str(s).replace('"', '""') + '"'
 
@@ -63,18 +72,66 @@ class Warehouse:
             self.con.execute(f"COPY {fq} TO '{out.as_posix()}' (FORMAT parquet)")
         return f"{layer}.{name}"
 
-    def write_bronze(self, dataset: str, name: str, df: pd.DataFrame, provenance: dict) -> str:
+    def exists(self, layer: str, name: str) -> bool:
+        return bool(self.con.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema=? AND table_name=?",
+                                     [layer, name]).fetchall()[0][0])
+
+    def write_bronze(self, dataset: str, name: str, df: pd.DataFrame, provenance: dict, mode: str = "replace") -> dict:
+        """Land a source frame in bronze.<name>.
+
+        mode = replace      drop + recreate (default; previous behaviour)
+               append       insert every incoming row after the existing ones
+               incremental  insert only rows whose _row_hash (hash of the source columns, not of _src/_ingested_at)
+                            is not already in the table — re-running the same file inserts 0 rows
+        A schema change (different source columns, or types DuckDB cannot cast) falls back to a full rebuild.
+        Returns {"table", "mode", "inserted", "skipped", "rebuilt", "rows", "reason"}.
+        """
+        if mode not in LOAD_MODES:
+            raise ValueError(f"mode must be one of {LOAD_MODES}")
         df = df.copy()
         df.columns = [str(c) for c in df.columns]
-        df["_row_hash"] = pd.util.hash_pandas_object(df.astype(str), index=False).astype("uint64").astype(str)
+        df["_row_hash"] = row_hash(df)
         df["_src"] = provenance.get("source", name)
         df["_ingested_at"] = provenance.get("fetched_at", now_iso())
-        t = self.write("bronze", name, df)
+        fq = f"bronze.{ident(name)}"
+        stats = {"table": f"bronze.{name}", "mode": mode, "inserted": int(len(df)), "skipped": 0, "rebuilt": False, "reason": None}
+        if mode == "replace" or not self.exists("bronze", name):
+            if mode != "replace":
+                stats["reason"] = "first load"
+            self.write("bronze", name, df)
+        else:
+            old_cols = [c["name"] for c in self.columns(f"bronze.{name}")]
+            if old_cols != list(df.columns):
+                stats.update(rebuilt=True, reason="schema changed → full rebuild")
+                self.write("bronze", name, df)
+            else:
+                d = _duck_safe(df)
+                self.con.register("_tmp_df", d)
+                try:
+                    if mode == "incremental":
+                        new = self.con.execute(f"SELECT count(*) FROM _tmp_df n WHERE n._row_hash NOT IN "
+                                               f"(SELECT _row_hash FROM {fq} WHERE _row_hash IS NOT NULL)").fetchall()[0][0]
+                        self.con.execute(f"INSERT INTO {fq} BY NAME SELECT * FROM _tmp_df n WHERE n._row_hash NOT IN "
+                                         f"(SELECT _row_hash FROM {fq} WHERE _row_hash IS NOT NULL)")
+                        stats.update(inserted=int(new), skipped=int(len(df) - new))
+                    else:
+                        self.con.execute(f"INSERT INTO {fq} BY NAME SELECT * FROM _tmp_df")
+                except duckdb.Error as e:          # incompatible types = schema change
+                    stats.update(rebuilt=True, inserted=int(len(df)), skipped=0,
+                                 reason=f"schema changed ({type(e).__name__}) → full rebuild")
+                    self.con.unregister("_tmp_df")
+                    self.write("bronze", name, df)
+                else:
+                    self.con.unregister("_tmp_df")
+                    out = self.lake / "bronze" / f"{name}.parquet"
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    self.con.execute(f"COPY {fq} TO '{out.as_posix()}' (FORMAT parquet)")
+        stats["rows"] = int(self.con.execute(f"SELECT count(*) FROM {fq}").fetchall()[0][0])
         self.con.execute("INSERT INTO meta.sources VALUES (?,?,?,?,?,?)",
                          [dataset, name, provenance.get("kind"), provenance.get("uri"), provenance.get("fetched_at"),
                           json.dumps(provenance, ensure_ascii=False, default=str)])
-        self.lineage(dataset, f"source:{provenance.get('source', name)}", t, "ingest")
-        return t
+        self.lineage(dataset, f"source:{provenance.get('source', name)}", stats["table"], "ingest")
+        return stats
 
     def lineage(self, dataset: str, src: str, dst: str, step: str):
         self.con.execute("INSERT INTO meta.lineage VALUES (?,?,?,?,?)", [dataset, src, dst, step, now_iso()])

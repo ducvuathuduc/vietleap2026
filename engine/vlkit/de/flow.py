@@ -36,7 +36,13 @@ def _dump(obj, p: Path):
 
 def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = None, wh: Warehouse | None = None,
              impute: str | None = None, primary: str | None = None, serve: bool = False,
-             serve_kwargs: dict | None = None, keys: dict | None = None) -> dict:
+             serve_kwargs: dict | None = None, keys: dict | None = None, mode: str = "replace") -> dict:
+    """mode: replace | append | incremental — how bronze tables are loaded (see Warehouse.write_bronze).
+    Silver and gold are always rebuilt from the full bronze table: de-duplication, outlier fences and models need
+    every row, and a re-run that inserted nothing still yields identical silver/gold."""
+    from .warehouse import LOAD_MODES
+    if mode not in LOAD_MODES:
+        raise ValueError(f"mode must be one of {LOAD_MODES}")
     ds = slugify(dataset)
     out = Path(out_root or KIT / "out") / ds
     out.mkdir(parents=True, exist_ok=True)
@@ -45,7 +51,7 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
     run_id, timings, steps = uuid.uuid4().hex[:8], {}, []
     try:
         # ---------------- Ingestion → bronze
-        t0, bronze, provenance, conform_of = time.time(), [], [], {}
+        t0, bronze, provenance, conform_of, load = time.time(), [], [], {}, {}
         for src in sources:
             st = now_iso()
             try:
@@ -55,21 +61,25 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
                 steps.append({"step": f"ingest:{src.name}", "status": "failed", "error": repr(e)})
                 continue
             provenance.append(res.provenance)
+            src_load = {}
             for name, df in res.frames.items():
                 if df is None or df.empty:
                     continue
                 tname = f"{ds}__{slugify(name)}"
-                wh.write_bronze(ds, tname, df, {**res.provenance, "source": src.name})
+                ls = wh.write_bronze(ds, tname, df, {**res.provenance, "source": src.name}, mode=mode)
+                load[ls["table"]] = src_load[ls["table"]] = {k: ls[k] for k in ("inserted", "skipped", "rebuilt", "rows", "reason")}
                 bronze.append(f"bronze.{tname}")
                 conform_of[f"silver.{tname}"] = src.conform
-            wh.log_run(run_id, ds, f"ingest:{src.name}", "ok", st, {"tables": list(res.frames)})
-            steps.append({"step": f"ingest:{src.name}", "status": "ok", "tables": list(res.frames)})
+            ins, skp = sum(v["inserted"] for v in src_load.values()), sum(v["skipped"] for v in src_load.values())
+            wh.log_run(run_id, ds, f"ingest:{src.name}", "ok", st, {"tables": list(res.frames), "mode": mode,
+                                                                     "inserted": ins, "skipped": skp, "load": src_load})
+            steps.append({"step": f"ingest:{src.name}", "status": "ok", "tables": list(res.frames), "inserted": ins, "skipped": skp})
         timings["ingest"] = round(time.time() - t0, 2)
         if not bronze:
             raise RuntimeError("no source produced data")
 
         # ---------------- Transform 1: quality → silver
-        t0, silver, quality, roles_of = time.time(), [], {}, {}
+        t0, silver, quality, roles_of, load_silver = time.time(), [], {}, {}, {}
         for b in bronze:
             st = now_iso()
             q = quality_step(wh.read(b), impute=impute)
@@ -80,8 +90,13 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             quality[f"silver.{name}"] = q["report"]
             roles_of[f"silver.{name}"] = q["roles"]
             silver.append(f"silver.{name}")
+            new_rows = load.get(b, {}).get("inserted", 0)
+            load_silver[f"silver.{name}"] = {"rows": int(len(q["silver"])), "new_bronze_rows": int(new_rows),
+                                             "strategy": "full rebuild from bronze"}
             wh.log_run(run_id, ds, f"clean:{name}", "ok", st, {"score_before": q["report"]["score_before"],
-                                                               "score_after": q["report"]["score_after"]})
+                                                               "score_after": q["report"]["score_after"],
+                                                               "mode": mode, "new_bronze_rows": int(new_rows),
+                                                               "silver_rows": int(len(q["silver"]))})
         timings["clean"] = round(time.time() - t0, 2)
 
         # ---------------- Transform 2: models on the primary silver table (largest unless told)
@@ -137,6 +152,8 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             "column_plan": models["plan"], "rationale": models["rationale"], "recommended": models["recommended"],
             "provenance": provenance,
             "conformed": conformed["diagnostics"] if conformed else None,
+            "load": {"mode": mode, "inserted": sum(v["inserted"] for v in load.values()),
+                     "skipped": sum(v["skipped"] for v in load.values()), "tables": load, "silver": load_silver},
         }
         # written before serving so the deck/report built by the insight engine can show pipeline, model,
         # quality and provenance slides; rewritten below with serving timings + final lineage

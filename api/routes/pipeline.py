@@ -52,6 +52,8 @@ class IngestIn(BaseModel):
     primary: str | None = None
     impute: Literal["median"] | None = None
     serve: bool = True
+    mode: Literal["replace", "append", "incremental"] = Field(
+        "replace", description="bronze load: replace | append | incremental (insert only rows whose _row_hash is new)")
 
     @model_validator(mode="after")
     def _consistent(self):
@@ -106,8 +108,8 @@ def ingest(body: IngestIn):
             wh = Warehouse()
             try:
                 s = run_flow(body.dataset, sources, out_root=get_settings().out_dir, wh=wh, impute=body.impute,
-                             primary=body.primary, serve=body.serve)
-                job["summary"] = {k: s[k] for k in ("dataset", "run_id", "timings", "steps", "gold", "quality")}
+                             primary=body.primary, serve=body.serve, mode=body.mode)
+                job["summary"] = {k: s[k] for k in ("dataset", "run_id", "timings", "steps", "gold", "quality", "load")}
                 job["status"] = "done"
             except Exception as e:
                 job["status"], job["error"] = "error", f"{type(e).__name__}: {e}"

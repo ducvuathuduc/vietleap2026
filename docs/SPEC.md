@@ -277,7 +277,7 @@ make setup | api | web | web-dev | demo | demo-online | brief F=.. D=.. | test |
 | Đề → brief.json + 7 scenario pack | ✅ done |
 | Deck 15 slide + pitch.md + kiểm tràn chữ | ✅ done |
 | CV đếm phương tiện (YOLO + ByteTrack) | ✅ done (chưa chạy model thật) |
-| Nạp tăng dần theo `_row_hash` (`--mode`) | ⏳ planned |
+| Nạp tăng dần theo `_row_hash` (`--mode`) | ✅ done |
 | Pipeline: thẻ join coverage · Mô hình: tab Conformed + ERD · `/api/datasets/{ds}/conformed` | ⏳ planned |
 | Command palette Ctrl+K (cmdk) | ⏳ planned |
 | NL → SQL trong AI Analyst + bảng + biểu đồ tự động | ⏳ planned |

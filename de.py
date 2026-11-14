@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """VietLeap data pipeline CLI — Ingestion → Storage → Transform → Serving.
 
-  python de.py file  <path> [--name DS] [--impute median] [--serve]     one file (csv/xlsx/json/parquet/zip)
+  python de.py file  <path> [--name DS] [--impute median] [--serve] [--mode replace|append|incremental]  one file (csv/xlsx/json/parquet/zip)
   python de.py run   <sources.yaml> [--impute median] [--serve]          many sources (file/api/sql/scrape/social/cv)
   python de.py tables                                                    list warehouse tables
   python de.py sql   "SELECT ..."                                        read-only query on the warehouse
@@ -19,6 +19,10 @@ from vlkit.de.warehouse import Warehouse  # noqa: E402
 
 def _print(s):
     print(f"\n✓ {s['dataset']}  run {s['run_id']}  {s['timings']}")
+    ld = s.get("load") or {}
+    if ld:
+        print(f"  load {ld['mode']}: {ld['inserted']:,} rows inserted, {ld['skipped']:,} skipped (already loaded)"
+              + "".join(f"\n    ↻ {t}: {v['reason']}" for t, v in ld["tables"].items() if v.get("rebuilt")))
     for k, q in s["quality"].items():
         print(f"  quality {k}: {q['score_before']} → {q['score_after']}  ({q['rows']:,} rows, {q['issues']} issues found)")
     for k, m in s["models"].items():
@@ -65,6 +69,8 @@ def main(argv=None):
     for p in (f, r):
         p.add_argument("--impute", choices=["median"]); p.add_argument("--serve", action="store_true")
         p.add_argument("--target"); p.add_argument("--out")
+        p.add_argument("--mode", choices=["replace", "append", "incremental"], default="replace",
+                       help="bronze load: replace (default) | append | incremental (skip rows whose _row_hash exists)")
     sub.add_parser("tables")
     q = sub.add_parser("sql"); q.add_argument("query"); q.add_argument("--limit", type=int, default=50)
     b = sub.add_parser("brief", help="đề bài (.md/.txt) → brief.json"); b.add_argument("path")
@@ -73,11 +79,12 @@ def main(argv=None):
     if a.cmd in ("file", "run"):
         sk = {"target": a.target} if a.target else {}
         if a.cmd == "file":
-            s = run_file(a.path, dataset=a.name, impute=a.impute, serve=a.serve, serve_kwargs=sk, out_root=a.out)
+            s = run_file(a.path, dataset=a.name, impute=a.impute, serve=a.serve, serve_kwargs=sk, out_root=a.out,
+                         mode=a.mode)
         else:
             ds, sources, keys = load_sources(a.yaml)
             s = run_flow(ds, sources, impute=a.impute, serve=a.serve, primary=a.primary, serve_kwargs=sk, out_root=a.out,
-                         keys=keys)
+                         keys=keys, mode=a.mode)
         _print(s)
     elif a.cmd == "brief":
         _brief(a)
