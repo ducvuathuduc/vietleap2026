@@ -183,5 +183,5 @@ def test_sqlite_and_file_share_province(wh, tmp_path, kit_root):
             Source("budget", "sql", f"sqlite:///{db}", {"query": "SELECT * FROM t"})]
     s = run_flow("mix", srcs, out_root=tmp_path / "out", wh=wh, primary="bds")
     j = s["conformed"]["joins"][0]
-    assert j["join_on"] == ["geo_key"] and j["match_pct"] == 100.0
+    assert j["join_on"] == ["province_key"] and j["match_pct"] == 100.0
     assert s["conformed"]["integrated_rows"] == s["conformed"]["base_rows"]

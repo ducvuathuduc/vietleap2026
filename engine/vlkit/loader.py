@@ -245,6 +245,7 @@ def clean(df: pd.DataFrame, log: list[str] | None = None) -> CleanResult:
     df = df.drop_duplicates()
     if len(df) < before:
         log.append(f"removed {before - len(df)} exact duplicate rows ({(before - len(df)) / before:.1%})")
+    kept_index = df.index.to_numpy()   # raw row positions that survived (DE layer carries _row_hash / raw columns over)
     df = df.reset_index(drop=True)
     roles = {c: guess_role(c, df[c], len(df)) for c in df.columns}
     # province normalisation for geo columns
@@ -293,6 +294,7 @@ def clean(df: pd.DataFrame, log: list[str] | None = None) -> CleanResult:
     log.append(f"rows: {n0} raw → {len(df)} clean")
     res = CleanResult(df=df, roles=roles, log=log, numeric_reports=numeric_reports)
     res.source["outlier_counts"] = {c: int(flags[c].sum()) for c in flags.columns}
+    res.source["kept_index"] = kept_index
     return res
 
 

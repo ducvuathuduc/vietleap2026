@@ -4,8 +4,10 @@ When ≥2 silver tables share a business key — province (tỉnh), year (năm),
 (ISO3) or any key declared under ``keys:`` in sources.yaml — we build ONE shared dimension per key and
 point every source at it:
 
-    gold.<ds>__cdim_geo        geo_key (surrogate) · province · province_2025 (63→34, NQ 202/2025/QH15) ·
-                               province_2025_key · region (6 vùng GSO)
+    gold.<ds>__cdim_geo        geo_key (surrogate) · district · district_norm · geo_level · province · province_key ·
+                               province_2025 (63→34, NQ 202/2025/QH15) · province_2025_key · region (6 vùng GSO)
+                               — one row per (province, quận/huyện) seen + one province-level row per province, so
+                               district-grain and province-grain sources share the same dimension
     gold.<ds>__cdim_date       date_key (YYYYMMDD) · date · year · quarter · month · month_key · weekday
     gold.<ds>__cdim_year       year_key · year
     gold.<ds>__cdim_<key>      <key>_key (surrogate) · <key> (normalised upper/trim) · n_sources
@@ -20,11 +22,12 @@ meta.join_coverage, pipeline.json["conformed"], conformed.json and lineage.json.
 
 Per-source YAML options (``conform:`` next to ``options:``):
 
-    conform: {where: "iso3 = 'VNM'", agg: mean, geo_level: "2025"}
+    conform: {where: "iso3 = 'VNM'", agg: mean, geo_level: "2025", province: "Hồ Chí Minh"}
 
 ``where`` filters the source before it is joined (SQL predicate on its columns, read-only), ``agg``
 (mean|sum|min|max|first) aggregates a source that has several rows per join key, ``geo_level: 2025`` says
-its province names are post-merger (34) units so the join happens on province_2025.
+its province names are post-merger (34) units so the join happens on province_2025, ``province`` gives the
+province of a district-level source that has no province column.
 """
 from __future__ import annotations
 
@@ -49,6 +52,8 @@ KEY_ALIASES = {
     "date": "date", "ngay": "date",
     "ticker": "ticker", "ma ck": "ticker", "ma_ck": "ticker", "symbol": "ticker", "ma cp": "ticker",
     "country": "country", "iso3": "country", "quoc gia": "country",
+    "district": "district", "quan": "district", "huyen": "district", "quan huyen": "district", "phuong": "district",
+    "ward": "district", "phuong xa": "district",
 }
 TICKER_NAMES = {"ma ck", "ma cp", "ma chung khoan", "ma co phieu", "ticker", "symbol", "stock code", "ma"}
 COUNTRY_NAMES = {"iso3", "iso3 code", "countryiso3code", "country code", "country iso3", "ma quoc gia", "iso"}
@@ -85,6 +90,9 @@ class TableKeys:
     @property
     def types(self) -> set[str]:
         t = set(self.cols)
+        if "district" in t:          # a district column is a (finer) geo key
+            t.discard("district")
+            t.add("geo")
         if self.derived_year or "year" in self.cols:
             t.add("year")
         return t
@@ -127,12 +135,21 @@ def detect_keys(df: pd.DataFrame, roles: dict, spec: dict | None = None) -> dict
         typ = KEY_ALIASES.get(ascii_key(str(key)), _slug(str(key)))
         if typ == "geo" and f"{c}__province" in df.columns:
             c = f"{c}__province"
+        if typ == "district":
+            if f"{c}__district_key" in df.columns:
+                c = f"{c}__district_key"
+            elif not c.endswith("__district_key"):
+                continue          # only normalised district columns (silver adds <col>__district_key) can be conformed
         found.setdefault(typ, c)
     # 2. auto-detection
     if "geo" not in found:
         prov = [c for c in cols if c.endswith("__province")]
         if prov:
             found["geo"] = max(prov, key=lambda c: df[c].notna().mean())
+    if "district" not in found:
+        dk = [c for c in cols if c.endswith("__district_key")]
+        if dk:
+            found["district"] = max(dk, key=lambda c: df[c].notna().mean())
     if "date" not in found:
         dt = [c for c in cols if pd.api.types.is_datetime64_any_dtype(df[c])]
         if dt:
@@ -218,6 +235,9 @@ def build_conformed(wh: Warehouse, ds: str, silver: list[str], roles_of: dict[st
     dims: dict[str, str] = {}
 
     def geo_expr(tk: TableKeys, alias: str = "s") -> str:
+        if "geo" not in tk.cols:      # district-only source: province from conform.province, else unknown
+            p = normalize_province(str(tk.conform.get("province", ""))) if tk.conform.get("province") else None
+            return "'" + p.replace("'", "''") + "'" if p else "CAST(NULL AS VARCHAR)"
         c = f"{alias}.{ident(tk.cols['geo'])}"
         if tk.geo_raw:
             return f"coalesce((SELECT a.province FROM meta.geo_alias a WHERE a.raw = CAST({c} AS VARCHAR)), CAST({c} AS VARCHAR))"
@@ -233,14 +253,27 @@ def build_conformed(wh: Warehouse, ds: str, silver: list[str], roles_of: dict[st
     def norm_expr(tk: TableKeys, typ: str, alias: str = "s") -> str:
         return f"nullif(upper(trim(CAST({alias}.{ident(tk.cols[typ])} AS VARCHAR))), '')"
 
-    # ---- dim_geo
+    def dist_exprs(tk: TableKeys, alias: str = "s") -> tuple[str, str]:
+        if "district" not in tk.cols:
+            return "CAST(NULL AS VARCHAR)", "CAST(NULL AS VARCHAR)"
+        dk = tk.cols["district"]
+        disp = dk.removesuffix("_key") if dk.endswith("__district_key") else dk
+        return f"CAST({alias}.{ident(dk)} AS VARCHAR)", f"CAST({alias}.{ident(disp)} AS VARCHAR)"
+
+    # ---- dim_geo (district grain + province grain rows in one conformed dimension)
     if "geo" in shared:
-        parts = [f"SELECT {geo_expr(tk)} AS province FROM {S(tk)} s" for tk in tks if "geo" in tk.cols]
+        parts = [f"SELECT {geo_expr(tk)} AS province, {dist_exprs(tk)[0]} AS district_norm, {dist_exprs(tk)[1]} AS district "
+                 f"FROM {S(tk)} s" for tk in tks if _has_geo(tk)]
         sql.append(f"""CREATE OR REPLACE TABLE {g('cdim_geo')} AS
-WITH v AS (SELECT DISTINCT province FROM ({' UNION ALL '.join(parts)}) u WHERE province IS NOT NULL)
-SELECT row_number() OVER (ORDER BY v.province) AS geo_key, v.province,
+WITH u AS ({' UNION ALL '.join(parts)}),
+d AS (SELECT province, district_norm, min(district) AS district FROM u WHERE district_norm IS NOT NULL GROUP BY ALL),
+p AS (SELECT DISTINCT province FROM u WHERE province IS NOT NULL),
+v AS (SELECT province, district_norm, district FROM d UNION ALL SELECT province, NULL, NULL FROM p)
+SELECT row_number() OVER (ORDER BY v.province NULLS LAST, v.district_norm NULLS FIRST) AS geo_key,
+       v.district, v.district_norm, CASE WHEN v.district_norm IS NULL THEN 'province' ELSE 'district' END AS geo_level,
+       v.province, CASE WHEN v.province IS NOT NULL THEN dense_rank() OVER (ORDER BY v.province) END AS province_key,
        coalesce(r.province_2025, v.province) AS province_2025,
-       dense_rank() OVER (ORDER BY coalesce(r.province_2025, v.province)) AS province_2025_key,
+       CASE WHEN v.province IS NOT NULL THEN dense_rank() OVER (ORDER BY coalesce(r.province_2025, v.province)) END AS province_2025_key,
        r.region, r.province IS NOT NULL AS in_reference
 FROM v LEFT JOIN meta.province_ref r USING (province)""")
         dims["geo"] = f"gold.{T('cdim_geo')}"
@@ -264,7 +297,7 @@ SELECT DISTINCT y AS year_key, y AS year, (y // 10) * 10 AS decade FROM ({' UNIO
 WHERE y IS NOT NULL ORDER BY 1""")
         dims["year"] = f"gold.{T('cdim_year')}"
     # ---- generic dims (ticker, country, YAML keys)
-    for typ in [t for t in shared if t not in ("geo", "date", "year")]:
+    for typ in [t for t in shared if t not in ("geo", "date", "year", "district")]:
         parts = [f"SELECT {norm_expr(tk, typ)} AS v, '{tk.short}' AS src FROM {S(tk)} s" for tk in tks if typ in tk.cols]
         sql.append(f"""CREATE OR REPLACE TABLE {g('cdim_' + typ)} AS
 SELECT row_number() OVER (ORDER BY v) AS {typ}_key, v AS {ident(typ)}, count(DISTINCT src) AS n_sources
@@ -275,14 +308,18 @@ FROM ({' UNION ALL '.join(parts)}) u WHERE v IS NOT NULL GROUP BY v""")
     facts: dict[str, str] = {}
     for tk in tks:
         sel, joins = [], []
-        if "geo" in shared and "geo" in tk.cols:
-            sel += ["dg.geo_key", "dg.province_2025_key"]
-            joins.append(f"LEFT JOIN {g('cdim_geo')} dg ON dg.province = {geo_expr(tk)}")
+        if "geo" in shared and _has_geo(tk):
+            sel += ["dg.geo_key", "dg.province_key", "dg.province_2025_key"]
+            if "district" in tk.cols:
+                joins.append(f"LEFT JOIN {g('cdim_geo')} dg ON dg.district_norm = {dist_exprs(tk)[0]} "
+                             f"AND dg.province IS NOT DISTINCT FROM {geo_expr(tk)}")
+            else:
+                joins.append(f"LEFT JOIN {g('cdim_geo')} dg ON dg.province = {geo_expr(tk)} AND dg.district_norm IS NULL")
         if "date" in shared and "date" in tk.cols:
             sel.append(f"CAST(strftime(CAST(s.{ident(tk.cols['date'])} AS DATE), '%Y%m%d') AS INTEGER) AS date_key")
         if "year" in shared and year_expr(tk):
             sel.append(f"{year_expr(tk)} AS year_key")
-        for typ in [t for t in shared if t not in ("geo", "date", "year") and t in tk.cols]:
+        for typ in [t for t in shared if t not in ("geo", "date", "year", "district") and t in tk.cols]:
             sel.append(f"d_{typ}.{typ}_key")
             joins.append(f"LEFT JOIN {g('cdim_' + typ)} d_{typ} ON d_{typ}.{ident(typ)} = {norm_expr(tk, typ)}")
         if not sel:
@@ -327,7 +364,10 @@ FROM {S(tk)} s {' '.join(joins)}""")
             common.discard("year")
         geo_on = None
         if "geo" in common:
-            geo_on = "province_2025_key" if any(t.geo_level == "2025" for t in gr + base_group) else "geo_key"
+            both = gr + base_group
+            geo_on = ("geo_key" if all("district" in t.cols for t in both)          # district ⨝ district
+                      else "province_2025_key" if any(t.geo_level == "2025" for t in both)  # 34-unit sources
+                      else "province_key")
         on_cols = [("date_key" if t == "date" else "year_key" if t == "year" else geo_on if t == "geo" else f"{t}_key")
                    for t in sorted(common)]
         d = {"source": name, "tables": [tk.table for tk in gr], "keys": sorted(common), "join_on": on_cols,
@@ -342,7 +382,7 @@ FROM {S(tk)} s {' '.join(joins)}""")
             f"SELECT count(*), count(DISTINCT ({', '.join(on_cols)})) FROM ({src_sql}) z WHERE {' AND '.join(f'{c} IS NOT NULL' for c in on_cols)}").fetchone()
         attrs = [c["name"] for c in wh.columns(facts[gr[0].table]) if not c["name"].startswith("_") and c["name"] != "fact_id"
                  and not c["name"].endswith("_key") and c["name"] not in {tk.cols.get(t) for tk in gr for t in tk.cols}
-                 and not c["name"].endswith(("__province", "__province_2025"))][:MAX_JOIN_COLS]
+                 and not c["name"].endswith(("__province", "__province_2025", "__district"))][:MAX_JOIN_COLS]
         agg = AGGS.get(str(conf.get("agg", "")).lower())
         if n_rows > n_keys and not agg:
             joins_diag.append({**d, "status": "grain_mismatch", "rows_filtered": int(n_rows), "distinct_keys": int(n_keys),
@@ -367,8 +407,9 @@ FROM {S(tk)} s {' '.join(joins)}""")
     obt = T(f"obt_integrated_{ds}")
     base_sql = union(base_group)
     geo_cols = ""
-    if "geo" in shared and all("geo" in tk.cols for tk in base_group):
-        geo_cols = ", dg.province AS _geo_province, dg.province_2025 AS _geo_province_2025, dg.region AS _geo_region"
+    if "geo" in shared and all(_has_geo(tk) for tk in base_group):
+        geo_cols = (", dg.district AS _geo_district, dg.province AS _geo_province, dg.province_2025 AS _geo_province_2025, "
+                    "dg.region AS _geo_region")
     obt_sql = (f"CREATE OR REPLACE TABLE gold.{ident(obt)} AS SELECT b.*{geo_cols}"
                + (", " + ", ".join(extra_sel) if extra_sel else "")
                + f" FROM ({base_sql}) b "
@@ -401,10 +442,11 @@ FROM {S(tk)} s {' '.join(joins)}""")
         if tk.table not in facts:
             continue
         f = _q(facts[tk.table])
-        row = {"table": tk.table, "source": tk.short, "rows": tk.rows, "keys": {}, "geo_level": tk.geo_level if "geo" in tk.cols else None}
+        row = {"table": tk.table, "source": tk.short, "rows": tk.rows, "keys": {},
+               "geo_level": ("district" if "district" in tk.cols else tk.geo_level) if _has_geo(tk) else None}
         for typ in sorted(_fk_types(tk, shared)):
             col = "date_key" if typ == "date" else "year_key" if typ == "year" else "geo_key" if typ == "geo" else f"{typ}_key"
-            src_col = tk.cols.get(typ) or (tk.cols.get("date") if typ == "year" else None)
+            src_col = tk.cols.get(typ) or (tk.cols.get("date") if typ == "year" else tk.cols.get("district") if typ == "geo" else None)
             null_src = wh.con.execute(f"SELECT count(*) FROM {S(tk)} WHERE {ident(src_col)} IS NULL").fetchone()[0] if src_col else 0
             matched = wh.con.execute(f"SELECT count(*) FROM {f} WHERE {col} IS NOT NULL").fetchone()[0]
             info = {"column": src_col, "matched_rows": int(matched), "null_key_rows": int(null_src),
@@ -419,7 +461,7 @@ FROM {S(tk)} s {' '.join(joins)}""")
     overlap = []
     for typ in shared:
         have = [tk for tk in tks if tk.table in facts and typ in _fk_types(tk, shared)]
-        col = "date_key" if typ == "date" else "year_key" if typ == "year" else "geo_key" if typ == "geo" else f"{typ}_key"
+        col = "date_key" if typ == "date" else "year_key" if typ == "year" else "province_key" if typ == "geo" else f"{typ}_key"
         for a_i, a in enumerate(have):
             for b in have[a_i + 1:]:
                 na, nb, both = wh.con.execute(
@@ -453,6 +495,10 @@ def _numeric_cols(wh: Warehouse, fq: str, cols: list[str]) -> set[str]:
     return {c["name"] for c in wh.columns(fq) if c["name"] in cols and c["type"].split("(")[0].upper() in num}
 
 
+def _has_geo(tk: TableKeys) -> bool:
+    return "geo" in tk.cols or "district" in tk.cols
+
+
 def _fk_types(tk: TableKeys, shared: list[str]) -> set[str]:
     return {t for t in tk.types if t in shared}
 
@@ -460,9 +506,12 @@ def _fk_types(tk: TableKeys, shared: list[str]) -> set[str]:
 def _label_expr(on_cols: list[str], has_geo: bool) -> str:
     parts = []
     for c in on_cols:
-        if c in ("geo_key", "province_2025_key") and has_geo:
-            parts.append("coalesce(b._geo_province, CAST(b.geo_key AS VARCHAR))" if c == "geo_key"
-                         else "coalesce(b._geo_province_2025, CAST(b.province_2025_key AS VARCHAR))")
+        if c == "geo_key" and has_geo:
+            parts.append("coalesce(concat_ws(', ', b._geo_district, b._geo_province), CAST(b.geo_key AS VARCHAR))")
+        elif c == "province_key" and has_geo:
+            parts.append("coalesce(b._geo_province, CAST(b.province_key AS VARCHAR))")
+        elif c == "province_2025_key" and has_geo:
+            parts.append("coalesce(b._geo_province_2025, CAST(b.province_2025_key AS VARCHAR))")
         else:
             parts.append(f"CAST(b.{c} AS VARCHAR)")
     return " || ' · ' || ".join(f"coalesce({p}, '∅')" for p in parts) if parts else "''"

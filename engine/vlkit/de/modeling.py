@@ -27,7 +27,7 @@ RES = Path(__file__).resolve().parents[1] / "resources"
 RATIONALE = {
     "obt": "Một bảng phẳng: truy vấn dashboard/ML nhanh nhất, dễ cho đồng đội không rành SQL. Nhược: lặp dữ liệu, khó cập nhật.",
     "star": "Chuẩn Kimball: fact chứa số đo, dim chứa ngữ cảnh (thời gian, địa lý, phân loại). Dễ hiểu với người ra quyết định, slice/dice nhanh. Đây là mô hình trình bày chính.",
-    "snowflake": "Chuẩn hoá dim (tỉnh → tỉnh sau sáp nhập 2025 → vùng; ngày → tháng → năm): bớt lặp, đúng hệ phân cấp hành chính mới. Đổi lại thêm join.",
+    "snowflake": "Chuẩn hoá dim (quận/huyện → tỉnh → tỉnh sau sáp nhập 2025 → vùng; ngày → tháng → năm): bớt lặp, đúng hệ phân cấp hành chính mới. Đổi lại thêm join.",
     "conformed": "Conformed dimension (Kimball bus matrix): khi ≥2 nguồn chung khoá (tỉnh, năm, ngày, mã CK, quốc gia) thì dùng CHUNG một dim_geo/dim_date/dim_<khoá> có surrogate key; mỗi nguồn thành một fact trỏ vào dim chung, rồi ghép thành OBT tích hợp (tỉnh chuẩn hoá 63→34 + vùng). Có thống kê khớp/không khớp từng nguồn để biết join có mất dữ liệu không.",
     "data_vault": "Hub/Link/Satellite với hash key, load_dts, record_source: truy vết nguồn và lịch sử thay đổi khi ghép nhiều nguồn. Mạnh cho tích hợp dài hạn, nặng cho 28 giờ — dựng để chứng minh khả năng audit.",
 }
@@ -57,14 +57,17 @@ def plan_columns(df: pd.DataFrame, roles: dict) -> dict:
         dt = [c for c in time if pd.api.types.is_datetime64_any_dtype(df[c])]
         time_col = max(dt or time, key=lambda c: df[c].notna().mean())
     prov = next((c for c in cols if c.endswith("__province") and not c.endswith("__province_2025")), None)
-    geo = [c for c in cols if roles.get(c) in ("geo",) and not c.endswith("__province_2025") and c != prov]
+    dist = next((c for c in cols if c.endswith("__district") and f"{c}_key" in df.columns), None)
+    geo = [c for c in cols if roles.get(c) in ("geo",) and not c.endswith(("__province_2025", "__district", "__district_key"))
+           and c != prov]
     cats = [c for c in cols if roles.get(c) == "category" and 2 <= df[c].nunique() <= 200]
-    if not prov:  # non-province geo (district, country...) becomes a normal dimension
+    if not prov and not dist:  # other geo (country, region...) becomes a normal dimension
         cats = [c for c in geo if 2 <= df[c].nunique() <= 500] + cats
     measures = [c for c in cols if roles.get(c) == "numeric" and pd.api.types.is_numeric_dtype(df[c])]
     ids = [c for c in cols if roles.get(c) == "id"]
     return {"time": time_col, "time_is_date": bool(time_col and pd.api.types.is_datetime64_any_dtype(df[time_col])),
-            "province": prov, "cats": cats[:12], "measures": measures, "ids": ids[:3]}
+            "province": prov, "district": dist, "district_key": f"{dist}_key" if dist else None,
+            "cats": cats[:12], "measures": measures, "ids": ids[:3]}
 
 
 def build_models(wh: Warehouse, ds: str, silver: str, roles: dict, out_dir: Path | None = None) -> dict:
@@ -109,7 +112,19 @@ FROM b, range(b.lo, b.hi + INTERVAL 1 DAY, INTERVAL 1 DAY) AS r(d)""")
 SELECT DISTINCT CAST({t} AS INTEGER) AS date_key, CAST({t} AS INTEGER) AS year FROM {S} WHERE {t} IS NOT NULL ORDER BY 1""")
             fk.append(("date_key", f"CAST(s.{t} AS INTEGER)", "dim_date"))
         star_tables.append(f"gold.{T('dim_date')}")
-    if p["province"]:
+    if p["district"]:
+        # district grain: district → province → province_2025 → region (province NULL when the table has none)
+        dc, dk = ident(p["district"]), ident(p["district_key"])
+        pc = f"s.{ident(p['province'])}" if p["province"] else "CAST(NULL AS VARCHAR)"
+        star_sql.append(f"""CREATE OR REPLACE TABLE {g('dim_geo')} AS
+SELECT row_number() OVER (ORDER BY v.province NULLS LAST, v.district_norm) AS geo_key, v.district, v.district_norm,
+       v.province, coalesce(r.province_2025, v.province) AS province_2025, r.region
+FROM (SELECT s.{dk} AS district_norm, {pc} AS province, min(s.{dc}) AS district FROM {S} s
+      WHERE s.{dk} IS NOT NULL GROUP BY ALL) v
+LEFT JOIN meta.province_ref r USING (province)""")
+        fk.append(("geo_key", (f"s.{dk}", pc), "dim_geo:district"))
+        star_tables.append(f"gold.{T('dim_geo')}")
+    elif p["province"]:
         pc = ident(p["province"])
         star_sql.append(f"""CREATE OR REPLACE TABLE {g('dim_geo')} AS
 SELECT row_number() OVER (ORDER BY v.province) AS geo_key, v.province, r.province_2025, r.region
@@ -127,6 +142,10 @@ SELECT row_number() OVER (ORDER BY v) AS {sc}_key, v AS {ident(sc)} FROM (SELECT
     for i, (key, expr, dim) in enumerate(fk):
         if dim == "dim_date":
             fsel.append(f"{expr} AS {key}")
+        elif dim == "dim_geo:district":
+            dk, pc = expr
+            fsel.append(f"d{i}.{key}")
+            fjoin.append(f"LEFT JOIN {g('dim_geo')} d{i} ON {dk} = d{i}.district_norm AND {pc} IS NOT DISTINCT FROM d{i}.province")
         else:
             dname, dcol = dim.split(":")
             fsel.append(f"d{i}.{key}")
@@ -141,7 +160,18 @@ SELECT row_number() OVER (ORDER BY v) AS {sc}_key, v AS {ident(sc)} FROM (SELECT
 
     # ---------------------------------------------------------------- SNOWFLAKE (normalised dims, same fact keys)
     sf_sql, sf_tables = [], []
-    if p["province"]:
+    if p["district"]:
+        sf_sql += [
+            f"CREATE OR REPLACE TABLE {g('sf_dim_region')} AS SELECT row_number() OVER (ORDER BY region) AS region_key, region FROM (SELECT DISTINCT region FROM {g('dim_geo')} WHERE region IS NOT NULL)",
+            f"CREATE OR REPLACE TABLE {g('sf_dim_province_2025')} AS SELECT row_number() OVER (ORDER BY province_2025) AS province_2025_key, province_2025 FROM (SELECT DISTINCT province_2025 FROM {g('dim_geo')} WHERE province_2025 IS NOT NULL)",
+            f"""CREATE OR REPLACE TABLE {g('sf_dim_province')} AS SELECT row_number() OVER (ORDER BY v.province) AS province_key, v.province, p25.province_2025_key, rg.region_key
+FROM (SELECT DISTINCT province, province_2025, region FROM {g('dim_geo')} WHERE province IS NOT NULL) v
+LEFT JOIN {g('sf_dim_province_2025')} p25 USING (province_2025) LEFT JOIN {g('sf_dim_region')} rg USING (region)""",
+            f"""CREATE OR REPLACE TABLE {g('sf_dim_district')} AS SELECT gk.geo_key AS district_key, gk.district, gk.district_norm, sp.province_key
+FROM {g('dim_geo')} gk LEFT JOIN {g('sf_dim_province')} sp ON sp.province = gk.province""",
+        ]
+        sf_tables += [f"gold.{T(n)}" for n in ("sf_dim_district", "sf_dim_province", "sf_dim_province_2025", "sf_dim_region")]
+    elif p["province"]:
         sf_sql += [
             f"CREATE OR REPLACE TABLE {g('sf_dim_region')} AS SELECT row_number() OVER (ORDER BY region) AS region_key, region FROM (SELECT DISTINCT region FROM {g('dim_geo')} WHERE region IS NOT NULL)",
             f"CREATE OR REPLACE TABLE {g('sf_dim_province_2025')} AS SELECT row_number() OVER (ORDER BY province_2025) AS province_2025_key, province_2025 FROM (SELECT DISTINCT province_2025 FROM {g('dim_geo')} WHERE province_2025 IS NOT NULL)",
@@ -163,6 +193,8 @@ FROM {g('dim_geo')} gk LEFT JOIN {g('sf_dim_province_2025')} p25 USING (province
     bks = list(p["ids"][:1])
     if p["province"]:
         bks.append(p["province"])
+    if p["district"]:
+        bks.append(p["district_key"])
     bks += [c for c in sorted(p["cats"], key=lambda c: -df[c].nunique())][: max(0, 3 - len(bks))]
     dv_sql, dv_tables, hk_cols = [], [], []
     norm = lambda e: f"upper(trim(CAST({e} AS VARCHAR)))"  # noqa: E731

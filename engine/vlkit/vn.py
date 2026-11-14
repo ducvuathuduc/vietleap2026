@@ -292,3 +292,81 @@ def to_new_province(old: str | None) -> str | None:
     if old is None:
         return None
     return _merge_map().get(old, old if old in _merge_map().values() else None)
+
+
+# ----------------------------------------------------------------------------- districts / wards
+# Sub-province units. Before 1 Jul 2025: quận/huyện/thị xã/thành phố thuộc tỉnh (→ phường/xã/thị trấn);
+# after the 2025 reform wards/communes sit directly under the 34 provinces. Both are handled as the level
+# below the province: "Quận 1", "Q.1", "Q1", "quan 01" → key "quan 1", display "Quận 1";
+# "Huyện Củ Chi", "H. Củ Chi", "Cu Chi" → key "cu chi", display "Củ Chi".
+DISTRICT_COL_HINTS = {"quan", "huyen", "district", "quan huyen", "thi xa", "quan huyen thi xa", "district name"}
+WARD_COL_HINTS = {"phuong", "xa", "ward", "commune", "phuong xa", "xa phuong", "ward commune"}
+_DIST_KIND = [  # ascii prefix → canonical Vietnamese kind (longest first; 1–2 letter forms need a space or a digit)
+    ("thanh pho", "Thành phố"), ("thi tran", "Thị trấn"), ("thi xa", "Thị xã"), ("quan", "Quận"), ("huyen", "Huyện"),
+    ("phuong", "Phường"), ("district", "Quận"), ("ward", "Phường"), ("commune", "Xã"), ("xa", "Xã"),
+    ("tp", "Thành phố"), ("tx", "Thị xã"), ("tt", "Thị trấn"), ("q", "Quận"), ("h", "Huyện"), ("p", "Phường"),
+]
+_DIST_PREFIX_VI = re.compile(r"^\s*(thành phố|thị trấn|thị xã|quận|huyện|phường|xã|district|ward|commune|"
+                             r"tp\.?|tx\.?|tt\.?|q\.|h\.|p\.)\s*", re.I)
+
+
+def normalize_district(name, default_kind: str = "Quận") -> tuple[str, str] | None:
+    """(display, key) for a district/ward spelling, accent-insensitive key; None for blanks."""
+    if not isinstance(name, str) and not (isinstance(name, (int, float)) and name == name):
+        return None
+    raw = clean_text(str(name))
+    if isinstance(name, float) and name.is_integer():
+        raw = str(int(name))
+    if not raw:
+        return None
+    k = ascii_key(raw)
+    if not k:
+        return None
+    kind, rest = None, k
+    for pre, vi in _DIST_KIND:
+        if len(pre) <= 2:
+            m = re.match(rf"^{pre}(?:\s+|(?=\d))(.+)$", k)
+        else:
+            m = re.match(rf"^{pre}\s+(.+)$", k)
+        if m:
+            kind, rest = vi, m.group(1).strip()
+            break
+    if re.fullmatch(r"\d+", rest):
+        vi = kind or default_kind
+        n = int(rest)
+        return f"{vi} {n}", f"{ascii_key(vi)} {n}"
+    display = _DIST_PREFIX_VI.sub("", raw).strip() if kind else raw
+    display = " ".join(w[:1].upper() + w[1:] for w in display.split()) or raw
+    return display, rest
+
+
+def is_district_column(name: str, values: pd.Series | None = None) -> str | None:
+    """'district' | 'ward' | None — by column name, else by value prefixes (≥60 % 'Quận …'/'Huyện …'/'Q.1')."""
+    key = ascii_key(name)
+    toks = set(key.split())
+    if key in DISTRICT_COL_HINTS or toks & {"quan", "huyen", "district"}:
+        return "district"
+    if key in WARD_COL_HINTS or toks & {"phuong", "ward", "commune"}:
+        return "ward"
+    if values is not None:
+        v = values.dropna().astype(str).head(500)
+        if len(v):
+            share = v.map(lambda x: bool(re.match(r"^\s*(quận|huyện|thị xã|q\.?\s*\d|q\.\s)", x, re.I))).mean()
+            if share >= 0.6:
+                return "district"
+    return None
+
+
+def canonical_districts(s: pd.Series, default_kind: str = "Quận") -> tuple[pd.Series, pd.Series]:
+    """Vectorised normalize_district + one display name per key (prefer the accented, most frequent spelling)."""
+    uniq = pd.unique(s.dropna())
+    pairs = {u: normalize_district(u, default_kind) for u in uniq}
+    key = s.map(lambda v: (pairs.get(v) or (None, None))[1] if v is not None and v == v else None)
+    disp = s.map(lambda v: (pairs.get(v) or (None, None))[0] if v is not None and v == v else None)
+    best: dict[str, str] = {}
+    counts = pd.DataFrame({"k": key, "d": disp}).dropna().value_counts()
+    for (k, d), _n in counts.items():          # sorted by frequency
+        cur = best.get(k)
+        if cur is None or (ascii_key(cur) == cur.lower() and ascii_key(d) != d.lower()):
+            best[k] = d
+    return key.map(lambda k: best.get(k) if k else None), key

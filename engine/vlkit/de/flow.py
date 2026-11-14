@@ -102,14 +102,14 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             if conformed:
                 c = conformed["diagnostics"]
                 for t in silver:
-                    for typ in c["detected"].get(t, {}):
+                    for typ in {{"district": "geo"}.get(k, k) for k in c["detected"].get(t, {})}:
                         if typ in c["dims"]:
                             wh.lineage(ds, t, c["dims"][typ], "conform")
                     if t in c["facts"]:
                         wh.lineage(ds, t, c["facts"][t], "conform")
                 for typ, dim in c["dims"].items():
                     for t, f in c["facts"].items():
-                        if typ in c["detected"].get(t, {}):
+                        if typ in {{"district": "geo"}.get(k, k) for k in c["detected"].get(t, {})}:
                             wh.lineage(ds, dim, f, "fk")
                 for f in c["facts"].values():
                     wh.lineage(ds, f, c["integrated"], "integrate")

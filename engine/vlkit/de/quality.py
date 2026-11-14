@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from ..loader import clean
-from ..vn import ascii_key, parse_numeric_series
+from ..vn import ascii_key, canonical_districts, is_district_column, parse_numeric_series
 
 NONNEG_HINTS = ["gia", "price", "dien tich", "area", "so luong", "count", "dan so", "population", "doanh thu",
                 "revenue", "chi", "thu", "budget", "ngan sach", "luong", "salary", "tuoi", "age"]
@@ -96,9 +96,27 @@ def to_silver(df_bronze: pd.DataFrame, impute: str | None = None) -> tuple[pd.Da
     raw = df_bronze.drop(columns=[c for c in df_bronze.columns if c in ("_row_hash", "_ingested_at")], errors="ignore")
     src = raw.pop("_src") if "_src" in raw.columns else None
     log: list[str] = []
+    dist_cols = {c: lvl for c in raw.columns if not str(c).startswith("_")
+                 and (lvl := is_district_column(str(c), raw[c] if raw[c].dtype == object or pd.api.types.is_string_dtype(raw[c]) else None))}
     res = clean(raw, log)
     df = res.df
     roles = res.roles
+    kept = res.source.get("kept_index")
+    # districts / wards: normalised from the RAW spelling (clean() strips "Quận"/"Huyện" prefixes, which would turn
+    # "Quận 1" into "1"), aligned to the surviving rows, kept next to the original column
+    for c, lvl in dist_cols.items():
+        if c not in df.columns or kept is None or roles.get(c) in ("numeric", "time") and lvl != "district":
+            continue
+        if any(str(x).endswith("__province") for x in df.columns if str(x).startswith(f"{c}__")):
+            continue   # values were actually provinces
+        disp, key = canonical_districts(raw[c].loc[kept].reset_index(drop=True), "Quận" if lvl == "district" else "Phường")
+        if key.notna().mean() < 0.5 * max(raw[c].notna().mean(), 1e-9):
+            continue
+        df[f"{c}__district"], df[f"{c}__district_key"] = disp.to_numpy(), key.to_numpy()
+        roles[f"{c}__district"], roles[f"{c}__district_key"] = "geo", "geo_key"
+        roles[c] = "geo_raw"
+        log.append(f"'{c}': {lvl} names normalised ({key.nunique()} units; prefixes Quận/Huyện/Q./TP. stripped, "
+                   f"accent-insensitive key) → '{c}__district' + '{c}__district_key'")
     for c in [c for c, r in roles.items() if r == "numeric"]:
         if any(h in ascii_key(c) for h in NONNEG_HINTS):
             neg = df[c] < 0
