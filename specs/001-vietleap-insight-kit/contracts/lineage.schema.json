@@ -1,0 +1,105 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "lineage.schema.json",
+ "title": "out/<ds>/lineage.json (engine/vlkit/de/lineage.py lineage_graph)",
+ "type": "object",
+ "properties": {
+  "dataset": {
+   "type": "string"
+  },
+  "nodes": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "label": {
+      "type": "string"
+     },
+     "layer": {
+      "enum": [
+       "source",
+       "bronze",
+       "silver",
+       "gold",
+       "serving",
+       "meta"
+      ]
+     },
+     "stage": {
+      "enum": [
+       "Ingestion",
+       "Storage",
+       "Transform",
+       "Serving"
+      ]
+     }
+    },
+    "required": [
+     "id",
+     "label",
+     "layer",
+     "stage"
+    ]
+   }
+  },
+  "edges": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "from": {
+      "type": "string"
+     },
+     "to": {
+      "type": "string"
+     },
+     "step": {
+      "enum": [
+       "ingest",
+       "clean",
+       "model",
+       "conform",
+       "fk",
+       "integrate",
+       "serve"
+      ]
+     }
+    },
+    "required": [
+     "from",
+     "to",
+     "step"
+    ]
+   }
+  },
+  "join_coverage": {
+   "type": "object",
+   "properties": {
+    "joins": {
+     "type": "array"
+    },
+    "sources": {
+     "type": "array"
+    }
+   },
+   "required": [
+    "joins",
+    "sources"
+   ]
+  },
+  "mermaid": {
+   "type": [
+    "string",
+    "null"
+   ]
+  }
+ },
+ "required": [
+  "dataset",
+  "nodes",
+  "edges"
+ ]
+}

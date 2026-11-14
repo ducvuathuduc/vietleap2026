@@ -1,0 +1,76 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "story.schema.json",
+ "title": "POST /api/story response (web/src/lib/analyst/story.ts Story)",
+ "type": "object",
+ "properties": {
+  "mode": {
+   "enum": [
+    "llm",
+    "offline"
+   ]
+  },
+  "model": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "headline": {
+   "type": "string"
+  },
+  "steps": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "rank": {
+      "type": "integer"
+     },
+     "title": {
+      "type": "string"
+     },
+     "narration": {
+      "type": "string"
+     },
+     "stats": {
+      "type": "string"
+     },
+     "action": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "source": {
+      "enum": [
+       "llm",
+       "engine"
+      ]
+     }
+    },
+    "required": [
+     "id",
+     "rank",
+     "title",
+     "narration",
+     "stats",
+     "source"
+    ]
+   }
+  },
+  "closing": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "mode",
+  "model",
+  "headline",
+  "steps",
+  "closing"
+ ]
+}
