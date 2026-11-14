@@ -64,3 +64,44 @@ Each decision: **Decision** · **Rationale** · **Alternatives considered**. Con
 
 ## R12. Packaging — Makefile now, docker-compose + GitHub Actions (planned T070–T071)
 - **Rationale**: Makefile is fastest on the contest laptop; docker/CI give reproducibility for judges/reviewers.
+
+## R13. Reuse vs Build — capability map
+
+Policy (constitution V + user direction): **prefer a free, open-source, ready-made integration over custom code**; adopt a new library
+only when it replaces custom code cheaply, fits 2 CPU / 7 GB, and all tests pass. Status: ✅ integrated · 🟡 recommended (evaluate when
+the need appears) · ⛔ evaluated and not adopted (reason).
+
+| Capability | Tool | Licence | Status | Why / notes |
+|---|---|---|---|---|
+| File readers | **DuckDB** readers + pandas (`read_csv/read_excel`) | MIT / BSD-3 | ✅ | native CSV/Parquet/JSON; VN encoding/delimiter sniffing kept in `loader.py` |
+| REST ingestion | **httpx + tenacity** | BSD-3 / Apache-2.0 | ✅ | paging, retry/backoff, Retry-After, rate limit, disk cache (`connectors.ingest_api`) |
+| Declarative ingestion | dlt (dlthub) | Apache-2.0 | 🟡 | schema evolution + incremental cursors + DuckDB destination out of the box; adopt if contest needs many paginated APIs; current connector already covers WDI-style APIs in ~60 lines |
+| DB ingestion | **SQLAlchemy** (JDBC equivalent) | MIT | ✅ | any dialect, chunked, SELECT-only |
+| HTML scraping | **httpx + selectolax/lxml**, pandas `read_html` | MIT / BSD | ✅ | robots.txt, throttling, cache |
+| JS-rendered pages | **Playwright** (optional) | Apache-2.0 | ✅ optional | only when `render_js: true` |
+| Crawl at scale | Scrapy | BSD-3 | ⛔ | heavyweight for a few pages in 28 h; AutoThrottle/robots features already mirrored |
+| Article text extraction | trafilatura | Apache-2.0 (≥1.8) | 🟡 | if a theme needs news full-text/sentiment; RSS headlines suffice now |
+| Social / trends | **feedparser**, pytrends (optional) | BSD-2 / Apache-2.0 | ✅ | |
+| Warehouse | **DuckDB** + Parquet | MIT | ✅ | R1 |
+| SQL transforms / models | generated DuckDB SQL (`modeling.py`, `conformed.py`) saved to `out/<ds>/models/*.sql` | — | ✅ (build) | dynamic: models depend on detected column roles at runtime |
+| Transform framework | dbt-duckdb / SQLMesh | Apache-2.0 / Apache-2.0 | ⛔ for now | static project files fight runtime schema detection; adds toolchain & compile time; reconsider post-contest by exporting generated SQL as dbt models |
+| Data validation | custom checks in `quality.py` (missing/dup/outlier/score) | — | ✅ (build) | VN-specific parsing + scoring needed for the before/after story |
+| Validation library | pandera | MIT | 🟡 | lightweight DataFrame schemas — good fit to assert silver contracts in tests; adopt with brief-defined expectations |
+| Validation suites | Great Expectations / soda-core | Apache-2.0 / Apache-2.0 | ⛔ | heavy config, slow on 2 CPU; overkill for one-day datasets |
+| Profiling | custom `profile.py` | — | ✅ | ydata-profiling (MIT) 🟡 as an optional one-click HTML report; heavy (minutes on 100k rows) |
+| Statistics | **scipy, statsmodels, scikit-learn** | BSD-3 | ✅ | R2 |
+| Stats convenience | pingouin | GPL-3.0 | ⛔ | copyleft; scipy/statsmodels already provide the tests |
+| API | **FastAPI + pydantic** | MIT | ✅ | R3 |
+| Dashboard shell | **shadcn/ui dashboard-01** + official components | MIT | ✅ | constitution IV |
+| Charts | **Recharts via shadcn chart** | MIT | ✅ | Tremor (Apache-2.0) ⛔ — would restyle away from dashboard-01 |
+| Command palette | cmdk via **shadcn Command** | MIT | 🟡 → T050 | official shadcn component |
+| Sliders | **shadcn Slider** | MIT | 🟡 → T052 | |
+| Vietnam map | d3-geo (ISC) + open GeoJSON; react-simple-maps (MIT) | ISC / MIT | 🟡 → T053 | react-simple-maps is unmaintained (React 19 peer deps); d3-geo projection inside an SVG is lighter |
+| Diagrams | **mermaid** | MIT | ✅ | lineage + ERD |
+| AI layer | **Vercel AI SDK v7** (+ @ai-sdk/groq, openai-compatible) | Apache-2.0 | ✅ | R5 |
+| Guided tour | **driver.js** | MIT | ✅ | R7 |
+| Deck / pitch | **python-pptx**, **Marp** markdown | MIT / MIT | ✅ | R11 |
+| PDF | Chromium headless (Playwright) | Apache-2.0 | ✅ optional | |
+| CV | **ultralytics YOLOv8n + supervision** (+ trackers) | AGPL-3.0 (optional) / MIT / Apache-2.0 | ✅ optional | R8 |
+| Contract tests | **jsonschema** | MIT | ✅ | `tests/test_contracts.py` |
+| Supply-chain checks | pip-audit, npm audit, gitleaks, Dependabot, CodeQL | Apache-2.0 / — / MIT / GitHub free for public repos | 🟡 → T067/T071 | CI workflow |

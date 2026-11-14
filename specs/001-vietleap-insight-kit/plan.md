@@ -17,6 +17,19 @@ bronze/silver/gold → mô hình (OBT/Star/Snowflake/Data Vault/Conformed) → i
 **Constraints**: offline-capable; no build concurrently with pytest; `NO_PROXY=localhost,127.0.0.1` behind proxies
 **Scale/Scope**: 1 team, ≤ 20 sources per run, datasets ≤ ~1M rows, ~15 pages
 
+## Reuse vs Build (summary — full table in [research.md §R13](research.md#r13-reuse-vs-build--capability-map))
+| Capability | Reused (integrated) | Built (why) | Recommended next |
+|---|---|---|---|
+| Ingestion | DuckDB/pandas readers, httpx+tenacity, SQLAlchemy, selectolax, feedparser, Playwright | thin connector layer + provenance (one contract for 6 source kinds) | dlt for many paginated APIs; trafilatura for news text |
+| Storage | DuckDB + Parquet | — | — |
+| Transform/models | DuckDB SQL engine | model generator (runtime column roles → OBT/Star/Snowflake/DV/conformed) | export generated SQL as dbt-duckdb project post-contest |
+| Quality | pandas | VN parsing + before/after score | pandera schemas in tests |
+| Stats/ML | scipy, statsmodels, scikit-learn | insight ranking + VI/EN sentences | — |
+| UI | shadcn dashboard-01, Recharts, mermaid, driver.js | page composition only | shadcn Command (Ctrl+K), Slider, d3-geo map |
+| AI | Vercel AI SDK, Groq/OpenAI-compatible | number-verification guard | — |
+| Reports | python-pptx, Marp, Chromium | text fitting / overflow check | — |
+| CV | ultralytics, supervision | CSV contract | — |
+
 ## Constitution Check
 | Principle | Gate | Status |
 |---|---|---|
