@@ -1,0 +1,8 @@
+# gitleaks config: default rules + allowlist for placeholders in docs/examples.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "documentation placeholders"
+regexes = ['''gsk_\.\.\.''', '''GROQ_API_KEY=$''']
+paths = ['''web/package-lock\.json''']

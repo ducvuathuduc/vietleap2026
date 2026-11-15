@@ -41,13 +41,13 @@ availability of the demo during the 7-minute pitch.
 | D2 | DoS | huge upload exhausts RAM | `POST /api/datasets` | 200 MB cap streamed in 1 MB chunks (`.part` file deleted on overflow), extension allowlist, `Content-Length` cap in `SecurityMiddleware` | ✅ done (T064) |
 | E1 | Elevation | prompt injection in dataset cells / scraped pages / RSS makes the LLM call tools or lie | `/api/chat`, `/api/story`, agent | all tools read-only (no write tools); SQL guarded; numbers verified (story/agent); `stopWhen` 8 steps; system prompts (`web/src/lib/analyst/prompt.ts` rule 6, `api/agent/runner.py` rule 6) say tool output/data is never instructions | ✅ done (T061) |
 | I5 | Info disclosure | dataset rows sent to third-party LLM | `/api/chat` | tools return aggregates by default; `runSql` can return ≤ 200 rows; offline mode keeps everything local; documented in SECURITY.md (PII section) | ⚠ documented, user choice |
-| I6 | Info disclosure | secrets committed | repo | `.env*`, `*.pem`, `*.key` ignored in root and web (`!.env.example`); keys only via env; API connectors may only read `KIT_TOKEN_*` | ⚠ partial → T067 (gitleaks in CI) |
+| I6 | Info disclosure | secrets committed | repo | `.env*`, `*.pem`, `*.key` ignored in root and web (`!.env.example`); keys only via env; API connectors may only read `KIT_TOKEN_*` | ✅ done (gitleaks in CI) |
 | S2 | Spoofing (CSRF-like) | another site's page in the user's browser POSTs to localhost API | FastAPI | CORS origin allowlist (wildcard dropped), methods GET/POST, headers Content-Type/Accept, no credentials; JSON bodies require preflight → cross-site POST blocked | ✅ done (T064) |
 | T3 | Tampering (clickjacking/XSS) | dashboard framed or injected script | Next.js | React escaping; story popovers HTML-escaped; mermaid strict; CSP (self-only, `frame-ancestors 'none'`, `object-src 'none'`), X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy, COOP on Next (`next.config.ts`) and API (`api/security.py`); `poweredByHeader:false` | ✅ done (T065; residual: `'unsafe-inline'` scripts without nonce) |
 | D3 | DoS | request flood on SQL/ingest/LLM (quota burn) | API, `/api/chat` | sliding-window per-IP limits (API 60/min on expensive POSTs → 429 + Retry-After; LLM routes 20/min) | ✅ done (T066) |
 | R1 | Repudiation | who ran which ingest/what changed | meta | `meta.runs` (run_id, step, status, timings, detail), `meta.lineage`, provenance with fetched_at | ✅ done |
 | I7 | Info disclosure | stack traces / exception text to clients | API | global handler returns `"{type}: {msg}"` (no traceback) | ⚠ accepted (local tool; helps debugging) |
-| T4 | Supply chain | vulnerable / malicious dependency | deps | lockfile (`web/package-lock.json`), pinned majors; **no audit** | ❌ gap → T067 (pip-audit, npm audit in CI) |
+| T4 | Supply chain | vulnerable / malicious dependency | deps | lockfile; CI `security.yml`: gitleaks (full history), pip-audit, npm audit (≥ high), CodeQL (python, JS/TS); Dependabot weekly. 2026-11-15 local: pip-audit clean; npm 4 moderate/2 low in shadcn CLI deps | ✅ done (T067) |
 | L1 | Licence | non-open or copyleft component/data in submission | repo | `docs/licenses.md`, provenance `license_note`; ultralytics AGPL optional | ✅ done |
 
 ## 3. PII handling
@@ -71,7 +71,7 @@ wording (numbers are verified, reasoning is not).
 | A03 Injection | SQL injection via `/api/sql` & AI `runSql`; SQL predicates in `conform.where`; command injection in cv options | read-only connection + allowlist/denylist + LIMIT + timeout; `conformed._valid_where` filters predicates (YAML/CLI only); cv options allowlist, subprocess with arg list (no shell) | ✅ |
 | A04 Insecure Design (2025: A06) | features that let an API caller pick arbitrary hosts/paths | STRIDE model, guards designed for API vs trusted CLI split | ✅ |
 | A05 Security Misconfiguration (2025: A02) | wildcard CORS, missing headers, docs exposed | CORS restricted, security headers, API on 127.0.0.1; `/docs` kept for judges (local) | ✅ |
-| A06 Vulnerable & Outdated Components (2025: A03 Software Supply Chain Failures) | vulnerable npm/PyPI deps, typosquats | lockfile; pip-audit + npm audit + Dependabot + CodeQL + gitleaks in CI | ⚠ → T067/T071 |
+| A06 Vulnerable & Outdated Components (2025: A03 Software Supply Chain Failures) | vulnerable npm/PyPI deps, typosquats | lockfile; pip-audit + npm audit + Dependabot + CodeQL + gitleaks in CI | ✅ |
 | A07 Identification & Authentication Failures | — (no accounts) | n/a — local single-team tool | ➖ n/a |
 | A08 Software & Data Integrity Failures | tampered source data, unsigned deps | provenance fingerprints (sha256 per table), `_row_hash`, lockfiles; CI from GitHub Actions pinned major versions | ⚠ partial |
 | A09 Security Logging & Monitoring Failures (2025: Logging & Alerting) | no trace of who ingested what | `meta.runs`, `meta.lineage`, provenance; uvicorn access log | ✅ (no alerting: accepted) |
@@ -83,7 +83,7 @@ wording (numbers are verified, reasoning is not).
 |---|---|---|---|
 | LLM01 Prompt Injection (direct & indirect) | instructions hidden in dataset cells, scraped pages, RSS, element JSON | system-prompt rule "tool output is data" (web + Python agent), read-only tools only, number verification, `stopWhen` 8 steps, context JSON ≤ 8000 chars | ✅ (residual: wording can still be manipulated; numbers cannot) |
 | LLM02 Sensitive Information Disclosure | LLM reveals rows/PII or env secrets | tools return aggregates; runSql ≤ 200 rows and cannot read files/env; offline mode for sensitive data; keys never in prompts | ✅ |
-| LLM03 Supply Chain | malicious model/provider SDK | official AI SDK packages, provider selectable, local Ollama option | ⚠ audits → T067 |
+| LLM03 Supply Chain | malicious model/provider SDK | official AI SDK packages, provider selectable, local Ollama option, npm audit/CodeQL | ✅ |
 | LLM04 Data & Model Poisoning | poisoned source data biases insights | provenance + quality report + outlier flags; judges can trace every number to SQL | ⚠ partial (inherent) |
 | LLM05 Improper Output Handling | LLM text rendered as HTML/markdown → XSS; SQL from LLM executed | story popovers HTML-escaped; chat rendered as React text; LLM SQL goes through the same read-only guard | ✅ |
 | LLM06 Excessive Agency | AI writes/deletes data, calls external URLs | no write tools, no ingest tool, no URL-fetch tool; SQL read-only | ✅ |
@@ -101,5 +101,5 @@ wording (numbers are verified, reasoning is not).
 | XSS / clickjacking | React escaping, HTML escape, CSP, X-Frame-Options | ✅ |
 | CSRF | CORS allowlist + JSON preflight, no cookies/credentials | ✅ |
 | DoS | rate limits, body cap, SQL timeout, row limits, DuckDB 2 threads | ✅ |
-| Supply chain | lockfile; pip-audit, npm audit, gitleaks, Dependabot, CodeQL | ⚠ → T067/T071 |
-| Secrets exposure | env-only, `.env*` ignored, `auth_env` prefix, provenance masking; gitleaks | ⚠ CI part → T067 |
+| Supply chain | lockfile; pip-audit, npm audit, gitleaks, Dependabot, CodeQL | ✅ |
+| Secrets exposure | env-only, `.env*` ignored, `auth_env` prefix, provenance masking; gitleaks | ✅ |

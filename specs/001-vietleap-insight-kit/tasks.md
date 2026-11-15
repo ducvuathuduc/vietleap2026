@@ -50,10 +50,10 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 - [x] T061 SQL guard (+ prompt-injection rule in both system prompts) (`1147a5d`): block file-path string table refs (`FROM 'x.csv'`), external access off on read-only connection, statement timeout → T060
 - [x] T062 SSRF guard (`c1a263b`) for api/scrape/social sources submitted via API (block private/loopback/link-local/metadata IPs, http(s) only, re-check redirects) → T060
 - [x] T063 Path guard + cv option allowlist + zip-bomb limit (`c1a263b`): API-submitted `file`/`cv`/`sql` sources limited to allowed dirs (data/, scenarios/, uploads) → T060
-- [x] T064 (this commit) Upload limits streamed (no full read before size check), CORS methods/headers restricted → T060
-- [x] T065 (this commit) Security headers: FastAPI middleware + Next `headers()` (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) → T060
-- [x] T066 (this commit) Simple in-memory rate limit on `/api/sql`, `/api/ingest`, `POST /api/datasets`, agent, `/api/chat` → T060
-- [ ] T067 `.gitignore` all `.env*` (except `.env.example`); gitleaks + pip-audit + npm audit in CI → T071
+- [x] T064 (`0eec8d3`) Upload limits streamed (no full read before size check), CORS methods/headers restricted → T060
+- [x] T065 (`0eec8d3`) Security headers: FastAPI middleware + Next `headers()` (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) → T060
+- [x] T066 (`0eec8d3`) Simple in-memory rate limit on `/api/sql`, `/api/ingest`, `POST /api/datasets`, agent, `/api/chat` → T060
+- [x] T067 `.gitignore` `.env*` (`0eec8d3`); gitleaks + pip-audit + npm audit + CodeQL + Dependabot in `.github/` (this commit). Local run 2026-11-15: gitleaks 28 commits no leaks; pip-audit 0 known vulns; npm audit 0 high/critical (2 low, 4 moderate in shadcn CLI deps deepmerge/minimatch — CI threshold high)
 
 ## Phase 6 — Contest-fit features (HIGH priority, from contest analysis)
 - [ ] T080 [P] Policy-question-first storytelling: deck + story open with the policy question (from brief.json), then evidence → decision → KPI
@@ -70,8 +70,8 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 - [ ] T055 [P] Screenshots `docs/screenshots/` for README/deck
 
 ## Phase 8 — Ops & validation
-- [ ] T070 Dockerfiles (api, web) + docker-compose
-- [ ] T071 GitHub Actions CI: pytest + web lint/test/build (+ T067 audits)
+- [x] T070 Dockerfiles (api, web) + docker-compose (this commit; not run — no docker on dev machine)
+- [x] T071 GitHub Actions CI: pytest + OpenAPI drift check + web test/lint/build; Security workflow (this commit; first run on GitHub to verify)
 - [ ] T075 Test AI Analyst / Câu chuyện with a real LLM key (Groq) — record results in MASTER_PLAN
 - [ ] T076 (LOW) Run YOLO counting on a real licensed video (needs `pip install ultralytics supervision`)
 - [ ] T077 Update MASTER_PLAN §0, README, SPEC index, this file after each phase

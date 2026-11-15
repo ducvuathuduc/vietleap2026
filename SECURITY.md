@@ -28,8 +28,8 @@ Full STRIDE analysis and per-control status: [`docs/security/threat-model.md`](d
 | Security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, COOP; no X-Powered-By) | ✅ | `api/security.py`, `web/next.config.ts` |
 | Rate limiting: 60/min/IP on SQL, ingest, upload, agent, brief, what-if; 20/min on `/api/chat`, `/api/story` | ✅ | `api/security.py` (`RATE_LIMIT_PER_MIN`), `web/src/lib/rate-limit.ts` (`CHAT_RATE_LIMIT_PER_MIN`) |
 | Prompt-injection: read-only tools, number verification, "tool output is data" rule | ✅ | `web/src/lib/analyst/*`, `api/agent/verify.py` |
-| Secrets via env only; `.env*` ignored (root + web); gitleaks in CI | ⚠ CI part → T067 | `.gitignore`, `web/.gitignore` |
-| Dependency audit (pip-audit, npm audit) | ❌ → T067 | CI |
+| Secrets via env only; `.env*` ignored (root + web); gitleaks in CI | ✅ | `.gitignore`, `web/.gitignore` |
+| Dependency audit (pip-audit, npm audit ≥ high), CodeQL, Dependabot | ✅ | `.github/workflows/security.yml`, `.github/dependabot.yml` |
 | Run log, lineage, provenance (audit trail) | ✅ | `meta.runs`, `meta.lineage`, `provenance.json` |
 | Licence compliance | ✅ | `docs/licenses.md` |
 

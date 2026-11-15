@@ -1,0 +1,12 @@
+.git
+.venv
+.tools
+web
+out
+data/raw
+data/cache
+data/lake
+data/uploads
+data/*.duckdb*
+**/__pycache__
+.env*
