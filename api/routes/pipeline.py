@@ -14,6 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from vlkit.de.flow import run_flow, slugify
+from vlkit.de.netguard import SourceRejected, guard_source
 from vlkit.de.sources import KINDS, Source
 from vlkit.de.warehouse import Warehouse
 
@@ -98,6 +99,11 @@ def source_kinds():
 @router.post("/ingest", status_code=202)
 def ingest(body: IngestIn):
     sources = [Source(**s.model_dump()) for s in body.sources]
+    for src in sources:                       # SSRF / local-path / option guards for untrusted API callers
+        try:
+            guard_source(src)
+        except SourceRejected as e:
+            raise HTTPException(422, f"source '{src.name}': {e}")
     job = {"id": uuid.uuid4().hex[:12], "status": "queued", "dataset": slugify(body.dataset), "error": None,
            "started": time.time(), "finished": None, "summary": None}
     _jobs[job["id"]] = job

@@ -24,10 +24,12 @@ from urllib.robotparser import RobotFileParser
 
 import pandas as pd
 
+from .netguard import httpx_hooks
 from .sources import IngestResult, Source, make_provenance
 
 UA = "VietLeapInsightKit/1.0 (student hackathon research; contact: vietleap2026 participant)"
 CACHE = Path(__file__).resolve().parents[3] / "data" / "cache"
+MAX_UNZIPPED_BYTES = 2 * 1024 ** 3
 
 
 # ----------------------------------------------------------------------------- file
@@ -44,6 +46,9 @@ def ingest_file(src: Source) -> IngestResult:
         tmp = CACHE / "unzipped" / p.stem
         tmp.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(p) as z:
+            total = sum(i.file_size for i in z.infolist())
+            if total > MAX_UNZIPPED_BYTES:     # zip-bomb guard (extractall already strips '..' and absolute paths)
+                raise ValueError(f"zip expands to {total:,} bytes > limit {MAX_UNZIPPED_BYTES:,}")
             z.extractall(tmp)
         for f in sorted(tmp.rglob("*")):
             if f.suffix.lower() in (".csv", ".tsv", ".txt", ".xlsx", ".xls", ".json", ".jsonl", ".parquet"):
@@ -125,7 +130,7 @@ def ingest_api(src: Source, client=None) -> IngestResult:
     if o.get("auth_env") and os.environ.get(o["auth_env"]):
         headers["Authorization"] = f"Bearer {os.environ[o['auth_env']]}"
     own = client is None
-    client = client or httpx.Client(headers=headers, timeout=30, follow_redirects=True)
+    client = client or httpx.Client(headers=headers, timeout=30, follow_redirects=True, event_hooks=httpx_hooks(src))
     paging, params = o.get("paging", "none"), dict(o.get("params", {}))
     min_interval = 1.0 / float(o.get("rate_per_sec", 2))
     max_pages, size = int(o.get("max_pages", 50)), int(o.get("page_size", 100))
@@ -228,7 +233,7 @@ def ingest_scrape(src: Source, client=None) -> IngestResult:
     urls = list(o.get("urls") or [src.uri])
     lo, hi = o.get("delay", [1.0, 3.0])
     own = client is None
-    client = client or httpx.Client(headers={"User-Agent": UA}, timeout=30, follow_redirects=True)
+    client = client or httpx.Client(headers={"User-Agent": UA}, timeout=30, follow_redirects=True, event_hooks=httpx_hooks(src))
     frames, visited, skipped = {}, [], []
     recs: list[dict] = []
     try:
@@ -306,7 +311,12 @@ def ingest_social(src: Source) -> IngestResult:
     import feedparser
     rows = []
     for feed_url in [src.uri, *src.options.get("feeds", [])]:
-        f = feedparser.parse(feed_url, agent=UA)
+        if src.options.get("_net_guard"):     # API-submitted: fetch through the SSRF-checked client, parse the bytes
+            import httpx
+            with httpx.Client(headers={"User-Agent": UA}, timeout=30, follow_redirects=True, event_hooks=httpx_hooks(src)) as c:
+                f = feedparser.parse(c.get(feed_url).content)
+        else:
+            f = feedparser.parse(feed_url, agent=UA)
         for e in f.entries:
             rows.append({"feed": feed_url, "title": e.get("title"), "summary": re.sub("<[^>]+>", " ", e.get("summary", "") or "").strip(),
                          "published": e.get("published") or e.get("updated"), "link": e.get("link"),

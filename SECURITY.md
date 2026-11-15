@@ -20,8 +20,8 @@ Full STRIDE analysis and per-control status: [`docs/security/threat-model.md`](d
 |---|---|---|
 | Read-only SQL: single statement, allowlist, DDL/DML denylist, row limit | ✅ | `engine/vlkit/de/warehouse.py Warehouse.sql`, `api/routes/pipeline.py SqlIn` |
 | SQL cannot read local files (external access off + file/env function denylist), 20 s statement timeout | ✅ | `Warehouse.readonly()`, `Warehouse.sql`, `tests/test_security.py` |
-| SSRF: block private/loopback/link-local/metadata IPs for API-submitted URLs, incl. redirects | ❌ → T062 | |
-| Local path allowlist for API-submitted file/cv/sql sources | ❌ → T063 | |
+| SSRF: block private/loopback/link-local/metadata IPs for API-submitted URLs, incl. redirects and DNS answers; `auth_env` limited to `KIT_TOKEN_*`; `render_js` refused via API | ✅ | `engine/vlkit/de/netguard.py`, connectors httpx event hooks, `tests/test_security.py` |
+| Local path allowlist (symlinks resolved) for API-submitted file/cv/sqlite sources; network DB hosts checked; cv option allowlist; zip-bomb limit 2 GB | ✅ | `netguard.check_path`, `connectors.ingest_file` |
 | Upload limits (type allowlist, 200 MB, streamed size check) | ⚠ → T064 | `api/routes/datasets.py` |
 | Path traversal (ids, filenames, export kinds, chart names) | ✅ | `api/store.py`, `api/routes/datasets.py` |
 | CORS origin allowlist; methods/headers restricted | ⚠ → T064 | `api/main.py`, `CORS_ORIGINS` |
