@@ -9,6 +9,8 @@ import {
 } from "ai"
 import { z } from "zod"
 
+import { rateLimited } from "@/lib/rate-limit"
+
 import type { Insight, ModelsResponse, PipelineSummary, QualityResponse, Recommendation } from "@/lib/api/types"
 import { backend, dsPath } from "@/lib/analyst/backend"
 import { explainOffline, sourcesFor, type OfflineSources } from "@/lib/analyst/explain"
@@ -40,6 +42,8 @@ export function GET() {
 }
 
 export async function POST(req: Request) {
+  const limited = rateLimited(req)
+  if (limited) return limited
   let body: z.infer<typeof Body>
   try {
     body = Body.parse(await req.json())

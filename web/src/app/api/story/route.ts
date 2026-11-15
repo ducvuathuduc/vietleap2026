@@ -1,6 +1,8 @@
 import { generateText } from "ai"
 import { z } from "zod"
 
+import { rateLimited } from "@/lib/rate-limit"
+
 import type { DatasetDetail, Insight, Recommendation } from "@/lib/api/types"
 import { backend, BackendError, dsPath } from "@/lib/analyst/backend"
 import { analystModel } from "@/lib/analyst/model"
@@ -20,6 +22,8 @@ const Body = z.object({
  * deterministic engine text — the endpoint never fails because of the LLM.
  */
 export async function POST(req: Request) {
+  const limited = rateLimited(req)
+  if (limited) return limited
   let body: z.infer<typeof Body>
   try {
     body = Body.parse(await req.json())

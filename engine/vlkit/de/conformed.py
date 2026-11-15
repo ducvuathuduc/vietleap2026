@@ -41,7 +41,7 @@ from pathlib import Path
 import pandas as pd
 
 from ..vn import ascii_key, normalize_province, to_new_province
-from .warehouse import Warehouse, ident
+from .warehouse import _FILE_ACCESS, Warehouse, ident
 
 RES = Path(__file__).resolve().parents[1] / "resources"
 
@@ -184,7 +184,7 @@ def _geo_level(df: pd.DataFrame, col: str, conform: dict) -> str:
 def _valid_where(w: str | None) -> str | None:
     if not w:
         return None
-    if _FORBIDDEN.search(w):
+    if _FORBIDDEN.search(w) or _FILE_ACCESS.search(w):
         raise PermissionError(f"conform.where must be a plain read-only predicate: {w!r}")
     return w
 

@@ -45,14 +45,24 @@ async def upload(file: UploadFile = File(...), target: str | None = Form(None), 
         raise HTTPException(415, f"unsupported file type '{ext}'; allowed: {sorted(ALLOWED)}")
     if domain not in ("auto", "property", "public_finance", "firm", "generic"):
         raise HTTPException(422, "domain must be auto|property|public_finance|firm|generic")
-    data = await file.read()
-    if len(data) > MAX_BYTES:
-        raise HTTPException(413, "file larger than 200 MB")
     s = get_settings()
     s.upload_dir.mkdir(parents=True, exist_ok=True)
     ds_name = slug(name or Path(file.filename).stem)[:60] or "dataset"
     dest = s.upload_dir / f"{ds_name}{ext}"
-    dest.write_bytes(data)
+    tmp = dest.with_suffix(dest.suffix + ".part")
+    size = 0
+    with tmp.open("wb") as fh:                      # stream in 1 MB chunks: never hold > 1 MB in RAM, stop at the cap
+        while chunk := await file.read(1 << 20):
+            size += len(chunk)
+            if size > MAX_BYTES:
+                fh.close()
+                tmp.unlink(missing_ok=True)
+                raise HTTPException(413, "file larger than 200 MB")
+            fh.write(chunk)
+    if size == 0:
+        tmp.unlink(missing_ok=True)
+        raise HTTPException(422, "empty file")
+    tmp.replace(dest)
     return jobs.submit(dest, ds_name, target=target or None, time_col=time or None, geo_col=geo or None, domain=domain)
 
 

@@ -22,13 +22,13 @@ Full STRIDE analysis and per-control status: [`docs/security/threat-model.md`](d
 | SQL cannot read local files (external access off + file/env function denylist), 20 s statement timeout | ✅ | `Warehouse.readonly()`, `Warehouse.sql`, `tests/test_security.py` |
 | SSRF: block private/loopback/link-local/metadata IPs for API-submitted URLs, incl. redirects and DNS answers; `auth_env` limited to `KIT_TOKEN_*`; `render_js` refused via API | ✅ | `engine/vlkit/de/netguard.py`, connectors httpx event hooks, `tests/test_security.py` |
 | Local path allowlist (symlinks resolved) for API-submitted file/cv/sqlite sources; network DB hosts checked; cv option allowlist; zip-bomb limit 2 GB | ✅ | `netguard.check_path`, `connectors.ingest_file` |
-| Upload limits (type allowlist, 200 MB, streamed size check) | ⚠ → T064 | `api/routes/datasets.py` |
+| Upload limits (type allowlist, 200 MB streamed in 1 MB chunks, empty-file reject, request-body cap) | ✅ | `api/routes/datasets.py`, `api/security.py` |
 | Path traversal (ids, filenames, export kinds, chart names) | ✅ | `api/store.py`, `api/routes/datasets.py` |
-| CORS origin allowlist; methods/headers restricted | ⚠ → T064 | `api/main.py`, `CORS_ORIGINS` |
-| Security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) | ❌ → T065 | |
-| Rate limiting on SQL / ingest / upload / agent / chat | ❌ → T066 | |
+| CORS origin allowlist (no `*`), methods GET/POST, headers Content-Type/Accept, no credentials | ✅ | `api/main.py`, `CORS_ORIGINS` |
+| Security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, COOP; no X-Powered-By) | ✅ | `api/security.py`, `web/next.config.ts` |
+| Rate limiting: 60/min/IP on SQL, ingest, upload, agent, brief, what-if; 20/min on `/api/chat`, `/api/story` | ✅ | `api/security.py` (`RATE_LIMIT_PER_MIN`), `web/src/lib/rate-limit.ts` (`CHAT_RATE_LIMIT_PER_MIN`) |
 | Prompt-injection: read-only tools, number verification, "tool output is data" rule | ✅ | `web/src/lib/analyst/*`, `api/agent/verify.py` |
-| Secrets via env only; `.env*` ignored; gitleaks in CI | ⚠ → T067 | `.gitignore`, `web/.gitignore` |
+| Secrets via env only; `.env*` ignored (root + web); gitleaks in CI | ⚠ CI part → T067 | `.gitignore`, `web/.gitignore` |
 | Dependency audit (pip-audit, npm audit) | ❌ → T067 | CI |
 | Run log, lineage, provenance (audit trail) | ✅ | `meta.runs`, `meta.lineage`, `provenance.json` |
 | Licence compliance | ✅ | `docs/licenses.md` |

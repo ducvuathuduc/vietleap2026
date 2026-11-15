@@ -178,3 +178,72 @@ def test_zip_bomb_limit(tmp_path, monkeypatch):
     monkeypatch.setattr(connectors, "MAX_UNZIPPED_BYTES", 1000)
     with pytest.raises(ValueError):
         connectors.ingest_file(_src("file", str(z)))
+
+
+# ------------------------------------------------------------------ T064–T066 HTTP hardening
+def _mini_app(per_min=3, max_body_mb=1):
+    from fastapi import FastAPI
+    from api.security import SecurityMiddleware
+    a = FastAPI()
+    a.add_middleware(SecurityMiddleware, per_min=per_min, max_body_mb=max_body_mb)
+
+    @a.post("/api/sql")
+    def sql():
+        return {"ok": True}
+
+    @a.get("/api/health")
+    def health():
+        return {"ok": True}
+    return a
+
+
+def test_security_headers_on_api():
+    from fastapi.testclient import TestClient
+    from api.main import app
+    r = TestClient(app).get("/api/health")
+    for h in ("x-content-type-options", "x-frame-options", "content-security-policy", "referrer-policy", "permissions-policy"):
+        assert h in r.headers, h
+    assert r.headers["x-frame-options"] == "DENY"
+    assert "jsdelivr" in TestClient(app).get("/docs").headers["content-security-policy"]
+
+
+def test_rate_limit_on_expensive_routes():
+    from fastapi.testclient import TestClient
+    c = TestClient(_mini_app(per_min=3))
+    codes = [c.post("/api/sql").status_code for _ in range(5)]
+    assert codes[:3] == [200, 200, 200] and codes[3:] == [429, 429]
+    assert all(c.get("/api/health").status_code == 200 for _ in range(10))   # cheap GETs not limited
+
+
+def test_body_size_cap():
+    from fastapi.testclient import TestClient
+    c = TestClient(_mini_app(max_body_mb=1))
+    assert c.post("/api/sql", content=b"x" * (2 * 1024 * 1024)).status_code == 413
+
+
+def test_cors_restricted():
+    from fastapi.testclient import TestClient
+    from api.main import app
+    c = TestClient(app)
+    ok = c.options("/api/sql", headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST"})
+    assert ok.headers.get("access-control-allow-origin") == "http://localhost:3000"
+    evil = c.options("/api/sql", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"})
+    assert "access-control-allow-origin" not in evil.headers
+    put = c.options("/api/sql", headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "DELETE"})
+    assert put.status_code == 400
+
+
+def test_upload_streamed_limits(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setenv("KIT_UPLOAD_DIR", str(tmp_path / "up"))
+    monkeypatch.setenv("KIT_OUT_DIR", str(tmp_path / "out"))
+    from api.main import app
+    from api.routes import datasets
+    monkeypatch.setattr(datasets, "MAX_BYTES", 1000)
+    c = TestClient(app)
+    r = c.post("/api/datasets", files={"file": ("big.csv", b"a\n" + b"1\n" * 2000, "text/csv")})
+    assert r.status_code == 413 and not list((tmp_path / "up").glob("*"))
+    assert c.post("/api/datasets", files={"file": ("x.exe", b"MZ", "application/octet-stream")}).status_code == 415
+    assert c.post("/api/datasets", files={"file": ("e.csv", b"", "text/csv")}).status_code == 422
+    r = c.post("/api/datasets", files={"file": ("../../evil.csv", b"a,b\n1,2\n", "text/csv")})
+    assert r.status_code == 202 and (tmp_path / "up" / "evil.csv").exists()

@@ -10,5 +10,9 @@ data/cache/
 data/lake/
 data/*.duckdb
 .env
+.env*
+!.env.example
+*.pem
+*.key
 *.log
 data/*.duckdb.wal
