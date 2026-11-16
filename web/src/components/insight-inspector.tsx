@@ -8,7 +8,7 @@ import { toast } from "sonner"
 
 import { useDataset } from "@/components/dataset-provider"
 import { InsightSheet } from "@/components/insight-sheet"
-import { escapeHtml, stepSelector, type Story } from "@/lib/analyst/story"
+import { escapeHtml, limitsPopover, questionPopover, stepSelector, type Story } from "@/lib/analyst/story"
 import { readInsightTarget, type InsightContext } from "@/lib/insight-target"
 import { tourSteps, targetSelector, type DiscoveredTarget } from "@/lib/tour-steps"
 
@@ -76,13 +76,17 @@ function waitFor(selector: string, timeoutMs: number): Promise<boolean> {
   })
 }
 
+const BRIEF_CARD = '[data-tour="brief-question"]'
+
+/** Story arc (feature 002): decision question → insights → closing → limitations. */
 function storySteps(story: Story): DriveStep[] {
-  const intro: DriveStep = {
-    popover: {
-      title: "Câu chuyện dữ liệu",
-      description: `${escapeHtml(story.headline)}<br><br><small>${story.mode === "llm" ? `Lời dẫn: ${escapeHtml(story.model ?? "AI")} · số liệu đã đối chiếu với engine` : "Chế độ offline: lời dẫn lấy nguyên văn từ engine"} · ←/→ để chuyển, Esc để thoát</small>`,
-    },
-  }
+  const modeLine = `<br><br><small>${story.mode === "llm" ? `Lời dẫn: ${escapeHtml(story.model ?? "AI")} · số liệu đã đối chiếu với engine` : "Chế độ offline: lời dẫn lấy nguyên văn từ engine"} · ←/→ để chuyển, Esc để thoát</small>`
+  const headline = escapeHtml(story.headline)
+  // the brief card lives on Tổng quan; elsewhere the question is a centred popover (no element)
+  const q = story.question ? questionPopover(story.question) : null
+  const intro: DriveStep = q
+    ? { ...(exists(BRIEF_CARD) ? { element: BRIEF_CARD } : {}), popover: { title: q.title, description: `${q.description}<br><br>${headline}${modeLine}` } }
+    : { popover: { title: "Câu chuyện dữ liệu", description: `${headline}${modeLine}` } }
   const body = story.steps.map<DriveStep>((s) => ({
     element: () => (document.querySelector(stepSelector(s.id)) ?? document.querySelector(stepSelector(s.id, "table-row"))) as Element,
     popover: {
@@ -95,7 +99,8 @@ function storySteps(story: Story): DriveStep[] {
     },
   }))
   const outro: DriveStep = { popover: { title: "Từ dữ liệu đến quyết định", description: escapeHtml(story.closing) } }
-  return [intro, ...body, outro]
+  const limits: DriveStep[] = story.limits.length ? [{ popover: limitsPopover(story.limits) }] : []
+  return [intro, ...body, outro, ...limits]
 }
 
 /** "Explain anything": hover-highlight tagged elements with driver.js, click to ask the AI analyst in a Sheet. */

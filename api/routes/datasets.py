@@ -79,7 +79,7 @@ def summary(ds_id: str, store: Store = Depends(get_store)):
     ds = ds_or_404(store, ds_id)
     r = ds.results
     return {"meta": r["meta"], "kpis": r["kpis"], "caveats": r["caveats"], "timings": r.get("timings"), "files": r.get("files", {}),
-            "recommendations": r["recommendations"]}
+            "recommendations": r["recommendations"], "has_brief": (ds.path / "brief.json").is_file()}
 
 
 @router.get("/datasets/{ds_id}/profile")

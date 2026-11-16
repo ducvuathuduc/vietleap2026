@@ -1,5 +1,6 @@
 "use client"
 
+import { BriefQuestionCard } from "@/components/brief-question-card"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { DataTable } from "@/components/data-table"
 import { useDataset } from "@/components/dataset-provider"
@@ -18,6 +19,11 @@ export default function OverviewPage() {
   return (
     <PageShell>
       <SectionCards kpis={detail?.kpis} />
+      {datasetId && detail && (
+        <div className="px-4 lg:px-6">
+          <BriefQuestionCard datasetId={datasetId} hasBrief={detail.has_brief} />
+        </div>
+      )}
       <div className="px-4 lg:px-6">
         <ChartAreaInteractive
           points={ts.data?.points}

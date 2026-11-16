@@ -2,7 +2,9 @@
 // Pure functions only (no fetch / framework imports) — unit-tested with `node --test`.
 // Numbers are never invented: the offline story copies engine sentences verbatim, and an LLM narration is kept
 // only if every number in it also appears in that insight's engine output (`ungroundedNumbers`).
-import type { Insight, Recommendation } from "@/lib/api/types"
+// Feature 002: the story opens with the decision question quoted from brief.json and closes with the engine caveats.
+// Brief text is untrusted user data: it is shown (HTML-escaped) but never sent to the model.
+import type { Brief, Insight, Recommendation } from "@/lib/api/types"
 
 export interface StoryStep {
   id: string
@@ -18,15 +20,49 @@ export interface StoryStep {
   source: "llm" | "engine"
 }
 
+/** Decision question quoted from out/<ds>/brief.json — rendered before step 1, never rewritten by the LLM. */
+export interface StoryQuestion {
+  text: string
+  who: string | null
+  what: string | null
+  kpi: string | null
+  source: "brief"
+}
+
 export interface Story {
   mode: "llm" | "offline"
   model: string | null
   headline: string
   steps: StoryStep[]
   closing: string
+  question: StoryQuestion | null
+  /** ≤ MAX_LIMITS caveats copied verbatim from results.json */
+  limits: string[]
+}
+
+export interface StoryContext {
+  brief?: Brief | null
+  caveats?: string[]
 }
 
 export const STORY_SIZE = 5
+export const MAX_LIMITS = 3
+// caps from specs/002-policy-question-story/contracts/story.question.schema.json
+const MAX_LEN = { text: 2000, who: 300, what: 600, kpi: 300 } as const
+
+function field(value: string | undefined, max: number): string | null {
+  const v = (value ?? "").trim()
+  return v ? v.slice(0, max) : null
+}
+
+/** The brief's first question (else its title) with who / what / KPI from the matched pack; null without a brief. */
+export function storyQuestion(brief: Brief | null | undefined): StoryQuestion | null {
+  if (!brief) return null
+  const text = field(brief.questions.find((q) => q.trim()), MAX_LEN.text) ?? field(brief.title, MAX_LEN.text)
+  if (!text) return null
+  const tpl = brief.pack?.decision_template
+  return { text, who: field(tpl?.who, MAX_LEN.who), what: field(tpl?.what, MAX_LEN.what), kpi: field(tpl?.kpi, MAX_LEN.kpi), source: "brief" }
+}
 
 function fmtNum(x: number, digits = 2): string {
   return x.toFixed(digits).replace(".", ",")
@@ -45,8 +81,8 @@ export function pickInsights(insights: Insight[], n = STORY_SIZE): Insight[] {
 
 const CAUSAL_NOTE = "Đây là quan hệ liên đới từ dữ liệu quan sát, không chứng minh nhân quả."
 
-/** Deterministic story: every sentence is engine output. */
-export function offlineStory(insights: Insight[], recs: Recommendation[], datasetName: string, n = STORY_SIZE): Story {
+/** Deterministic story: every sentence is engine output; the question is quoted brief text. */
+export function offlineStory(insights: Insight[], recs: Recommendation[], datasetName: string, n = STORY_SIZE, ctx: StoryContext = {}): Story {
   const top = pickInsights(insights, n)
   const recBy = new Map(recs.map((r) => [r.from_insight, r]))
   const steps = top.map<StoryStep>((i) => ({
@@ -67,6 +103,8 @@ export function offlineStory(insights: Insight[], recs: Recommendation[], datase
       : `Engine chưa tìm thấy insight có ý nghĩa thống kê cho “${datasetName}”.`,
     steps,
     closing: `${first ? `Khuyến nghị ưu tiên: ${first.now_what_vi} ` : ""}${CAUSAL_NOTE}`,
+    question: storyQuestion(ctx.brief),
+    limits: (ctx.caveats ?? []).slice(0, MAX_LIMITS),
   }
 }
 
@@ -184,7 +222,7 @@ export function mergeDraft(base: Story, draft: LlmStoryDraft | null, insights: I
   }
 }
 
-/** Prompt for the model: only the engine facts it may use. */
+/** Prompt for the model: only the engine facts it may use (never the brief or the question — untrusted text). */
 export function storyPrompt(insights: Insight[], recs: Recommendation[], datasetName: string): string {
   const recBy = new Map(recs.map((r) => [r.from_insight, r]))
   const facts = insights.map((i) => ({
@@ -212,6 +250,25 @@ export function storyPrompt(insights: Insight[], recs: Recommendation[], dataset
 /** Escape text for driver.js popovers (they render description as HTML). */
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string)
+}
+
+export interface Popover {
+  title: string
+  description: string
+}
+
+/** First story step: the decision question, escaped (driver.js renders HTML) and labelled as quoted brief text. */
+export function questionPopover(q: StoryQuestion): Popover {
+  const row = (label: string, v: string | null) => (v ? `<br><small><b>${label}:</b> ${escapeHtml(v)}</small>` : "")
+  return {
+    title: "Câu hỏi quyết định",
+    description: `<i>Đề bài:</i> “${escapeHtml(q.text)}”${row("Ai quyết định", q.who)}${row("Quyết định gì", q.what)}${row("KPI thành công", q.kpi)}`,
+  }
+}
+
+/** Last story step: the engine's caveats, escaped. */
+export function limitsPopover(limits: string[]): Popover {
+  return { title: "Hạn chế", description: `<ul>${limits.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` }
 }
 
 /** CSS selector of the element a story step highlights. */

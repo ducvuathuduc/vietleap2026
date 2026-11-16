@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "story.question.schema.json",
-  "title": "Additive fields on POST /api/story response (feature 002) — merged into specs/001-vietleap-insight-kit/contracts/story.schema.json by T210",
+  "title": "Additive fields on POST /api/story response (feature 002) — merged into specs/001-vietleap-insight-kit/contracts/story.schema.json (done in T210)",
   "type": "object",
   "properties": {
     "question": {

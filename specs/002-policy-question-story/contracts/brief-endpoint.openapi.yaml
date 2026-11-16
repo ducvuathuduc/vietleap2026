@@ -1,11 +1,11 @@
-# OpenAPI 3.1 fragment — feature 002 (merged into specs/001-vietleap-insight-kit/contracts/openapi.json by tools/export_openapi.py after T208)
+# OpenAPI 3.1 fragment — feature 002 (merged into specs/001-vietleap-insight-kit/contracts/openapi.json by tools/export_openapi.py — done in T208)
 paths:
   /api/datasets/{ds}/brief:
     get:
       summary: Brief (problem statement → plan) saved for a dataset
       operationId: get_dataset_brief
       parameters:
-        - {name: ds, in: path, required: true, schema: {type: string, pattern: "^[\\w.-]{1,80}$"}}
+        - {name: ds, in: path, required: true, schema: {type: string, pattern: "^\\w[\\w.-]{0,79}$"}}  # no leading dot: "..", ".", ".hidden" → 422
       responses:
         "200":
           description: out/<ds>/brief.json
@@ -13,3 +13,5 @@ paths:
             application/json:
               schema: {$ref: "../../001-vietleap-insight-kit/contracts/brief.schema.json"}
         "404": {description: no brief saved for this dataset}
+# Additive (no response model in openapi.json): GET /api/datasets/{ds_id} summary gains `has_brief: boolean`
+# (out/<ds>/brief.json exists), so the web asks for the brief only when it exists — no 404 noise in the browser console.

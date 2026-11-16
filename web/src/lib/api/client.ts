@@ -90,6 +90,7 @@ export const api = {
   brief: (text: string, dataset: string | null) =>
     request<Brief>("/api/brief", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, dataset }) }),
   briefSamples: () => request<{ name: string; text: string }[]>("/api/brief/samples"),
+  datasetBrief: (id: string) => request<Brief>(`${ds(id)}/brief`),
   // data-engineering layer
   sourceKinds: () => request<SourceKindsResponse>("/api/sources/kinds"),
   ingest: (body: IngestRequest) =>

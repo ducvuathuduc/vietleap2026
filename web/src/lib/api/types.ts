@@ -88,6 +88,8 @@ export interface DatasetDetail {
   timings: Record<string, number> | null
   files: Record<string, string | number | null>
   recommendations: Recommendation[]
+  /** out/<ds>/brief.json exists (GET /api/datasets/{ds}/brief) — feature 002 */
+  has_brief: boolean
 }
 
 export interface ColumnProfile {

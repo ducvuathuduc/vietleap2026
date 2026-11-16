@@ -1325,6 +1325,50 @@
     }
    }
   },
+  "/api/datasets/{ds}/brief": {
+   "get": {
+    "tags": [
+     "brief"
+    ],
+    "summary": "Get Dataset Brief",
+    "description": "Brief saved for a dataset by POST /api/brief (out/<ds>/brief.json); 404 when none was saved.",
+    "operationId": "get_dataset_brief_api_datasets__ds__brief_get",
+    "parameters": [
+     {
+      "name": "ds",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\w[\\w.-]{0,79}$",
+       "description": "dataset id (no leading dot)",
+       "title": "Ds"
+      },
+      "description": "dataset id (no leading dot)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/brief/packs": {
    "get": {
     "tags": [
@@ -1458,7 +1502,7 @@
        {
         "type": "string",
         "maxLength": 80,
-        "pattern": "^[\\w.-]+$"
+        "pattern": "^\\w[\\w.-]*$"
        },
        {
         "type": "null"

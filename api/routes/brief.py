@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path as PathParam
 from pydantic import BaseModel, Field
 
 from vlkit.brief import load_packs, parse_brief
@@ -19,7 +19,7 @@ BRIEFS = Path(__file__).resolve().parents[2] / "scenarios" / "briefs"
 
 class BriefIn(BaseModel):
     text: str = Field(min_length=10, max_length=20_000)
-    dataset: str | None = Field(None, max_length=80, pattern=r"^[\w.-]+$")
+    dataset: str | None = Field(None, max_length=80, pattern=r"^\w[\w.-]*$")  # no leading dot: never out/../
 
 
 def _dataset_columns(ds: str) -> list[str]:
@@ -41,6 +41,15 @@ def brief(body: BriefIn):
     if body.dataset:                               # persist next to the dataset's other outputs
         (get_settings().out_dir / slug(body.dataset) / "brief.json").write_text(json.dumps(b, ensure_ascii=False, indent=2), encoding="utf-8")
     return b
+
+
+@router.get("/datasets/{ds}/brief")
+def get_dataset_brief(ds: str = PathParam(pattern=r"^\w[\w.-]{0,79}$", description="dataset id (no leading dot)")):
+    """Brief saved for a dataset by POST /api/brief (out/<ds>/brief.json); 404 when none was saved."""
+    p = get_settings().out_dir / slug(ds) / "brief.json"
+    if not p.is_file():
+        raise HTTPException(404, f"no brief saved for dataset '{ds}' — paste the brief on the Đề bài page first")
+    return json.loads(p.read_text(encoding="utf-8"))
 
 
 @router.get("/brief/packs")

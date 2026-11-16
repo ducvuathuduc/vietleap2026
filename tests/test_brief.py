@@ -104,6 +104,39 @@ def test_brief_api(tmp_path, monkeypatch, kit_root):
     assert c.post("/api/brief", json={"text": "short"}).status_code == 422
     assert c.post("/api/brief", json={"text": "Hãy phân tích dữ liệu", "dataset": "nope"}).status_code == 404
     assert c.post("/api/brief", json={"text": "Hãy phân tích dữ liệu", "dataset": "../etc"}).status_code == 422
+    assert c.post("/api/brief", json={"text": "Hãy phân tích dữ liệu", "dataset": ".."}).status_code == 422
     assert len(c.get("/api/brief/packs").json()) >= 7
     names = {x["name"] for x in c.get("/api/brief/samples").json()}
     assert {"bds_gia_m2", "ngan_sach_tinh"} <= names and "README" not in names
+
+
+def test_get_brief_endpoint(tmp_path, monkeypatch, kit_root):
+    """Feature 002 T207: GET /api/datasets/{ds}/brief returns the saved brief.json; 404 when none; traversal ids rejected.
+    The dataset summary says whether a brief exists (`has_brief`) so the web never requests a missing one."""
+    import json
+
+    import pandas as pd
+    from fastapi.testclient import TestClient
+    out = tmp_path / "out"
+    for ds in ("bds", "empty"):
+        (out / ds).mkdir(parents=True)
+        results = {"meta": {"roles": {c: "x" for c in BDS + ["price_per_m2"]}}, "kpis": [], "caveats": [], "recommendations": []}
+        (out / ds / "results.json").write_text(json.dumps(results), encoding="utf-8")
+        pd.DataFrame({"x": [1]}).to_parquet(out / ds / "clean.parquet")
+    (out / "brief.json").write_text(json.dumps({"title": "outside", "questions": []}), encoding="utf-8")  # must stay unreachable
+    monkeypatch.setenv("KIT_OUT_DIR", str(out))
+    from api.main import app
+    c = TestClient(app)
+    assert c.get("/api/datasets/bds/brief").status_code == 404
+    assert c.get("/api/datasets/bds").json()["has_brief"] is False
+    posted = c.post("/api/brief", json={"text": _read(kit_root, "bds_gia_m2.md"), "dataset": "bds"}).json()
+    r = c.get("/api/datasets/bds/brief")
+    assert r.status_code == 200 and r.json() == posted
+    assert r.json()["questions"][0] == posted["questions"][0]
+    assert c.get("/api/datasets/bds").json()["has_brief"] is True
+    assert c.get("/api/datasets/empty/brief").status_code == 404
+    assert c.get("/api/datasets/nope/brief").status_code == 404
+    for bad in ("..", ".", "..%2Fetc", "%2E%2E", ".hidden"):
+        r = c.get(f"/api/datasets/{bad}/brief")
+        assert 400 <= r.status_code < 500 and "outside" not in r.text, bad  # rejected (422) or normalised away, never read
+    assert c.get("/api/datasets/.hidden/brief").status_code == 422  # leading dot refused by the path pattern

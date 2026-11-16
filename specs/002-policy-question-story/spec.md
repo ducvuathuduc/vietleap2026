@@ -1,7 +1,7 @@
 # Feature Specification: Policy-question-first story & deck
 
 **Feature Branch**: `002-policy-question-story` (work lands on `main`, one commit per task group — constitution VIII)
-**Created**: 2026-11-16 · **Status**: Phase A implemented (T201–T205); Phase B in progress · **Priority**: P1 for the contest (rubric A + D ≈ 40%, see `docs/CONTEST_ANALYSIS.md` §3.2)
+**Created**: 2026-11-16 · **Status**: Implemented (T201–T212) · **Priority**: P1 for the contest (rubric A + D ≈ 40%, see `docs/CONTEST_ANALYSIS.md` §3.2)
 **Input**: "Deck and story must open with the policy question from the brief, then evidence → decision → limitation, for economist judges."
 **Supersedes**: `specs/001-vietleap-insight-kit/tasks.md` T080.
 
@@ -97,5 +97,11 @@ As the **PO**, I want the Limitations slide to list the limitation that most thr
 - **Weak evidence** = `p_value ≥ 0.05` (engine p, already Bonferroni-adjusted where several tests run) or an engine `weak` flag; insights
   without a p-value (descriptive: segmentation, forecast) are not labelled weak. Recommendation #1 is the first recommendation whose source
   insight is not weak; when every one is weak the Policy slide says "Weak evidence only (p ≥ 0.05) — exploratory, pilot before acting".
+- **Brief endpoint id pattern** `^\w[\w.-]{0,79}$` (no leading dot) instead of the draft `^[\w.-]{1,80}$`, so `..`/`.` can never resolve to
+  `out/../brief.json`; contract fragment updated. The dataset summary (`GET /api/datasets/{ds_id}`) gains additive `has_brief` so the
+  Tổng quan card requests the brief only when it exists (a 404 fetch would log a browser console error).
+- **Web story arc**: step 0 = "Câu hỏi quyết định" (highlights the Tổng quan card when on that page, otherwise a centred popover — the
+  story itself runs on the Insight page), then the insight steps, the closing, and "Hạn chế" last. The brief card is not tagged for
+  "Hỏi AI", so brief text never reaches an LLM through the explain-anything sheet either.
 - **Insight slide layout**: chart (5.6 in) + EVIDENCE card on the top row, FOR THE DECISION and LIMITATION cards on the bottom row (z-order
   and reading order EVIDENCE → FOR THE DECISION → LIMITATION); full sentence + evidence line also in speaker notes.

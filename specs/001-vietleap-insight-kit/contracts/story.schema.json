@@ -1,7 +1,7 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "story.schema.json",
- "title": "POST /api/story response (web/src/lib/analyst/story.ts Story)",
+ "title": "POST /api/story response (web/src/lib/analyst/story.ts Story; question/limits added by feature 002, optional for older clients)",
  "type": "object",
  "properties": {
   "mode": {
@@ -64,6 +64,56 @@
   },
   "closing": {
    "type": "string"
+  },
+  "question": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "description": "Decision question quoted from out/<ds>/brief.json; never rewritten by the LLM",
+   "properties": {
+    "text": {
+     "type": "string",
+     "maxLength": 2000
+    },
+    "who": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "maxLength": 300
+    },
+    "what": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "maxLength": 600
+    },
+    "kpi": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "maxLength": 300
+    },
+    "source": {
+     "const": "brief"
+    }
+   },
+   "required": [
+    "text",
+    "source"
+   ],
+   "additionalProperties": false
+  },
+  "limits": {
+   "type": "array",
+   "maxItems": 3,
+   "items": {
+    "type": "string"
+   },
+   "description": "Copied verbatim from results.json caveats"
   }
  },
  "required": [

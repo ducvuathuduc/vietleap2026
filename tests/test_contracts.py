@@ -63,6 +63,15 @@ def test_story_contract_shape():
     _check("story", story)
     with pytest.raises(AssertionError):
         _check("story", {**story, "mode": "magic"})
+    # feature 002: additive question / limits
+    framed = {**story, "question": {"text": "Tỉnh nào nên ưu tiên?", "who": "UBND tỉnh", "what": None, "kpi": "Thu/người", "source": "brief"},
+              "limits": ["c1", "c2", "c3"]}
+    _check("story", framed)
+    _check("story", {**story, "question": None, "limits": []})
+    for bad in ({**framed, "limits": ["1", "2", "3", "4"]}, {**framed, "question": {"text": "q", "source": "llm"}},
+                {**framed, "question": {"text": "x" * 2001, "source": "brief"}}):
+        with pytest.raises(AssertionError):
+            _check("story", bad)
 
 
 def test_openapi_in_sync_with_app():
