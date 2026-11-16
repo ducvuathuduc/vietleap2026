@@ -1,0 +1,43 @@
+# OpenAPI 3.1 fragment — feature 009 (merged into specs/001-vietleap-insight-kit/contracts/openapi.json after T906)
+components:
+  schemas:
+    ExportRequest:
+      type: object
+      properties:
+        lang: {type: string, enum: [vi, en, both], default: both}
+        dashboard_pdf: {type: boolean, default: true}
+      additionalProperties: false
+    ExportJob:
+      type: object
+      required: [id, dataset, status, started_at]
+      properties:
+        id: {type: string}
+        dataset: {type: string}
+        status: {type: string, enum: [queued, running, done, done_with_warnings, error]}
+        progress: {type: number, minimum: 0, maximum: 1}
+        step: {type: [string, "null"], description: "rebuild | charts | deck | pdf | dashboard_pdf | bundle"}
+        warnings: {type: array, items: {type: string}}
+        error: {type: [string, "null"]}
+        files: {type: object, additionalProperties: {type: string}, description: "kind → relative path inside out/<ds>/"}
+        started_at: {type: string, description: ISO 8601, Asia/Saigon}
+        finished_at: {type: [string, "null"]}
+paths:
+  /api/datasets/{ds_id}/export:
+    post:
+      requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/ExportRequest"}}}}
+      responses:
+        "202": {description: job started or already running, content: {application/json: {schema: {$ref: "#/components/schemas/ExportJob"}}}}
+        "404": {description: dataset not found}
+        "429": {description: rate limited}
+  /api/export/{job_id}:
+    get:
+      responses:
+        "200": {description: job state, content: {application/json: {schema: {$ref: "#/components/schemas/ExportJob"}}}}
+        "404": {description: unknown job}
+  /api/datasets/{ds_id}/files/{kind}:
+    get:
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string, enum: [deck, deck_vi, pitch_md, pitch_en, dashboard, dashboard_pdf, summary_pdf, summary_md, results, clean_csv, bundle]}
