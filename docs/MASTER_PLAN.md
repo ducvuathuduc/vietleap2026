@@ -40,7 +40,7 @@ Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. M�
 
 ### Còn lại — mỗi việc là một feature Spec Kit
 Danh sách đầy đủ, ước lượng giờ, vai phụ trách và đồ thị phụ thuộc: [`specs/README.md`](../specs/README.md). Lịch theo ngày 16/11–21/11 (workshop 16/11 19:00, đóng băng tính năng 18/11 22:00, nộp 21/11 13:00, pitch 13:15): [`docs/ROADMAP.md`](ROADMAP.md).
-P1: ~~002 câu hỏi chính sách mở đầu deck/story~~ (xong `bdcb571`, `76c9e37`) · 003 deck/pitch song ngữ · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
+P1: ~~002 câu hỏi chính sách mở đầu deck/story~~ (xong `bdcb571`, `76c9e37`) · 003 deck/pitch song ngữ (**tạm dừng 16/11 16:40 theo yêu cầu, chưa viết code — làm tiếp từ T301**) · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
 P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K · 006 NL→SQL · 010 ảnh chụp + video demo.
 Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) mới kiểm bằng `deck_overflow()`, chưa xem ảnh render PNG/LibreOffice.
 

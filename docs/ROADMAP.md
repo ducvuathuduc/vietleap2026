@@ -8,14 +8,18 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - Remaining spec work ≈ 43.5 h (+2 h optional YOLO). Developer time before the 19/11 12:00 check-in ≈ 29 h (16/11 ≈ 6 h, 17/11 ≈ 10 h, 18/11 ≈ 10 h, 19/11 morning ≈ 3 h).
 - **Cut line**: all P1 (002, 003, 004, 009, 011-LLM ≈ 24 h) + 010 (3 h) must land; 007 is the first stretch goal; 005, 006, 008 only if P1 finishes early. Anything not merged by **18/11 22:00 (feature freeze)** is dropped for the contest.
 
+## Progress (16/11 16:40)
+- ✅ 002 done & pushed (`bdcb571`, `76c9e37`; CI + Security green) — Tue 17/11 08:00–12:00 slot is freed.
+- ⏸ Paused on request before 003 started (no 003 code written). Next on resume: 003 T301.
+
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |
 |---|---|---|---|---|---|
 | **Mon 16/11** | morning | Join-coverage UI finished; all remaining specs written and pushed | 001 T043–T045 (`7ecc309`); specs 002–011 | DE | pushed ✅ |
-| | afternoon | Policy-question-first deck & pitch (engine) | 002 T201–T206 | DE | slide 2 test green, pushed |
+| | afternoon | Policy-question-first deck & pitch (engine) | 002 T201–T206 | DE | ✅ pushed `bdcb571` (CI + Security green) |
 | | **19:00** | **Online workshop — Lưu Đức Cảnh (Tasco): luồng dữ liệu & dashboard chuyên nghiệp** — note exact vocabulary (4 stages, OBT/Star/Snowflake/Data Vault choice), ask "ở quy mô hackathon ưu tiên mô hình nào cho dashboard?" | — | LEAD | notes added to `docs/WORKFLOW.md` (commit) |
 | | after workshop | Align deck "Data model" wording with the speaker's answer | 002 T204 wording | DE | pushed |
-| **Tue 17/11** | 08:00–12:00 | Brief endpoint + story question/limits | 002 T207–T212 | DE | web test/lint/build green |
+| **Tue 17/11** | 08:00–12:00 | Brief endpoint + story question/limits | 002 T207–T212 | DE | ✅ done early 16/11 `76c9e37` (CI + Security green) |
 | | 13:00–17:00 | Bilingual deck/pitch (ST writes VI/EN strings in parallel) | 003 T301–T309 | DE + ST | `--lang both` test green |
 | | 17:00–19:00 | Real-key LLM run (Groq) + injection/rate-limit probes | 011 T1101–T1106 | LEAD/DE + AN | `llm-run.md` filled, gitleaks clean |
 | | evening | Engine support for packs (per-column agg, ratios, post_sql views) | 004 T401–T405 | DE | pushed |
