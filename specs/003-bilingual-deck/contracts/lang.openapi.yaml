@@ -1,0 +1,29 @@
+# OpenAPI 3.1 fragment — feature 003 (merged into specs/001-vietleap-insight-kit/contracts/openapi.json after T308)
+components:
+  schemas:
+    ReportLang: {type: string, enum: [vi, en, both], default: both}
+    ExportKind:
+      type: string
+      # existing: deck, dashboard, summary_pdf, summary_md, results, clean_csv (api/routes/datasets.py EXPORTS)
+      enum: [deck, deck_vi, pitch_md, pitch_en, dashboard, summary_pdf, summary_md, results, clean_csv]
+paths:
+  /api/datasets:
+    post:
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                lang: {$ref: "#/components/schemas/ReportLang"}
+  /api/ingest:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                lang: {$ref: "#/components/schemas/ReportLang"}   # IngestIn.lang
+  /api/datasets/{ds_id}/files/{kind}:
+    get:
+      parameters:
+        - {name: kind, in: path, required: true, schema: {$ref: "#/components/schemas/ExportKind"}}
