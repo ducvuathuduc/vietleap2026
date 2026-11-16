@@ -16,6 +16,8 @@ Start here, in this order:
 | 9 | [`docs/SRS.md`](SRS.md) | IEEE 830-style SRS + traceability matrix FR → code → tests |
 | 10 | [`SECURITY.md`](../SECURITY.md), [`docs/security/threat-model.md`](security/threat-model.md) | STRIDE threat model, controls status |
 | 11 | [`docs/CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) | Contest facts, judges, likely themes, scoring strategy |
+| 12 | [`specs/README.md`](../specs/README.md) | **Remaining work**: features 002–011 (one Spec Kit folder each), priority, status, owner role, estimate, dependency graph |
+| 13 | [`docs/ROADMAP.md`](ROADMAP.md) | Day-by-day plan 16/11–21/11 (workshop, freeze 18/11 22:00, contest timeline, gates) |
 | — | [`docs/MASTER_PLAN.md`](MASTER_PLAN.md) §0, [`docs/PLAYBOOK.md`](PLAYBOOK.md), [`docs/CONTEXT.md`](CONTEXT.md), [`AGENTS.md`](../AGENTS.md) | Status log, team runbook, context, agent rules |
 
 **Workflow for a new change** (Spec Kit): update `spec.md` (story/FR) → `plan.md` if architecture changes → add a task in `tasks.md` →

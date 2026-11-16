@@ -30,6 +30,9 @@ Máy có proxy: `export NO_PROXY=localhost,127.0.0.1` (Makefile đã tự đặt
 
 CLI trực tiếp: `python de.py file <file> --serve` · `python de.py run <sources.yaml> --primary <ds> --serve` · `python de.py tables` · `python de.py sql "SELECT ..."`.
 
+Nạp lại dữ liệu (`de.py file|run`, và trường `mode` của `POST /api/ingest`): `--mode replace` (mặc định, ghi đè bronze) · `--mode append` (thêm mọi dòng) ·
+`--mode incremental` (chỉ thêm dòng có `_row_hash` mới; bộ cột đổi → tự dựng lại bảng). Số dòng thêm/bỏ qua nằm trong `pipeline.json` (`load`) và `meta.runs`.
+
 ## 3. Biến môi trường AI Analyst (`web/.env.local`)
 
 Không có khoá nào → AI chạy **offline**: trả lời bằng insight/pipeline/quality do engine tính (vẫn dùng được khi demo mất mạng).
@@ -51,13 +54,30 @@ Groq được ưu tiên nếu cả hai cùng có. Không commit `.env*` có kho�
 
 **Đề bài** (dán đề → kế hoạch) → **Upload** (nút tải dữ liệu / trang Nguồn) → **Pipeline / Chất lượng / Mô hình** (giải thích cho giám khảo) → **Insight / Drivers & What-if / Phân khúc** → **Hỏi AI** (bật ở thanh trên, bấm vào bất kỳ thẻ/biểu đồ) → **Quyết định** → **Exports → deck.pptx**.
 
-## 5. Cấu trúc
+## 5. Bảo mật, CI, Docker
+
+- **Bảo mật** (chi tiết: [`SECURITY.md`](SECURITY.md), [`docs/security/threat-model.md`](docs/security/threat-model.md)): công cụ chạy cục bộ, không đăng nhập — API chỉ bind `127.0.0.1`.
+  SQL chỉ đọc (DuckDB `read_only`, tắt truy cập file/mạng, chặn hàm đọc file/env, timeout 20 s); nguồn gửi qua API bị chặn địa chỉ mạng nội bộ (SSRF) và đường dẫn ngoài thư mục cho phép;
+  upload giới hạn loại/kích thước; header bảo mật + CSP; CORS không wildcard; rate limit 60/phút (API) và 20/phút (`/api/chat`, `/api/story`); tool AI chỉ đọc, output tool là dữ liệu, không phải lệnh.
+  Khoá LLM chỉ để trong `web/.env.local` (đã git-ignore).
+- **CI** (GitHub Actions): `.github/workflows/ci.yml` — pytest + kiểm tra `openapi.json` không lệch (`python tools/export_openapi.py`), web `npm ci && npm test && npm run lint && npm run build`;
+  `.github/workflows/security.yml` — gitleaks (toàn lịch sử), pip-audit, `npm audit --audit-level=high`, CodeQL (Python + TS), chạy hằng tuần; Dependabot cho pip/npm/actions.
+- **Docker** (chưa chạy thử trên máy dev): `docker compose up --build` → dashboard `http://localhost:3000`, API `http://localhost:8000/docs`; cổng chỉ mở trên 127.0.0.1;
+  khoá LLM đọc từ `web/.env.local` nếu có.
+
+## 6. Spec & lộ trình
+
+Spec Kit: [`specs/README.md`](specs/README.md) (feature 001 đã xong; 002–011 là phần còn lại, có ước lượng và phụ thuộc) · lịch 16–21/11: [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+## 7. Cấu trúc
 
 ```
 engine/vlkit/      engine Python: de/ (connectors, warehouse DuckDB, quality, modeling, flow), insights, stats, brief, report
 api/               FastAPI (routes/, jobs nền)
 web/               Next.js 16 + shadcn/ui dashboard-01 + Vercel AI SDK + driver.js
-scenarios/         packs/ (7 miền đề), briefs/ (11 đề mẫu), demo/ (nguồn nhiều loại), cv_counting/
+scenarios/         packs/ (7 miền đề), briefs/ (11 đề mẫu), demo/ (nguồn nhiều loại), conformed/, cv_counting/
+specs/             Spec Kit: 001 (đã xong) + 002–011 (còn lại)
+.github/           CI + Security workflows, Dependabot
 docs/  slides/  tests/  tools/
 ```
 

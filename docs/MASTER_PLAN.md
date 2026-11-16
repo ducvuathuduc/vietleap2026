@@ -4,38 +4,43 @@
 
 ---
 
-## 0. TRẠNG THÁI (cập nhật 14/11/2026) — đọc mục này trước
+## 0. TRẠNG THÁI (cập nhật 16/11/2026) — đọc mục này trước
 
 **Lịch BTC đã xác nhận (giờ Việt Nam):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 15:30** Chi-Yu Lee (Konstanz) *From observation to data* (object tracking CV) · **20/11 09:00** công bố đề + chia đội ngẫu nhiên · **20/11 10:00** Viet Nguyen-Tien (LSE) *Unlocking the Data Economy* · **20/11 11:00** Sacha Dray (World Bank VN) workshop Dashboard · **21/11 13:00** hạn nộp · **21/11 13:15** pitch.
 
-### Đã xong & đã push (pytest 116 pass + 1 skip; `npm test` 20 pass; `npm run lint`, `npm run build` pass)
+**Kiểm tra lần cuối (16/11, commit `7ecc309`)**: `pytest -q tests` 194 pass + 1 skip + 2 xfail · `npm test` 24 pass · `npm run lint` sạch · `npm run build` pass (chạy tuần tự trên máy 2 CPU).
+CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` — lần chạy đầu trên GitHub cần xem lại. Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
+
+### Đã xong & đã push
 
 | Task | Nội dung | Commit |
 |---|---|---|
 | T1–T5 Lớp DE | Ingestion `engine/vlkit/de/connectors.py` (file csv/xlsx/json/parquet/zip, api có paging/retry/rate-limit/cache, sql SELECT-only, scrape tôn trọng robots.txt, social RSS/Trends, cv) → Storage DuckDB bronze/silver/gold/meta + Parquet lake → Transform `quality.py` (missing/duplicate/outlier 3×IQR gắn cờ, điểm 0–100 trước/sau, cleaning log) + `modeling.py` (OBT, Star, Snowflake, Data Vault 2.0, ERD Mermaid) → Serving `flow.py` (pipeline/quality/lineage/provenance JSON) + API FastAPI | 2e9674c |
 | T6 Web | shadcn dashboard-01 (không restyle): Tổng quan, Nguồn, Pipeline (lineage mermaid), Chất lượng, Mô hình (Tabs 4 mô hình + ERD + SQL), SQL Explorer, Hồ sơ, Insight, Drivers & What-if, Phân khúc, Quyết định | 0e8be9b |
-| T7 AI Analyst | Vercel AI SDK v7 `/api/chat` (streamText + 11 tool gọi FastAPI, Groq hoặc OpenAI-compatible qua env, offline không cần key) + trang Analyst | 953057a |
+| T7 AI Analyst | Vercel AI SDK v7 `/api/chat` (streamText + 10 tool chỉ đọc gọi FastAPI, Groq hoặc OpenAI-compatible qua env, offline không cần key) + trang Analyst | 953057a |
 | Explain-anything | driver.js tour "Hướng dẫn" + chế độ "Hỏi AI" (rê/bấm phần tử `data-insight-target` → Sheet AI giải thích, offline deterministic có unit test) | b225042 |
 | T8 Đề → brief | `engine/vlkit/brief.py` rule-based VI/EN, 7 scenario pack (`scenarios/packs/`), 11 đề mẫu (`scenarios/briefs/`), `POST /api/brief`, trang Đề bài | 2609808 |
 | Fix + Makefile | không chuẩn hoá tỉnh 2 lần; `make setup/api/web/web-dev/demo/demo-online/brief/test` | 757df0c, a4483a2 |
 | T11 docs | README quickstart, `docs/PLAYBOOK.md`, `docs/CONTEXT.md` | a712972 |
 | AI story | nút "Câu chuyện" (top-5 insight, driver.js lần lượt từng thẻ, kiểm số chống bịa), tour/inspect chống crash | 253f761 |
 | T10 deck | 15 slide (pipeline, mô hình, chất lượng, chính sách, hạn chế, provenance), fit chữ + kiểm tràn, `pitch.md` Marp | d3208b3 |
-| T9 CV | `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → counts.csv, `--events` không cần torch) | (commit này) |
+| T9 CV | `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → counts.csv, `--events` không cần torch) | 8024f92 |
+| DE nâng cao | Conformed dimensions nhiều nguồn + join coverage; dim_geo cấp quận/huyện; nạp tăng dần `--mode replace\|append\|incremental` theo `_row_hash` | 726fe1c, 74d2d98, 1b3a40d |
+| Spec Kit & tài liệu | constitution 8 nguyên tắc, `specs/001-*` (spec/plan/research/data-model/contracts/tasks), `docs/SPEC.md`, `docs/CONTEST_ANALYSIS.md`, `docs/WORKFLOW.md`, bản đồ Reuse vs Build | 004caef, aef4d05, b6e6b6b, 86f194b, e938a12 |
+| Bảo mật | `SECURITY.md` + STRIDE threat model; SQL read-only cứng (DuckDB read_only, tắt external access, denylist, timeout 20 s); SSRF + path guard cho nguồn gửi qua API; header bảo mật/CSP, CORS không wildcard, upload stream có giới hạn, rate limit 60/phút (API) và 20/phút (`/api/chat`, `/api/story`) | 2444157, 1147a5d, c1a263b, 0eec8d3 |
+| Ops | GitHub Actions CI + Security, Dependabot, Dockerfiles + docker-compose | a0a920e |
+| Join coverage UI | `GET /api/datasets/{ds}/conformed`, `keys` trong `/models`, thẻ "Độ phủ ghép nối" (trang Pipeline), tab Conformed (trang Mô hình), Hỏi AI offline cho kind `join` | 7ecc309 |
 
 Đã chạy thật: `scenarios/demo/sources.yaml` (5 loại nguồn: CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress); Hà Nội 81.681 tin (điểm chất lượng 84,9 → 92,4); 3 dataset practice (`data/practice/`).
 
-Lệnh: `make api` · `make web` · `make demo` · `python de.py file <path> --serve` · `python de.py run <sources.yaml> --primary <ds> --serve` · `python de.py brief <đề.md> --data <file>` · `python de.py sql "SELECT ..."`.
+Lệnh: `make api` · `make web` · `make demo` · `python de.py file <path> --serve [--mode incremental]` · `python de.py run <sources.yaml> --primary <ds> --serve` · `python de.py brief <đề.md> --data <file>` · `python de.py sql "SELECT ..."` · `docker compose up --build` (chưa kiểm thử).
 Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. Máy yếu: không chạy `npm run build` song song với pytest/engine.
 
-### Còn lại (theo thứ tự)
-1. ✅ **T11 docs** (xong 14/11) — `docs/PLAYBOOK.md` (lịch theo giờ, vai trò đội 4–5 người kể cả người không code), `docs/CONTEXT.md` (bối cảnh, nhà tài trợ → miền đề có thể ra), README quickstart 1 trang.
-2. ✅ **AI layer wow/robustness** (xong 14/11: `web/src/lib/analyst/story.ts` + `/api/story`, kiểm số chống bịa, test node) — tour/inspect không crash khi thiếu phần tử, Esc thoát, chạy mọi trang; nút **"Câu chuyện insight"**: agent (hoặc engine offline) kể top-5 insight, driver.js lần lượt highlight thẻ/biểu đồ tương ứng.
-3. ✅ **T10 deck** (xong 14/11: `report.py` fit chữ + `deck_overflow()`, `out/<ds>/pitch.md`, `slides/pitch.md`, `tests/test_deck.py`) — slide Data pipeline, Data model (OBT vs Star vs Snowflake vs Data Vault & vì sao), Data quality trước/sau, Provenance, Limitations, Policy recommendation; `slides/pitch.md` (Marp) 7 phút; kiểm tra tràn chữ.
-4. ✅ **T9 CV** (xong 14/11: `scenarios/cv_counting/count.py` + README, `tests/test_cv_counting.py`; chưa chạy YOLO thật — cần `pip install ultralytics supervision` + video có giấy phép) — `scenarios/cv_counting/count.py` (YOLOv8n + ByteTrack + LineZone → `counts.csv`), báo lỗi thân thiện khi thiếu ultralytics; README; test không tải model lớn.
-5. **T12 (tuỳ chọn)** — docker-compose, GitHub Actions.
-
-**Việc nhỏ còn mở cho lớp DE:** conformed dimension giữa nhiều nguồn (join theo tỉnh/năm khi ≥2 bảng silver chung khoá — `load_sources` đã đọc `keys:` nhưng chưa dùng); dim_geo cho quận/huyện; incremental load theo `_row_hash` (hiện ghi đè); screenshot `docs/screenshots/` cho T6.
+### Còn lại — mỗi việc là một feature Spec Kit
+Danh sách đầy đủ, ước lượng giờ, vai phụ trách và đồ thị phụ thuộc: [`specs/README.md`](../specs/README.md). Lịch theo ngày 16/11–21/11 (workshop 16/11 19:00, đóng băng tính năng 18/11 22:00, nộp 21/11 13:00, pitch 13:15): [`docs/ROADMAP.md`](ROADMAP.md).
+P1: 002 câu hỏi chính sách mở đầu deck/story · 003 deck/pitch song ngữ · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
+P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K · 006 NL→SQL · 010 ảnh chụp + video demo.
+Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker và CI chưa chạy lần đầu.
 
 ---
 

@@ -41,9 +41,9 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 - [x] T040 Incremental load by `_row_hash`: `--mode replace|append|incremental`, inserted/skipped in meta.runs, API `IngestIn.mode`, schema change → rebuild, tests (`1b3a40d`)
 - [x] T041 Spec Kit docs: constitution, spec/plan/research/data-model/contracts/quickstart/tasks/checklist, SRS, contract tests (`aef4d05`)
 - [x] T042 Copy `docs/CONTEST_ANALYSIS.md` from contest research (`b6e6b6b`)
-- [x] T043 (this commit) API `GET /api/datasets/{ds}/conformed` + `keys` in models response; regenerate `contracts/openapi.json` → T016
-- [x] T044 (this commit) Pipeline page: join-coverage Card + Table + Progress (shadcn), `data-insight-target` tags → T043
-- [x] T045 (this commit) Model page: "Conformed" tab with ERD + SQL + coverage, Hỏi AI offline explanation for conformed/join kinds → T043
+- [x] T043 (`7ecc309`) API `GET /api/datasets/{ds}/conformed` + `keys` in models response; regenerate `contracts/openapi.json` → T016
+- [x] T044 (`7ecc309`) Pipeline page: join-coverage Card + Table + Progress (shadcn), `data-insight-target` tags → T043
+- [x] T045 (`7ecc309`) Model page: "Conformed" tab with ERD + SQL + coverage, Hỏi AI offline explanation for conformed/join kinds → T043
 
 ## Phase 5 — Security [NFR-005] (see docs/security/threat-model.md)
 - [x] T060 SECURITY.md + STRIDE threat model with verified control status (`2444157`)
@@ -53,28 +53,32 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 - [x] T064 (`0eec8d3`) Upload limits streamed (no full read before size check), CORS methods/headers restricted → T060
 - [x] T065 (`0eec8d3`) Security headers: FastAPI middleware + Next `headers()` (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) → T060
 - [x] T066 (`0eec8d3`) Simple in-memory rate limit on `/api/sql`, `/api/ingest`, `POST /api/datasets`, agent, `/api/chat` → T060
-- [x] T067 `.gitignore` `.env*` (`0eec8d3`); gitleaks + pip-audit + npm audit + CodeQL + Dependabot in `.github/` (this commit). Local run 2026-11-15: gitleaks 28 commits no leaks; pip-audit 0 known vulns; npm audit 0 high/critical (2 low, 4 moderate in shadcn CLI deps deepmerge/minimatch — CI threshold high)
+- [x] T067 `.gitignore` `.env*` (`0eec8d3`); gitleaks + pip-audit + npm audit + CodeQL + Dependabot in `.github/` (`a0a920e`). Local run 2026-11-15: gitleaks 28 commits no leaks; pip-audit 0 known vulns; npm audit 0 high/critical (2 low, 4 moderate in shadcn CLI deps deepmerge/minimatch — CI threshold high)
 
 ## Phase 6 — Contest-fit features (HIGH priority, from contest analysis)
-- [ ] T080 [P] Policy-question-first storytelling: deck + story open with the policy question (from brief.json), then evidence → decision → KPI
-- [ ] T081 [P] Bilingual deck/pitch: `--lang vi|en` (deck currently English text from `*_en` fields; pitch.md VI) + web toggle on Export
-- [ ] T082 [P] Verify/extend packs `public_finance_province` and `listed_firms_market` with real-data dry runs (`data/practice/wdi_fiscal`, `firms_2021`); add `energy_ev_data_economy` pack + sample brief
-- [ ] T083 WDI Vietnam vs ASEAN comparison recipe (World Bank API sources.yaml with ASEAN ISO3 list, conformed on country+year)
+- [ ] T080 → [specs/002](../002-policy-question-story/) [P] Policy-question-first storytelling: deck + story open with the policy question (from brief.json), then evidence → decision → KPI
+- [ ] T081 → [specs/003](../003-bilingual-deck/) [P] Bilingual deck/pitch: `--lang vi|en` (deck currently English text from `*_en` fields; pitch.md VI) + web toggle on Export
+- [ ] T082 → [specs/004](../004-scenario-packs/) [P] Verify/extend packs `public_finance_province` and `listed_firms_market` with real-data dry runs (`data/practice/wdi_fiscal`, `firms_2021`); add `energy_ev_data_economy` pack + sample brief
+- [ ] T083 → [specs/004](../004-scenario-packs/) WDI Vietnam vs ASEAN comparison recipe (World Bank API sources.yaml with ASEAN ISO3 list, conformed on country+year)
 
 ## Phase 7 — Wow features [US7] (each its own commit)
-- [ ] T050 Command palette Ctrl+K (shadcn Command/cmdk): pages, "Câu chuyện", ask AI, what-if
-- [ ] T051 NL→SQL in AI Analyst: draft DuckDB SQL, validate read-only, run, inline table + auto chart (shadcn chart), answer cites the query → T061
-- [ ] T052 What-if sliders page (shadcn Slider): real-time predicted KPI + CI90 from engine drivers model
-- [ ] T053 Vietnam 34-province choropleth (open GeoJSON, licence recorded in docs/licenses.md), click → Hỏi AI
-- [ ] T054 One-click "Xuất báo cáo" (deck + pitch.md + PDF)
-- [ ] T055 [P] Screenshots `docs/screenshots/` for README/deck
+- [ ] T050 → [specs/005](../005-command-palette/) Command palette Ctrl+K (shadcn Command/cmdk): pages, "Câu chuyện", ask AI, what-if
+- [ ] T051 → [specs/006](../006-nl-to-sql/) NL→SQL in AI Analyst: draft DuckDB SQL, validate read-only, run, inline table + auto chart (shadcn chart), answer cites the query → T061
+- [ ] T052 → [specs/007](../007-whatif-sliders/) What-if sliders page (shadcn Slider): real-time predicted KPI + CI90 from engine drivers model
+- [ ] T053 → [specs/008](../008-province-choropleth/) Vietnam 34-province choropleth (open GeoJSON, licence recorded in docs/licenses.md), click → Hỏi AI
+- [ ] T054 → [specs/009](../009-one-click-export/) One-click "Xuất báo cáo" (deck + pitch.md + PDF)
+- [ ] T055 → [specs/010](../010-screenshots-demo-video/) [P] Screenshots `docs/screenshots/` for README/deck
 
 ## Phase 8 — Ops & validation
-- [x] T070 Dockerfiles (api, web) + docker-compose (this commit; not run — no docker on dev machine)
-- [x] T071 GitHub Actions CI: pytest + OpenAPI drift check + web test/lint/build; Security workflow (this commit; first run on GitHub to verify)
-- [ ] T075 Test AI Analyst / Câu chuyện with a real LLM key (Groq) — record results in MASTER_PLAN
-- [ ] T076 (LOW) Run YOLO counting on a real licensed video (needs `pip install ultralytics supervision`)
+- [x] T070 Dockerfiles (api, web) + docker-compose (`a0a920e`; not run — no docker on dev machine)
+- [x] T071 GitHub Actions CI: pytest + OpenAPI drift check + web test/lint/build; Security workflow (`a0a920e`; first run on GitHub to verify)
+- [ ] T075 → [specs/011](../011-real-key-validation/) Test AI Analyst / Câu chuyện with a real LLM key (Groq) — record results in MASTER_PLAN
+- [ ] T076 → [specs/011](../011-real-key-validation/) (LOW) Run YOLO counting on a real licensed video (needs `pip install ultralytics supervision`)
 - [ ] T077 Update MASTER_PLAN §0, README, SPEC index, this file after each phase
+
+## Remaining work → feature specs (2026-11-16)
+Every open task above now has its own Spec Kit folder (spec/plan/tasks/contracts) — index, estimates and dependency graph in
+[specs/README.md](../README.md); day-by-day plan in [docs/ROADMAP.md](../../docs/ROADMAP.md). Tick the box here when the feature's last task is pushed.
 
 ## Dependencies & order
 Phase 4 (T042–T045) → Phase 5 security quick fixes (T060–T066) → Phase 6 contest-fit (T080–T083) → Phase 7 wow (T050–T055) → Phase 8.
