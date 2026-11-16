@@ -30,6 +30,7 @@ CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift
 | Bảo mật | `SECURITY.md` + STRIDE threat model; SQL read-only cứng (DuckDB read_only, tắt external access, denylist, timeout 20 s); SSRF + path guard cho nguồn gửi qua API; header bảo mật/CSP, CORS không wildcard, upload stream có giới hạn, rate limit 60/phút (API) và 20/phút (`/api/chat`, `/api/story`) | 2444157, 1147a5d, c1a263b, 0eec8d3 |
 | Ops | GitHub Actions CI + Security, Dependabot, Dockerfiles + docker-compose | a0a920e |
 | Join coverage UI | `GET /api/datasets/{ds}/conformed`, `keys` trong `/models`, thẻ "Độ phủ ghép nối" (trang Pipeline), tab Conformed (trang Mô hình), Hỏi AI offline cho kind `join` | 7ecc309 |
+| 002 Phase A — câu hỏi chính sách mở đầu deck/pitch | `report.load_brief()` đọc `out/<ds>/brief.json`; slide 2 "Decision question" (câu hỏi trích nguyên văn, WHO DECIDES, SUCCESS KPI; không có đề → "(no brief — generic question)"); slide insight EVIDENCE → FOR THE DECISION → LIMITATION, insight có khuyến nghị đứng trước, p ≥ 0,05 ghi "Weak evidence" và không làm bằng chứng cho khuyến nghị #1; slide Limitations: nhân quả trước, rồi số thật (ô thiếu, dòng không ghép); `pitch.md` mở bằng "## 0 · Câu hỏi quyết định" (timing §4.6, 7 phút mặc định) | bdcb571 |
 
 Đã chạy thật: `scenarios/demo/sources.yaml` (5 loại nguồn: CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress); Hà Nội 81.681 tin (điểm chất lượng 84,9 → 92,4); 3 dataset practice (`data/practice/`).
 
@@ -38,7 +39,7 @@ Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. M�
 
 ### Còn lại — mỗi việc là một feature Spec Kit
 Danh sách đầy đủ, ước lượng giờ, vai phụ trách và đồ thị phụ thuộc: [`specs/README.md`](../specs/README.md). Lịch theo ngày 16/11–21/11 (workshop 16/11 19:00, đóng băng tính năng 18/11 22:00, nộp 21/11 13:00, pitch 13:15): [`docs/ROADMAP.md`](ROADMAP.md).
-P1: 002 câu hỏi chính sách mở đầu deck/story · 003 deck/pitch song ngữ · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
+P1: 002 câu hỏi chính sách mở đầu deck/story (Phase A deck/pitch xong; Phase B API + web story đang làm) · 003 deck/pitch song ngữ · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
 P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K · 006 NL→SQL · 010 ảnh chụp + video demo.
 Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử.
 

@@ -4,12 +4,12 @@
 **Done for every task**: `pytest -q tests` then `cd web && npm test && npm run lint && npm run build` (sequential, 2-CPU machine), commit as `thanhdicode`, `git push origin main`, tick here with the hash.
 
 ## Phase A — Engine (deck + pitch)
-- [ ] T201 Test-first: `tests/test_deck.py::test_slide2_decision_question` — build deck for `data/practice/wdi_asia_fiscal_panel.csv` with a `brief.json` parsed from `scenarios/briefs/wdi_tax_revenue.md`; assert slide 2 title "Decision question", body contains `questions[0]`, cards WHO DECIDES / SUCCESS KPI; second case without brief asserts tag "(no brief — generic question)". **Done when** test fails for the right reason.
-- [ ] T202 `engine/vlkit/report.py`: `load_brief()`, `_decision_frame()`, slide 2, `build_all` wiring → T201. **Done when** T201 passes and `deck_overflow()==[]` on 3 practice datasets.
-- [ ] T203 [P] Test-first: `tests/test_deck.py::test_insight_slide_evidence_decision_limitation` (3 cards in order; weak insight kicker "Weak evidence"; linked insights first) + extend `test_numbers_come_from_flow` to slide 2 and insight slides.
-- [ ] T204 `report.py` insight slide layout + ordering + Limitations order with real counts + speaker notes (FR-203/207/208) → T203.
-- [ ] T205 `report.py pitch_md()` §0 "Câu hỏi quyết định" + `slides/pitch.md` template; test `test_pitch_md_marp_storyline` asserts §0 first → T202.
-- [ ] T206 Commit + push "feat(story): T201–T205 policy-question-first deck & pitch" ; tick boxes.
+- [x] T201 (`bdcb571`) Test-first: `tests/test_deck.py::test_slide2_decision_question` — build deck for `data/practice/wdi_asia_fiscal_panel.csv` with a `brief.json` parsed from `scenarios/briefs/wdi_tax_revenue.md`; assert slide 2 title "Decision question", body contains `questions[0]`, cards WHO DECIDES / SUCCESS KPI; second case without brief asserts tag "(no brief — generic question)". **Done when** test fails for the right reason.
+- [x] T202 (`bdcb571`) `engine/vlkit/report.py`: `load_brief()`, `_decision_frame()`, slide 2, `build_all` wiring → T201. **Done when** T201 passes and `deck_overflow()==[]` on 3 practice datasets.
+- [x] T203 (`bdcb571`) [P] Test-first: `tests/test_deck.py::test_insight_slide_evidence_decision_limitation` (3 cards in order; weak insight kicker "Weak evidence"; linked insights first) + extend `test_numbers_come_from_flow` to slide 2 and insight slides.
+- [x] T204 (`bdcb571`) `report.py` insight slide layout + ordering + Limitations order with real counts + speaker notes (FR-203/207/208) → T203.
+- [x] T205 (`bdcb571`) `report.py pitch_md()` §0 "Câu hỏi quyết định" + `slides/pitch.md` template; test `test_pitch_md_marp_storyline` asserts §0 first → T202.
+- [x] T206 (`bdcb571`) Commit + push "feat(story): T201–T205 policy-question-first deck & pitch" ; tick boxes.
 
 ## Phase B — API + web story
 - [ ] T207 [P] Test-first `tests/test_brief.py::test_get_brief_endpoint` (200 after `POST /api/brief {dataset}`; 404 otherwise; `../` id rejected).
