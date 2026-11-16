@@ -196,8 +196,21 @@ def models(ds: str):
     p = _json(ds, "pipeline.json")
     d = _out(ds) / "models"
     sql = {f.stem: f.read_text(encoding="utf-8") for f in d.glob("*.sql")} if d.exists() else {}
+    c = p.get("conformed") or None
     return {"models": p["models"], "sql": sql, "rationale": p["rationale"], "recommended": p["recommended"],
-            "column_plan": p["column_plan"]}
+            "column_plan": p["column_plan"],
+            "keys": {"shared": c["shared_keys"], "detected": c.get("detected", {}), "dims": c["dims"]} if c else None}
+
+
+@router.get("/datasets/{ds}/conformed")
+def conformed(ds: str):
+    """Conformed dimensions across sources: dims, facts, integrated OBT, join coverage per source × key, pairwise key
+    overlap, plus the conformed ERD (Mermaid) and SQL. 404 when the run had < 2 sources sharing a key."""
+    c = _json(ds, "conformed.json")
+    d = _out(ds) / "models"
+    c["erd"] = (d / "conformed.mmd").read_text(encoding="utf-8") if (d / "conformed.mmd").exists() else None
+    c["sql"] = (d / "conformed.sql").read_text(encoding="utf-8") if (d / "conformed.sql").exists() else None
+    return c
 
 
 @router.get("/datasets/{ds}/provenance")

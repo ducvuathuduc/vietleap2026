@@ -26,6 +26,7 @@ const KIND_LABEL: Record<InsightContext["kind"], string> = {
   quality: "Chất lượng dữ liệu",
   model: "Mô hình dữ liệu",
   decision: "Khuyến nghị",
+  join: "Ghép nối nguồn",
 }
 
 /** One analyst conversation about one inspected element; remounted (fresh chat) per element. */

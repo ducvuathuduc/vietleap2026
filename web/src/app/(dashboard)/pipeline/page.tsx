@@ -1,6 +1,7 @@
 "use client"
 
 import { useDataset } from "@/components/dataset-provider"
+import { JoinCoverageCard } from "@/components/join-coverage"
 import { MermaidDiagram } from "@/components/mermaid-diagram"
 import { ResultTable } from "@/components/result-table"
 import { StatCards } from "@/components/stat-cards"
@@ -92,6 +93,12 @@ export default function PipelinePage() {
           </CardContent>
         </Card>
       </div>
+
+      {p.conformed ? (
+        <div className="px-4 lg:px-6">
+          <JoinCoverageCard c={p.conformed} />
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @5xl/main:grid-cols-2">
         <Card>

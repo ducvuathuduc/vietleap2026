@@ -12,6 +12,7 @@ export type InsightKind =
   | "quality"
   | "model"
   | "decision"
+  | "join"
 
 export interface InsightContext {
   kind: InsightKind

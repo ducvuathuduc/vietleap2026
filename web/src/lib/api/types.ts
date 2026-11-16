@@ -335,6 +335,86 @@ export interface PipelineSummary {
   rationale: Partial<Record<ModelKind, string>>
   recommended: { serving: ModelKind; semantic: ModelKind }
   provenance: Provenance[]
+  conformed?: ConformedDiagnostics | null
+  load?: LoadInfo | null
+}
+
+export interface LoadTable {
+  inserted: number
+  skipped: number
+  rebuilt: boolean
+  rows?: number
+  reason?: string | null
+}
+
+export interface LoadInfo {
+  mode: "replace" | "append" | "incremental"
+  inserted: number
+  skipped: number
+  tables: Record<string, LoadTable>
+}
+
+export interface KeyCoverage {
+  column: string | null
+  matched_rows: number
+  null_key_rows?: number
+  unmatched_rows: number
+  match_pct: number
+  outside_reference_rows?: number
+}
+
+export interface SourceCoverage {
+  table: string
+  source: string
+  rows: number
+  geo_level: string | null
+  keys: Record<string, KeyCoverage>
+}
+
+export interface JoinDiag {
+  source: string
+  keys: string[]
+  status: string
+  join_on?: string[]
+  matched_rows?: number
+  unmatched_rows?: number
+  match_pct?: number
+  unmatched_samples?: string[]
+  columns_added?: number
+  aggregated?: string | null
+  where?: string | null
+  hint?: string
+  rows_per_key?: number
+}
+
+export interface KeyOverlap {
+  key: string
+  a: string
+  b: string
+  a_keys: number
+  b_keys: number
+  shared_keys: number
+  jaccard: number
+}
+
+export interface ConformedDiagnostics {
+  shared_keys: string[]
+  dims: Record<string, string>
+  facts: Record<string, string>
+  integrated: string
+  integrated_rows: number
+  base?: string[]
+  base_rows?: number
+  row_explosion?: boolean
+  joins: JoinDiag[]
+  sources: SourceCoverage[]
+  overlap: KeyOverlap[]
+  detected?: Record<string, Record<string, string>>
+}
+
+export interface ConformedResponse extends ConformedDiagnostics {
+  erd: string | null
+  sql: string | null
 }
 
 export interface DqIssue {
@@ -394,6 +474,8 @@ export interface ModelsResponse {
   rationale: Partial<Record<ModelKind, string>>
   recommended: { serving: ModelKind; semantic: ModelKind }
   column_plan: ColumnPlan
+  /** conformed keys shared across sources (null when the run had a single source) */
+  keys?: { shared: string[]; detected: Record<string, Record<string, string>>; dims: Record<string, string> } | null
 }
 
 // ── Problem statement → plan (api/routes/brief.py, engine/vlkit/brief.py) ─────────

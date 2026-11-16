@@ -78,7 +78,7 @@ export interface OfflineSources {
 
 /** Which engine resources an element kind needs. */
 export function sourcesFor(kind: InsightContext["kind"]): (keyof OfflineSources)[] {
-  if (kind === "pipeline-stage") return ["pipeline"]
+  if (kind === "pipeline-stage" || kind === "join") return ["pipeline"]
   if (kind === "quality") return ["quality"]
   if (kind === "model") return ["models"]
   return ["insights"]
@@ -109,6 +109,35 @@ export function explainOffline(ctx: InsightContext, src: OfflineSources): Offlin
       output: { timings: p.timings, bronze: p.bronze.length, silver: p.silver.length, gold: p.gold.length, quality: p.quality },
       text: `${head}\n\n${fn ? fn(p) : "Không có mô tả cho giai đoạn này."}`,
     }
+  }
+  if (ctx.kind === "join" && src.pipeline) {
+    const c = src.pipeline.conformed
+    if (!c) return { output: null, text: `${head}\n\nLần chạy này chỉ có một nguồn hoặc các nguồn không có khoá chung — không có lớp conformed để ghép.` }
+    const pctTxt = (x: number | undefined) => (typeof x === "number" ? `${x}%` : "–")
+    const lines: string[] = []
+    let output: unknown = { shared_keys: c.shared_keys, integrated: c.integrated, integrated_rows: c.integrated_rows }
+    if (ctx.id.startsWith("integration:")) {
+      const name = ctx.id.slice("integration:".length)
+      const j = c.joins.find((x) => x.source === name)
+      if (j) {
+        output = j
+        lines.push(j.status === "joined"
+          ? `• ${j.source} ghép vào ${c.integrated} trên khoá ${j.keys.join(", ")}: ${j.matched_rows ?? "–"} dòng khớp, ${j.unmatched_rows ?? "–"} dòng không khớp (${pctTxt(j.match_pct)}).${j.aggregated ? ` Đã gộp theo ${j.aggregated} trước khi ghép.` : ""}`
+          : `• ${j.source} không được ghép (trạng thái ${j.status}).${j.hint ? ` ${j.hint}` : ""}`)
+        if (j.unmatched_samples?.length) lines.push(`• Mẫu khoá chưa khớp: ${j.unmatched_samples.join(", ")}.`)
+      }
+    } else {
+      const [source, key] = ctx.id.split(":")
+      const s = c.sources.find((x) => x.source === source)
+      const k = s && key ? s.keys[key] : undefined
+      if (s && k) {
+        output = { source: s.source, table: s.table, rows: s.rows, key, ...k }
+        lines.push(`• ${s.source} (${s.rows} dòng) theo khoá ${key}${k.column ? ` (cột ${k.column})` : ""}: ${k.matched_rows} dòng khớp dimension chung, ${k.unmatched_rows} không khớp${typeof k.null_key_rows === "number" ? `, ${k.null_key_rows} khoá trống` : ""} — tỉ lệ khớp ${pctTxt(k.match_pct)}.`)
+      }
+    }
+    if (!lines.length) lines.push(`• Khoá chung: ${c.shared_keys.join(", ")}; bảng tích hợp ${c.integrated} có ${c.integrated_rows} dòng.`)
+    lines.push(c.row_explosion ? "• CẢNH BÁO: số dòng bảng tích hợp khác bảng gốc — kiểm tra khoá trùng." : "• Bảng tích hợp không nhân dòng so với bảng gốc.")
+    return { output, text: `${head}\n\n${lines.join("\n")}\n\nDòng không khớp thường do tên địa danh/mã khác chuẩn hoặc khác kỳ; tỉ lệ khớp thấp làm giảm độ tin cậy của so sánh chéo nguồn.` }
   }
   if (ctx.kind === "quality" && src.quality) {
     const entries = Object.entries(src.quality).filter(([t]) => ctx.id === "score" || fold(t).includes(fold(ctx.id)) || fold(ctx.id).includes(fold(t)))

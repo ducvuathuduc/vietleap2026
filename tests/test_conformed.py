@@ -185,3 +185,25 @@ def test_sqlite_and_file_share_province(wh, tmp_path, kit_root):
     j = s["conformed"]["joins"][0]
     assert j["join_on"] == ["province_key"] and j["match_pct"] == 100.0
     assert s["conformed"]["integrated_rows"] == s["conformed"]["base_rows"]
+
+
+def test_api_conformed_endpoint(wh, tmp_path, kit_root, monkeypatch):
+    """GET /api/datasets/{ds}/conformed returns diagnostics + ERD + SQL; /models exposes the shared keys."""
+    from fastapi.testclient import TestClient
+    from vlkit.de.flow import run_flow
+    from vlkit.de.sources import load_sources
+    ds, srcs, keys = load_sources(kit_root / "scenarios/conformed/sources.yaml")
+    s = run_flow(ds, srcs, out_root=tmp_path / "out", wh=wh, primary="vn_housing", keys=keys)
+    monkeypatch.setenv("KIT_OUT_DIR", str(tmp_path / "out"))
+    from api.main import app
+    c = TestClient(app)
+    r = c.get(f"/api/datasets/{ds}/conformed")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["shared_keys"] == s["conformed"]["shared_keys"]
+    assert body["integrated_rows"] == s["conformed"]["integrated_rows"]
+    assert body["joins"][0]["source"] == "wdi_panel"
+    assert body["erd"].startswith("erDiagram") and "CREATE" in body["sql"].upper()
+    m = c.get(f"/api/datasets/{ds}/models").json()
+    assert m["keys"]["shared"] == body["shared_keys"] and m["keys"]["dims"] == body["dims"]
+    assert "conformed" in m["models"] and "conformed" in m["sql"]

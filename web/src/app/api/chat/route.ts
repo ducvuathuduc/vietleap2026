@@ -27,7 +27,7 @@ const Body = z.object({
   // element inspected in "Hỏi AI" mode (data-insight-target)
   context: z
     .object({
-      kind: z.enum(["kpi", "chart", "insight", "table-row", "segment", "driver", "whatif", "pipeline-stage", "quality", "model", "decision"]),
+      kind: z.enum(["kpi", "chart", "insight", "table-row", "segment", "driver", "whatif", "pipeline-stage", "quality", "model", "decision", "join"]),
       id: z.string().min(1).max(200),
       label: z.string().max(300),
       data: z.unknown().optional().refine((d) => d === undefined || JSON.stringify(d).length <= 8000, "context.data quá lớn (> 8000 ký tự)"),

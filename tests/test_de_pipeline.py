@@ -161,4 +161,6 @@ def test_api_ingest_job_and_dataset_endpoints(tmp_path, monkeypatch, kit_root):
     assert lin["nodes"] and lin["edges"] and lin["mermaid"].startswith("flowchart")
     m = c.get("/api/datasets/api_t/models").json()
     assert set(m["models"]) == {"obt", "star", "snowflake", "data_vault"} and m["sql"]
+    assert m["keys"] is None  # single source → no conformed layer
+    assert c.get("/api/datasets/api_t/conformed").status_code == 404
     assert c.get("/api/datasets/api_t/provenance").json()[0]["source"] == "firms"

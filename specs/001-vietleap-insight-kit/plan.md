@@ -193,7 +193,7 @@ YOLOv8n + ByteTrack (supervision / trackers / ultralytics) + `LineZone` → `cou
 | GET | `/api/warehouse/tables` · `/tables/{fq}/columns` | danh mục warehouse |
 | POST | `/api/sql` | SQL chỉ đọc `{query, limit≤5000}` → `{columns, rows, row_count}`; 403 khi vi phạm |
 | GET | `/api/datasets/{ds}/pipeline` · `/quality` · `/lineage` · `/models` · `/provenance` | đầu ra DE |
-| GET | `/api/datasets/{ds}/conformed` | conformed.json (dims, facts, joins, coverage, ERD) (planned, T043) |
+| GET | `/api/datasets/{ds}/conformed` | conformed.json (dims, facts, joins, coverage) + `erd` + `sql`; 404 khi < 2 nguồn chung khoá (T043) |
 | POST | `/api/brief` · GET `/api/brief/packs` · `/api/brief/samples` | đề → brief.json |
 
 Ghi DuckDB: một writer, mọi request warehouse đi qua `_wh_lock`.

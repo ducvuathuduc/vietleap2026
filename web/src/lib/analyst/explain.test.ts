@@ -52,4 +52,22 @@ test("pipeline stage explanation uses pipeline numbers", () => {
 test("sourcesFor maps kinds to engine resources", () => {
   assert.deepEqual(sourcesFor("quality"), ["quality"])
   assert.deepEqual(sourcesFor("kpi"), ["insights"])
+  assert.deepEqual(sourcesFor("join"), ["pipeline"])
+})
+
+test("join explanation copies coverage numbers from pipeline.conformed", () => {
+  const conformed = {
+    shared_keys: ["geo", "year"], dims: { geo: "dim_geo" }, facts: {}, integrated: "obt_integrated", integrated_rows: 63, row_explosion: false,
+    sources: [{ table: "a", source: "gso", rows: 70, geo_level: "province", keys: { geo: { column: "tinh", matched_rows: 63, unmatched_rows: 7, null_key_rows: 0, match_pct: 90 } } }],
+    joins: [{ source: "wb", keys: ["year"], status: "joined", matched_rows: 60, unmatched_rows: 3, match_pct: 95.2, unmatched_samples: ["2019"] }],
+    overlap: [],
+  }
+  const p = { conformed } as never
+  const a = explainOffline({ kind: "join", id: "gso:geo", label: "x" }, { pipeline: p })
+  assert.match(a.text, /gso \(70 dòng\) theo khoá geo \(cột tinh\): 63 dòng khớp dimension chung, 7 không khớp, 0 khoá trống — tỉ lệ khớp 90%/)
+  const b = explainOffline({ kind: "join", id: "integration:wb", label: "y" }, { pipeline: p })
+  assert.match(b.text, /60 dòng khớp, 3 dòng không khớp \(95.2%\)/)
+  assert.match(b.text, /Mẫu khoá chưa khớp: 2019/)
+  const none = explainOffline({ kind: "join", id: "gso:geo", label: "z" }, { pipeline: { conformed: null } as never })
+  assert.match(none.text, /không có lớp conformed/)
 })

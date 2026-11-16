@@ -41,9 +41,9 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 - [x] T040 Incremental load by `_row_hash`: `--mode replace|append|incremental`, inserted/skipped in meta.runs, API `IngestIn.mode`, schema change → rebuild, tests (`1b3a40d`)
 - [x] T041 Spec Kit docs: constitution, spec/plan/research/data-model/contracts/quickstart/tasks/checklist, SRS, contract tests (`aef4d05`)
 - [x] T042 Copy `docs/CONTEST_ANALYSIS.md` from contest research (`b6e6b6b`)
-- [ ] T043 API `GET /api/datasets/{ds}/conformed` + `keys` in models response; regenerate `contracts/openapi.json` → T016
-- [ ] T044 Pipeline page: join-coverage Card + Table + Progress (shadcn), `data-insight-target` tags → T043
-- [ ] T045 Model page: "Conformed" tab with ERD + SQL + coverage, Hỏi AI offline explanation for conformed/join kinds → T043
+- [x] T043 (this commit) API `GET /api/datasets/{ds}/conformed` + `keys` in models response; regenerate `contracts/openapi.json` → T016
+- [x] T044 (this commit) Pipeline page: join-coverage Card + Table + Progress (shadcn), `data-insight-target` tags → T043
+- [x] T045 (this commit) Model page: "Conformed" tab with ERD + SQL + coverage, Hỏi AI offline explanation for conformed/join kinds → T043
 
 ## Phase 5 — Security [NFR-005] (see docs/security/threat-model.md)
 - [x] T060 SECURITY.md + STRIDE threat model with verified control status (`2444157`)

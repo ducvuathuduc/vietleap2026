@@ -4,6 +4,7 @@ import type {
   IngestJob,
   IngestRequest,
   LineageResponse,
+  ConformedResponse,
   ModelsResponse,
   PipelineSummary,
   Provenance,
@@ -102,6 +103,7 @@ export const api = {
   quality: (id: string) => request<QualityResponse>(`${ds(id)}/quality`),
   lineage: (id: string) => request<LineageResponse>(`${ds(id)}/lineage`),
   models: (id: string) => request<ModelsResponse>(`${ds(id)}/models`),
+  conformed: (id: string) => request<ConformedResponse>(`${ds(id)}/conformed`),
   provenance: (id: string) => request<Provenance[]>(`${ds(id)}/provenance`),
   fileUrl: (id: string, kind: "deck" | "dashboard" | "summary_pdf" | "summary_md" | "results" | "clean_csv") => `${BASE}${ds(id)}/files/${kind}`,
 }

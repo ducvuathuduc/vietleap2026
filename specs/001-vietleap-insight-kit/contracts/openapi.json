@@ -1205,6 +1205,47 @@
     }
    }
   },
+  "/api/datasets/{ds}/conformed": {
+   "get": {
+    "tags": [
+     "pipeline"
+    ],
+    "summary": "Conformed",
+    "description": "Conformed dimensions across sources: dims, facts, integrated OBT, join coverage per source × key, pairwise key\noverlap, plus the conformed ERD (Mermaid) and SQL. 404 when the run had < 2 sources sharing a key.",
+    "operationId": "conformed_api_datasets__ds__conformed_get",
+    "parameters": [
+     {
+      "name": "ds",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ds"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/datasets/{ds}/provenance": {
    "get": {
     "tags": [
