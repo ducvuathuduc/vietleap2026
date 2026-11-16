@@ -1,0 +1,35 @@
+# OpenAPI 3.1 fragment — feature 008 (merged into specs/001-vietleap-insight-kit/contracts/openapi.json after T806)
+paths:
+  /api/datasets/{ds_id}/geo:
+    get:
+      summary: Metric aggregated by the 34 post-2025 provinces (_province_2025)
+      parameters:
+        - {name: metric, in: query, required: false, schema: {type: string, maxLength: 200}, description: numeric column; default = dataset target}
+        - {name: agg, in: query, required: false, schema: {type: string, enum: [median, mean, sum, count], default: median}}
+      responses:
+        "200":
+          description: province aggregates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [metric, agg, level, rows, national, unmatched]
+                properties:
+                  metric: {type: string}
+                  agg: {type: string}
+                  level: {const: province_2025}
+                  rows:
+                    type: array
+                    maxItems: 34
+                    items:
+                      type: object
+                      required: [province, value, n]
+                      properties:
+                        province: {type: string}
+                        region: {type: [string, "null"]}
+                        value: {type: [number, "null"]}
+                        n: {type: integer, minimum: 0}
+                  national: {type: object, properties: {value: {type: [number, "null"]}, n: {type: integer}}}
+                  unmatched: {type: object, properties: {rows: {type: integer}, samples: {type: array, items: {type: string}, maxItems: 10}}}
+        "404": {description: dataset not found}
+        "422": {description: no province column / metric not numeric / sum on a ratio column}
