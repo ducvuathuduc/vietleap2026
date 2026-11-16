@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sources-conform.schema.json",
+  "title": "sources.yaml additions (feature 004): per-column agg, ratio recompute, post_sql views",
+  "$defs": {
+    "aggFn": {"enum": ["mean", "sum", "min", "max", "first"]},
+    "conform": {
+      "type": "object",
+      "properties": {
+        "where": {"type": "string", "maxLength": 500},
+        "agg": {
+          "oneOf": [
+            {"$ref": "#/$defs/aggFn"},
+            {
+              "type": "object",
+              "properties": {
+                "default": {"$ref": "#/$defs/aggFn"},
+                "columns": {"type": "object", "additionalProperties": {"$ref": "#/$defs/aggFn"}}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "ratios": {
+          "type": "object",
+          "description": "name → [numerator column, denominator column]; recomputed after aggregation as SUM(num)/NULLIF(SUM(den),0)",
+          "additionalProperties": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 2}
+        },
+        "geo_level": {"enum": ["63", "2025", "34"]},
+        "province": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "post_sql": {
+      "type": "array",
+      "description": "CLI/YAML only (rejected by POST /api/ingest). Each item must match ^CREATE OR REPLACE VIEW gold\\.\\w+ AS (SELECT|WITH)",
+      "items": {"type": "string", "pattern": "^CREATE OR REPLACE VIEW gold\\.\\w+ AS (SELECT|WITH)"}
+    }
+  }
+}
