@@ -71,7 +71,7 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 
 ## Phase 8 — Ops & validation
 - [x] T070 Dockerfiles (api, web) + docker-compose (`a0a920e`; not run — no docker on dev machine)
-- [x] T071 GitHub Actions CI: pytest + OpenAPI drift check + web test/lint/build; Security workflow (`a0a920e`; first run on GitHub to verify)
+- [x] T071 GitHub Actions CI: pytest + OpenAPI drift check + web test/lint/build; Security workflow (`a0a920e`; verified green on GitHub Actions for `7ecc309`…`8eb44a3`, 16/11)
 - [ ] T075 → [specs/011](../011-real-key-validation/) Test AI Analyst / Câu chuyện with a real LLM key (Groq) — record results in MASTER_PLAN
 - [ ] T076 → [specs/011](../011-real-key-validation/) (LOW) Run YOLO counting on a real licensed video (needs `pip install ultralytics supervision`)
 - [ ] T077 Update MASTER_PLAN §0, README, SPEC index, this file after each phase
