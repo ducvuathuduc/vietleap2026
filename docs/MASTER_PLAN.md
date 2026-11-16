@@ -9,7 +9,7 @@
 **Lịch BTC đã xác nhận (giờ Việt Nam):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 15:30** Chi-Yu Lee (Konstanz) *From observation to data* (object tracking CV) · **20/11 09:00** công bố đề + chia đội ngẫu nhiên · **20/11 10:00** Viet Nguyen-Tien (LSE) *Unlocking the Data Economy* · **20/11 11:00** Sacha Dray (World Bank VN) workshop Dashboard · **21/11 13:00** hạn nộp · **21/11 13:15** pitch.
 
 **Kiểm tra lần cuối (16/11, commit `76c9e37`, feature 002)**: `pytest -q tests` 208 pass + 1 skip + 2 xfail · `npm test` 29 pass · `npm run lint` sạch · `npm run build` pass (chạy tuần tự trên máy 2 CPU).
-CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
+CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `3e39ad4` và `c0bd0e4` — feature 002, `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
 
 ### Đã xong & đã push
 
