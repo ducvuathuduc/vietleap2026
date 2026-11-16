@@ -13,7 +13,7 @@ Hours are single-developer estimates for the 2-CPU laptop, written 2026-11-16 (n
 | # | Feature | Contest priority | Status | Owner role | Est. h | Depends on | Tasks |
 |---|---|---|---|---|---|---|---|
 | [001](001-vietleap-insight-kit/) | VietLeap Insight Kit core (DE pipeline, insight engine, web, AI, deck, security, CI) | — | ✅ core done (last: T043–T045 `7ecc309`) | DE | — | — | T001–T077 |
-| [002](002-policy-question-story/) | Policy-question-first story & deck (decision → evidence → limitation) | **P1** (rubric A + D) | 🔵 Phase A (deck + pitch) `bdcb571`; Phase B (API + web story) in progress | DE + PO | 5 | 001 | T201–T212 |
+| [002](002-policy-question-story/) | Policy-question-first story & deck (decision → evidence → limitation) | **P1** (rubric A + D) | ✅ done & pushed (deck + pitch `bdcb571`, API + web story `76c9e37`) | DE + PO | 5 | 001 | T201–T212 |
 | [003](003-bilingual-deck/) | Bilingual deck/pitch `--lang vi\|en\|both` | **P1** (risk R6) | 🟡 | DE + ST | 4 | 002 (layout; strings can start in parallel) | T301–T312 |
 | [004](004-scenario-packs/) | Scenario packs: provincial public finance, listed firms, WDI VN vs ASEAN, energy/EV; dry-run checklist | **P1** (themes ~80% of likely briefs) | 🟡 | DE + RQ + AN | 7 | 001 | T401–T413 |
 | [009](009-one-click-export/) | One-click "Xuất báo cáo" (deck + pitch + dashboard PDF + bundle) | **P1** (submission 21/11 13:00) | 🟡 | DE + ST | 5 | 002, 003 (007/008 optional) | T901–T911 |
