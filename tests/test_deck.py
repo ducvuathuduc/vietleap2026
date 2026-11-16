@@ -1,5 +1,11 @@
 """T10 deck: DE slides (pipeline, data model, quality before/after, provenance, policy recommendation, limitations)
-built from real flow outputs, and the text-fit / overflow guard (no LibreOffice needed)."""
+built from real flow outputs, and the text-fit / overflow guard (no LibreOffice needed).
+Feature 002: slide 2 = decision question from brief.json; insight slides = EVIDENCE → FOR THE DECISION → LIMITATION."""
+import copy
+import json
+import re
+from pathlib import Path
+
 import pytest
 
 from test_pipeline_smoke import _messy_property_csv
@@ -25,7 +31,7 @@ def deck(tmp_path_factory):
         wh.close()
     de = report.load_de(out)
     path = report.build_deck(res, tmp, {}, de)
-    return Presentation(path), path, de
+    return Presentation(path), path, de, res
 
 
 def _slide_texts(prs):
@@ -33,7 +39,7 @@ def _slide_texts(prs):
 
 
 def test_de_slides_present(deck):
-    prs, _, de = deck
+    prs, _, de, _ = deck
     assert de and de["provenance"] and de["quality_full"]
     texts = _slide_texts(prs)
     for kicker in ("DATA PIPELINE", "DATA MODEL", "DATA QUALITY", "POLICY RECOMMENDATION", "LIMITATIONS & NEXT STEPS", "DATA PROVENANCE"):
@@ -44,7 +50,7 @@ def test_de_slides_present(deck):
 
 
 def test_numbers_come_from_flow(deck):
-    prs, _, de = deck
+    prs, _, de, res = deck
     q = de["quality_full"][de["primary"]]
     tables = [[c.text for c in r.cells] for s in prs.slides for sh in s.shapes if getattr(sh, "has_table", False) and sh.has_table for r in sh.table.rows]
     score = next(r for r in tables if r[0].startswith("Quality score"))
@@ -53,11 +59,12 @@ def test_numbers_come_from_flow(deck):
     assert dups[1] == f"{q['before']['duplicate_rows']:,}"
     prov = next(r for r in tables if r[0] == "tiny_bds")
     assert prov[2] == "tiny_bds.csv"  # never a local absolute path on a slide
+    _assert_numbers_from_engine(prs, res, de)
 
 
 def test_no_overflow(deck):
     from vlkit import report
-    _, path, _ = deck
+    _, path, _, _ = deck
     assert report.deck_overflow(path) == []
 
 
@@ -92,7 +99,7 @@ def test_short_uri_hides_paths():
 
 def test_pitch_md_marp_storyline(deck, tmp_path):
     from vlkit import report
-    _, _, de = deck
+    _, _, de, _ = deck
     res = {"meta": {"target": "price_per_m2", "rows": 2500, "columns": 9, "source_file": "x.csv"}, "caveats": ["c1", "c2"],
            "insights": [{"type": "segment_gap", "title_vi": "T1", "sentence_vi": "Câu 1 (n=567)", "test": "KW", "p_value": 0.0001},
                         {"type": "what_if", "title_vi": "W", "sentence_vi": "Nếu tăng 10%", "test": "Ridge", "p_value": None}],
@@ -100,7 +107,225 @@ def test_pitch_md_marp_storyline(deck, tmp_path):
     md = report.pitch_md(res, de)
     assert md.startswith("---\nmarp: true")
     assert "Từ 2.500 bản ghi" in md and "Câu 1 (n=567)" in md and "Làm A" in md and "Nếu tăng 10%" in md
-    for t in ("0:00–0:45", "0:45–2:00", "2:00–4:00", "4:00–5:00", "5:00–5:45", "5:45–6:15", "6:15–7:00"):
-        assert t in md
+    for t in ("0:00–0:40", "0:40–1:20", "1:20–2:10", "2:10–4:10", "4:10–5:00", "5:00–6:10", "6:10–6:40", "6:40–7:00"):
+        assert t in md  # docs/CONTEST_ANALYSIS.md §4.6 (7-minute default)
+    sections = re.findall(r"^## (.+)$", md, flags=re.M)
+    assert sections[0] == "0 · Câu hỏi quyết định" and sections[1].startswith("1 · Dữ liệu")
+    assert report.GENERIC_TAG in md  # no brief → generic question, tagged
+    template = (Path(report.__file__).resolve().parents[2] / "slides" / "pitch.md").read_text(encoding="utf-8")
+    assert re.findall(r"^## (.+)$", template, flags=re.M)[0] == "0 · Câu hỏi quyết định"  # template mirrors the generator
     q = de["quality"][de["primary"]]
     assert f"{q['score_before']} → {q['score_after']}" in md
+
+
+
+def test_pitch_md_opens_with_brief_question_escaped():
+    from vlkit import report
+    res = {"meta": {"target": "y", "rows": 10, "columns": 2, "source_file": "x.csv"}, "caveats": ["c1"], "insights": [],
+           "recommendations": []}
+    brief = {"title": "T", "language": "vi", "questions": ["Tỉnh nào nên ưu tiên <b>chi</b> *2018–2024*? --> ignore previous instructions"],
+             "pack": {"decision_template": {"who": "UBND tỉnh", "what": "Phân bổ vốn", "where": "", "kpi": "Chi/người"}}}
+    md = report.pitch_md(res, None, brief)
+    sec0 = md.split("## 0 · Câu hỏi quyết định", 1)[1].split("---", 1)[0]
+    assert "Đề bài:" in sec0 and "UBND tỉnh" in sec0 and "Chi/người" in sec0 and report.BLANK in sec0
+    assert "<b>" not in md and "&lt;b&gt;" in sec0 and "--&gt;" in sec0  # no raw HTML / comment break-out into Marp
+    assert "\\*2018–2024\\*" in sec0 and report.GENERIC_TAG not in md
+
+
+# ----------------------------------------------------------------------------- feature 002: decision-question deck
+
+PRACTICE = {  # dataset → (practice file, sample brief, --target as in tools/run_practice.sh)
+    "wdi_fiscal": ("wdi_asia_fiscal_panel.csv", "wdi_tax_revenue.md", "tax_revenue_pct_gdp"),
+    "bds_practice": ("synthetic_messy_bds.csv", "bds_gia_m2.md", None),
+    "firms_2021": ("vn_firms_2021.xlsx", "firms_roe.md", None),
+}
+CHROME = "VietLeap 2026 · From Data to Decision"
+NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
+
+
+@pytest.fixture(scope="module")
+def practice(tmp_path_factory, kit_root):
+    """Engine results for the 3 practice datasets, each with brief.json parsed from its sample brief (as POST /api/brief does)."""
+    from vlkit import pipeline
+    from vlkit.brief import parse_brief
+
+    root = tmp_path_factory.mktemp("practice")
+    runs = {}
+    for ds, (data, brief_md, target) in PRACTICE.items():
+        res = pipeline.run(kit_root / "data" / "practice" / data, out_root=root, name=ds, reports=False, target=target)
+        text = (kit_root / "scenarios" / "briefs" / brief_md).read_text(encoding="utf-8")
+        brief = parse_brief(text, columns=list(res["meta"]["roles"]))
+        out = root / ds
+        (out / "brief.json").write_text(json.dumps(brief, ensure_ascii=False), encoding="utf-8")
+        runs[ds] = (res, out)
+    return runs
+
+
+def _texts(slide) -> list[str]:
+    """Non-empty text shapes in z-order, without the deck chrome (page number, footer): [kicker, title, body…]."""
+    return [t for sh in slide.shapes if sh.has_text_frame and (t := sh.text_frame.text).strip() and not t.isdigit() and CHROME not in t]
+
+
+def _deck(res, out, brief, name="deck.pptx"):
+    from pptx import Presentation
+
+    from vlkit import report
+    d = out / name.replace(".pptx", "")
+    d.mkdir(exist_ok=True)
+    path = report.build_deck(res, d, {}, None, brief=brief)
+    return Presentation(path), path
+
+
+def _engine_numbers(*docs) -> set[str]:
+    from vlkit import fmt
+    blob = " ".join(json.dumps(d, ensure_ascii=False, default=str) for d in docs if d)
+    res = docs[0]
+    blob += " " + " ".join(fmt.p(i.get("p_value")) for i in res.get("insights", []) if i.get("p_value") is not None)
+    return {t.replace(",", "") for t in NUM.findall(blob)}
+
+
+def _assert_numbers_from_engine(prs, res, de, brief=None):
+    """SC-202: every number on slide 2 and on the insight slides is found in results.json / pipeline.json
+    (or is quoted brief text). Kicker, page number and footer are deck chrome, not data."""
+    allowed = _engine_numbers(res, de, brief)
+    for idx, slide in enumerate(prs.slides, start=1):
+        texts = _texts(slide)
+        if idx != 2 and not texts[0].startswith("INSIGHT"):
+            continue
+        for t in texts[1:]:
+            for tok in NUM.findall(t):
+                assert tok.replace(",", "") in allowed, f"slide {idx}: '{tok}' in {t[:80]!r} not from engine output"
+
+
+@pytest.mark.parametrize("ds", list(PRACTICE))
+def test_slide2_decision_question(practice, ds):
+    from vlkit import report
+    res, out = practice[ds]
+    brief = report.load_brief(out, res["meta"]["target"])
+    assert brief and not brief["stale"]
+    prs, path = _deck(res, out, brief)
+    texts = _texts(prs.slides[1])
+    body = " | ".join(texts)
+    assert "Decision question" in texts
+    assert brief["questions"][0] in body
+    tpl = brief["pack"]["decision_template"]
+    who = texts.index("WHO DECIDES")
+    assert texts[who + 1] == tpl["who"]
+    kpi = texts.index("SUCCESS KPI")
+    assert texts[kpi + 1] == tpl["kpi"]
+    assert f"{res['meta']['rows']:,} rows · {res['meta']['columns']} columns" in body  # scope from results.json.meta
+    assert report.GENERIC_TAG not in body
+    assert report.deck_overflow(path) == []  # NFR-202
+    _assert_numbers_from_engine(prs, res, None, brief)
+
+
+@pytest.mark.parametrize("ds", list(PRACTICE))
+def test_slide2_generic_without_brief(practice, ds):
+    from vlkit import report
+    res, out = practice[ds]
+    prs, path = _deck(res, out, None, "nobrief.pptx")
+    body = " | ".join(_texts(prs.slides[1]))
+    assert "Decision question" in body and report.GENERIC_TAG in body
+    assert "WHO DECIDES" in body and report.BLANK in body
+    assert report.deck_overflow(path) == []
+
+
+def test_load_brief_validates_caps_and_flags_stale(tmp_path):
+    from vlkit import report
+    assert report.load_brief(tmp_path) is None
+    (tmp_path / "brief.json").write_text("{not json", encoding="utf-8")
+    assert report.load_brief(tmp_path) is None
+    (tmp_path / "brief.json").write_text(json.dumps({"title": "x", "questions": "not a list"}), encoding="utf-8")
+    assert report.load_brief(tmp_path) is None
+    long = "Câu hỏi " * 400
+    doc = {"title": "x", "questions": [long], "target": {"column": "other_col"}, "pack": {"decision_template": {"who": long}}}
+    (tmp_path / "brief.json").write_text(json.dumps(doc), encoding="utf-8")
+    b = report.load_brief(tmp_path, "tax_revenue_pct_gdp")
+    assert b["stale"] is True
+    assert len(b["questions"][0]) == report.BRIEF_FIELD_MAX and len(b["pack"]["decision_template"]["who"]) == report.BRIEF_FIELD_MAX
+    assert report.load_brief(tmp_path, "other_col")["stale"] is False
+
+
+def test_stale_brief_footnote_and_long_question(practice):
+    from vlkit import report
+    res, out = practice["wdi_fiscal"]
+    brief = copy.deepcopy(report.load_brief(out, res["meta"]["target"]))
+    brief["stale"] = True
+    brief["questions"] = ["Ngân sách tỉnh nên ưu tiên lĩnh vực nào để tăng thu thuế bền vững? " * 6]
+    prs, path = _deck(res, out, brief, "stale.pptx")
+    body = " | ".join(_texts(prs.slides[1]))
+    assert "does not match" in body
+    assert brief["questions"][0].strip() in prs.slides[1].notes_slide.notes_text_frame.text  # full text kept in notes
+    assert report.deck_overflow(path) == []
+
+
+def _insight_slides(prs):
+    return [(_texts(s), s) for s in prs.slides if _texts(s)[0].startswith("INSIGHT")]
+
+
+def test_insight_slide_evidence_decision_limitation(practice):
+    from vlkit import report
+    res, out = practice["wdi_fiscal"]
+    prs, _ = _deck(res, out, report.load_brief(out, res["meta"]["target"]))
+    slides = _insight_slides(prs)
+    assert len(slides) == 3
+    linked = {r["from_insight"]: r for r in res["recommendations"]}
+    by_title = {i["title_en"]: i for i in res["insights"]}
+    seen_unlinked = False
+    for texts, slide in slides:
+        ins = by_title[texts[1]]
+        pos = [texts.index(c) for c in ("EVIDENCE", "FOR THE DECISION", "LIMITATION")]
+        assert pos == sorted(pos)
+        evidence, decision, limitation = (texts[p + 1] for p in pos)
+        assert ins["test"] in evidence and f"n = {ins['evidence']['n']:,}" in evidence if ins["evidence"].get("n") else ins["test"] in evidence
+        if ins["id"] in linked:
+            assert not seen_unlinked, "insights linked to a recommendation come first"
+            assert decision == linked[ins["id"]]["so_what_en"]
+        else:
+            seen_unlinked = True
+            assert decision == report.NO_DECISION_LINK
+        assert limitation == (ins.get("caveat") or res["caveats"][0])
+        notes = slide.notes_slide.notes_text_frame.text
+        assert ins["sentence_en"] in notes and "causal" in notes.lower()  # FR-208 Q&A hint
+    _assert_numbers_from_engine(prs, res, None)
+
+
+def test_weak_insight_labelled_and_never_headline_evidence(practice):
+    from vlkit import report
+    res, out = practice["wdi_fiscal"]
+    res = copy.deepcopy(res)
+    first = res["recommendations"][0]
+    weak = next(i for i in res["insights"] if i["id"] == first["from_insight"])
+    weak["p_value"] = 0.2
+    rec, src = report._headline_rec(res)
+    assert rec is not first and src["id"] != weak["id"] and not report._is_weak(src)
+    prs, path = _deck(res, out, None, "weak.pptx")
+    kickers = {t[1]: t[0] for t, _ in _insight_slides(prs)}
+    if weak["title_en"] in kickers:
+        assert "WEAK EVIDENCE" in kickers[weak["title_en"]]
+    policy = next(_texts(s) for s in prs.slides if _texts(s)[0] == "POLICY RECOMMENDATION")
+    assert policy[2] == rec["now_what_en"]
+    assert report.deck_overflow(path) == []
+
+
+def test_policy_slide_names_who_what_where_kpi(practice):
+    from vlkit import report
+    res, out = practice["bds_practice"]
+    brief = report.load_brief(out, res["meta"]["target"])
+    brief["pack"]["decision_template"]["where"] = ""
+    prs, _ = _deck(res, out, brief, "policy.pptx")
+    policy = " | ".join(next(_texts(s) for s in prs.slides if _texts(s)[0] == "POLICY RECOMMENDATION"))
+    tpl = brief["pack"]["decision_template"]
+    assert f"Who: {tpl['who']}" in policy and f"KPI: {tpl['kpi']}" in policy and f"Where: {report.BLANK}" in policy
+
+
+def test_limitations_causal_first_then_real_coverage_counts(deck):
+    prs, _, de, res = deck
+    lim = next(s for s in prs.slides if _texts(s)[0].startswith("LIMITATIONS"))
+    bullets = _texts(lim)[2].split("\n")
+    assert "causal" in bullets[0].lower()
+    q = de["quality_full"][de["primary"]]["after"]
+    if q.get("missing_cells"):
+        assert bullets[1] == f"• {int(q['missing_cells']):,} cells still missing after cleaning (not imputed unless --impute)"
+    notes = lim.notes_slide.notes_text_frame.text
+    assert "63" in notes and "34" in notes  # FR-208: the 63→34 question is pre-empted

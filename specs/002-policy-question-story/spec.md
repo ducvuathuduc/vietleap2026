@@ -1,7 +1,7 @@
 # Feature Specification: Policy-question-first story & deck
 
 **Feature Branch**: `002-policy-question-story` (work lands on `main`, one commit per task group — constitution VIII)
-**Created**: 2026-11-16 · **Status**: Draft (ready to implement) · **Priority**: P1 for the contest (rubric A + D ≈ 40%, see `docs/CONTEST_ANALYSIS.md` §3.2)
+**Created**: 2026-11-16 · **Status**: Phase A implemented (T201–T205); Phase B in progress · **Priority**: P1 for the contest (rubric A + D ≈ 40%, see `docs/CONTEST_ANALYSIS.md` §3.2)
 **Input**: "Deck and story must open with the policy question from the brief, then evidence → decision → limitation, for economist judges."
 **Supersedes**: `specs/001-vietleap-insight-kit/tasks.md` T080.
 
@@ -78,6 +78,24 @@ As the **PO**, I want the Limitations slide to list the limitation that most thr
 - **SC-203**: A non-coder teammate can explain the deck's arc (question → evidence → decision → limitation) after one read-through (dry run 18/11, recorded in `docs/ROADMAP.md`).
 
 ## Assumptions / open questions
-- [NEEDS CLARIFICATION: official pitch length and language — organisers have not published them (CONTEST_ANALYSIS §3.1); timing defaults to 7 minutes.]
-- [NEEDS CLARIFICATION: whether the organisers' brief will contain an explicit decision maker; if not, PO fills `who` on the Đề bài page before export.]
+- ~~[NEEDS CLARIFICATION: official pitch length and language]~~ **Decided 2026-11-16 (implementation default):** 7-minute pitch with the
+  timing of `docs/CONTEST_ANALYSIS.md` §4.6 (`report.PITCH_TIMING`: hook 0:00–0:40, question 0:40–1:20, pipeline 1:20–2:10, insights 2:10–4:10,
+  demo 4:10–5:00, decision + impact 5:00–6:10, limitations 6:10–6:40, close 6:40–7:00); deck labels EN, pitch.md VI (bilingual = feature 003).
+  Re-scale proportionally if the organisers publish another length.
+- ~~[NEEDS CLARIFICATION: whether the brief names a decision maker]~~ **Decided 2026-11-16:** `who/what/where/kpi` come from the matched
+  scenario pack's `decision_template`; anything missing is shown as "____" (never invented) for the PO to fill before export.
 - Brief parsing stays rule-based (no LLM) — reuse `parse_brief`.
+
+## Implementation decisions (2026-11-16)
+- **Decision question = `questions[0]`** verbatim (US1-1), even when the parser's first "question" is an instruction sentence; `title` only when `questions` is empty.
+- **FR-201 validation** at runtime checks the keys/types the story uses (`title: str`, `questions: list[str]`, `pack.decision_template: object`),
+  so the engine does not depend on the `specs/` folder or `jsonschema` at runtime (NFR-201); full schema validation stays in `tests/test_contracts.py`.
+  Every string is capped at 2 000 chars.
+- **Stale brief** (brief `target.column` ≠ analysed target): footnote on slide 2 + `[warn]` in the build log. It is *not* written to
+  `pipeline.json.steps` as the edge case suggested: `pipeline.json` is rewritten by `vlkit.de.flow` after serving, and its `steps[].status`
+  contract is `ok|failed` — changing that contract is out of scope for 002.
+- **Weak evidence** = `p_value ≥ 0.05` (engine p, already Bonferroni-adjusted where several tests run) or an engine `weak` flag; insights
+  without a p-value (descriptive: segmentation, forecast) are not labelled weak. Recommendation #1 is the first recommendation whose source
+  insight is not weak; when every one is weak the Policy slide says "Weak evidence only (p ≥ 0.05) — exploratory, pilot before acting".
+- **Insight slide layout**: chart (5.6 in) + EVIDENCE card on the top row, FOR THE DECISION and LIMITATION cards on the bottom row (z-order
+  and reading order EVIDENCE → FOR THE DECISION → LIMITATION); full sentence + evidence line also in speaker notes.
