@@ -46,6 +46,8 @@ P1: ~~002 câu hỏi chính sách mở đầu deck/story~~ (xong `bdcb571`, `76c
 P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K · 006 NL→SQL · 010 ảnh chụp + video demo.
 **Tiến độ 17/11**: 004 T401–T405 (`2cf9d34`) đã thêm gộp theo cột, tính lại tỷ lệ từ tổng và view `gold.v_*` từ recipe CLI. Kiểm tra local: pytest 238 pass, 1 skip, 2 xfail; web 33 pass, lint/build đạt; OpenAPI khớp. Tiếp theo: recipe và dry run 004, các gap ưu tiên, rồi 009 → 011 → 010. Feature freeze 18/11 22:00.
 
+**Recipe và dry run 004** (`ed2bd08`): 4 pack chạy thật. Pytest 246 pass, 1 skip, 2 xfail. 33 test web, lint, build và OpenAPI đạt. WDI live quá thời gian chờ, panel offline chạy được cho GDP/người. Bảng ngân sách thật đối chiếu được bổ sung có mục tiêu, còn thiếu thu–chi để kiểm chứng KPI tự chủ. Xem [checklist](../specs/004-scenario-packs/checklists/dry-run.md). Tiếp theo: workflow một lệnh và các file xuất dữ liệu.
+
 Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) và deck tiếng Việt (`deck.vi.pptx`) mới kiểm bằng `deck_overflow()` + parity số, chưa xem ảnh render PNG/LibreOffice; nhật ký làm sạch/provenance trong deck VI giữ nguyên văn tiếng Anh của engine (ghi trong spec 003 §Clarifications).
 
 ### Gaps — chỉ liệt kê, chưa làm (17/11; đối chiếu slide mentor DE "6 bước" + kiểm tra API từ sandbox 17/11)
