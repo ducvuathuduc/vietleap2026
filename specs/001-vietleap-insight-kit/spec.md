@@ -19,7 +19,7 @@ traffic CV ~10%. Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). Pitch ma
 ## Business workflow
 Full version with mermaid flow, per-stage input→output→owner, collection notes and model decision matrix: [docs/WORKFLOW.md](../../docs/WORKFLOW.md).
 Based on the organizer workshop *"Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp"* (Lưu Đức Cảnh, Tasco, 16/11/2026 19:00)
-and Sacha Dray's (World Bank) dashboard workshop (20/11 11:00).
+and Sacha Dray's (World Bank) dashboard workshop (20/11 09:30, agenda on vietleap2026.com as of 17/11).
 
 1. **Policy question first** — đề → `brief.json` → one-line decision question (who decides what, measured by which KPI).
 2. **Ingestion** by situation — Database/JDBC (read-only account, SELECT only), Public API (rate limit, pagination, retry/backoff, cache,

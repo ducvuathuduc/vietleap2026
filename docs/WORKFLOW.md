@@ -2,12 +2,25 @@
 
 Dựa trên workshop của BTC **"Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp"** (Lưu Đức Cảnh, Tasco — 16/11/2026 19:00)
 — vòng đời dữ liệu end-to-end qua **4 giai đoạn Ingestion – Storage – Transform – Serving** — và nguyên tắc dashboard của workshop
-**Sacha Dray (World Bank Việt Nam, 20/11 11:00)**: KPI hướng quyết định, **mỗi view trả lời một câu hỏi**.
+**Sacha Dray (World Bank Việt Nam, 20/11 09:30 — lịch vietleap2026.com, 17/11)**: KPI hướng quyết định, **mỗi view trả lời một câu hỏi**.
 Spec chính thức: [`specs/001-vietleap-insight-kit/spec.md`](../specs/001-vietleap-insight-kit/spec.md) §Business workflow ·
 Lịch theo giờ & vai trò chi tiết: [`PLAYBOOK.md`](PLAYBOOK.md) · Lệnh: [`quickstart.md`](../specs/001-vietleap-insight-kit/quickstart.md).
 
-> Phần nội dung workshop 16/11 dưới đây dựng từ poster/đề cương đã công bố; **cập nhật sau buổi 16/11** nếu diễn giả nhấn mạnh điểm khác
-> (thuật ngữ giám khảo dùng → dùng đúng trong pitch).
+> Mục 0 dựa trên slide mentor phát sau buổi 16/11; các mục 1–7 dựng từ poster/đề cương đã công bố trước đó (thuật ngữ giám khảo dùng → dùng đúng trong pitch).
+
+## 0. Phạm vi hackathon 6 bước (slide mentor Data Engineering, 16/11) → nơi kit hiện thực
+
+Slide mentor (phần 2, "Scope áp dụng trong Hackathon — 6 bước") yêu cầu **mỗi bước có sản phẩm cụ thể: code, báo cáo EDA, data dictionary, dashboard**
+và "không bỏ qua bước nào". Bảng dưới ánh xạ từng bước vào chỗ kit đã làm, và ghi rõ **khoảng trống** (danh sách đầy đủ: [`MASTER_PLAN.md`](MASTER_PLAN.md) §0 "Gaps").
+
+| # | Bước (mentor) | Sản phẩm mentor đòi | Kit hiện thực ở đâu | Khoảng trống |
+|---|---|---|---|---|
+| 1 | **Chọn domain** (ưu tiên kinh tế; team hiểu nghiệp vụ, có API/open data, phạm vi vừa đủ) | Lý do chọn domain | 7 scenario pack `scenarios/packs/*.yaml` (tài chính công tỉnh, DN niêm yết, chỉ số phát triển, chính sách kinh tế, BĐS/dữ liệu mở, tác động xã hội, CV); trang **Đề bài** / `de.py brief` chọn pack theo từ khoá → `brief.json` | Chưa có pack riêng cho ngân hàng–tín dụng–tỷ giá, thương mại/XNK, lao động–dân số, bán lẻ, du lịch (engine vẫn chạy với domain `generic`); pack vĩ mô theo tháng chưa có |
+| 2 | **Xác định nguồn & cách lấy** (A DB/JDBC · B Public API · C file · D scraping · E social) + job chuẩn DE (idempotent, watermark, retry/backoff, logging, giữ raw) | Code thu thập chạy lại được | `engine/vlkit/de/connectors.py` (`file`, `api` có paging/rate-limit/retry `tenacity` exponential + `Retry-After`/cache `data/cache/`, `sql` SELECT-only, `scrape` tôn trọng robots.txt, `social` RSS/Trends, `cv`); `sources.yaml` + `de.py run`; bronze giữ thô kèm `_src`, `_ingested_at`, `_row_hash`; `--mode incremental` bỏ dòng có `_row_hash` đã nạp; nhật ký chạy `meta.runs` + `pipeline.json` (timings, inserted/skipped); `provenance.json` | Incremental theo **hash nội dung**, chưa có watermark/cursor theo thời gian cho API; chưa có workflow lịch `collect_data.yml` (GitHub Actions cron); chưa có recipe UN SDG / tỷ giá open.er-api / Open-Meteo archive; chưa có gói dữ liệu offline dựng sẵn |
+| 3 | **EDA — thống kê mô tả** (profiling, business validation, outlier IQR/Z, correlation, time consistency) | Báo cáo EDA | `engine/vlkit/profile.py` (shape, dtype, % missing, unique, phân phối, skew, outlier), tương quan Spearman/partial (`stats.py`), `quality.json`; trang **Hồ sơ dữ liệu**, **Chất lượng**, **Insight** | **Chưa xuất báo cáo EDA thành file** (HTML/MD); chưa có kiểm tra khoảng trống thời gian (time gap) riêng |
+| 4 | **Làm sạch & mô hình hoá** (7 bước làm sạch, gắn cờ thay vì xoá; Medallion; Star schema mặc định) | Code + **data dictionary** | `engine/vlkit/de/quality.py` (kiểu VN, missing, trùng dòng + khoá ứng viên, outlier 3×IQR **gắn cờ**, điểm 0–100 trước/sau, cleaning log); DuckDB bronze/silver/gold + Parquet; `modeling.py` dựng OBT, **Star**, Snowflake, Data Vault 2.0 + ERD; conformed dims tỉnh/năm (63→34) | **Chưa có xuất data dictionary** (cột, kiểu, đơn vị, nguồn, công thức). Mentor khuyến nghị Star làm mô hình chính; kit khuyến nghị OBT cho serving + Star cho trình bày (cả hai đều dựng) |
+| 5 | **Serving — dashboard** (Overview → Drill-down → Detail; chọn chart đúng mục đích, có choropleth; 1 câu hỏi business + 1 khuyến nghị) | Dashboard | Next.js + shadcn dashboard-01 (Tổng quan, Pipeline, Chất lượng, Mô hình, SQL Explorer, Insight, Drivers & What-if, Phân khúc, Quyết định, AI Analyst); `dashboard.html` tĩnh; FastAPI; export deck/pitch VI/EN, executive summary | Bản đồ choropleth 34 tỉnh mới ở mức spec (008); chưa dùng nhãn Overview/Drill-down/Detail trên giao diện |
+| 6 | **Insight → quyết định** | Khuyến nghị hành động | Insight có kiểm định (test, p, effect, n), drivers/what-if có khoảng bootstrap, `decision.py` (So what → Now what), trang **Quyết định**, slide câu hỏi quyết định + khuyến nghị chính sách + hạn chế (002), deck/pitch song ngữ (003) | — |
 
 ## 1. Luồng tổng thể
 

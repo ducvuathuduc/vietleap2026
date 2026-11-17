@@ -1,16 +1,17 @@
 # ROADMAP 16/11 → 21/11/2026 (Asia/Saigon)
 
 Source of truth for *what*: [`specs/README.md`](../specs/README.md) (features 002–011, estimates, dependencies).
-Source of truth for the *contest days*: [`docs/CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) §1.3 (official agenda) and §4.2 (hour-by-hour plan).
+Source of truth for the *contest days*: [`docs/CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) §1.3 (official agenda — https://vietleap2026.com/, read 17/11; the site changed the schedule on 17/11 ~18:55) and §4.2 (hour-by-hour plan).
 Rules: every task group = commit + push (constitution VIII); never run `npm run build` together with pytest (2-CPU laptop); `NO_PROXY=localhost,127.0.0.1`.
 
 ## Capacity vs scope (planning numbers, not measurements)
-- Remaining spec work ≈ 43.5 h (+2 h optional YOLO). Developer time before the 19/11 12:00 check-in ≈ 29 h (16/11 ≈ 6 h, 17/11 ≈ 10 h, 18/11 ≈ 10 h, 19/11 morning ≈ 3 h).
+- Remaining spec work ≈ 43.5 h (+2 h optional YOLO). Developer time before the 19/11 check-in (window 09:00–11:30 / 13:30–14:45) ≈ 29 h (16/11 ≈ 6 h, 17/11 ≈ 10 h, 18/11 ≈ 10 h, 19/11 morning ≈ 3 h).
 - **Cut line**: all P1 (002, 003, 004, 009, 011-LLM ≈ 24 h) + 010 (3 h) must land; 007 is the first stretch goal; 005, 006, 008 only if P1 finishes early. Anything not merged by **18/11 22:00 (feature freeze)** is dropped for the contest.
 
 ## Progress (17/11 evening)
 - ✅ 002 done & pushed (`bdcb571`, `76c9e37`; CI + Security green) — Tue 17/11 08:00–12:00 slot is freed.
-- ✅ 003 done & pushed (`74de518` string table + caveats, `5aa4194` `--lang vi|en|both`, `4e098e5` web toggle; CI + Security green for `74de518`, `5aa4194`) — includes the web toggle originally planned for Wed 18/11 (T310–T312).
+- ✅ 003 done & pushed (`74de518` string table + caveats, `5aa4194` `--lang vi|en|both`, `4e098e5` web toggle; CI + Security green for `74de518`, `5aa4194`, `a19048a`) — includes the web toggle originally planned for Wed 18/11 (T310–T312).
+- ✅ Open-source README + community files; contest schedule synced with vietleap2026.com (17/11); mentor 6-step mapping + gaps in `WORKFLOW.md` §0 / `MASTER_PLAN.md` §0.
 - Next: 004 T401 (engine support for scenario packs).
 
 ## Day by day
@@ -33,17 +34,17 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 | | stretch | What-if sliders page | 007 T701–T711 | DE | only if P1 done |
 | **Thu 19/11** | 07:00–11:00 | Screenshots + 90 s demo video; README images | 010 T1001–T1007 | ST + DE | PNGs pushed, video on Drive |
 | | 11:00–12:00 | Contest laptop: `git pull && make setup && make demo`, `make api` + `make web`, export once | — | DE | all green offline |
-| | 12:00–15:00 | Check-in KTX UEH Green Living Hub; test wifi; hotspot fallback | — | LEAD | kit runs on venue network |
-| | 15:00 / **15:30** | Opening; **workshop Chi-Yu Lee (Konstanz) — object tracking CV** | 011 YOLO optional notes | all | 5-line notes |
-| | 18:30–20:30 | Networking: confirm submission format, pitch length/language with organisers | — | LEAD | §5 updated |
+| | 13:30–14:45 | Check-in UEH Green Living Hub (morning window 09:00–11:30 also open); test wifi; hotspot fallback | — | LEAD | kit runs on venue network |
+| | **14:45–15:30** | **Workshop Chi-Yu Lee (Konstanz) — object tracking** | 011 YOLO optional notes | all | 5-line notes |
+| | **15:30–16:15** | **Talk Viet Nguyen-Tien (LSE) — "Data to Decision" / Combining Data for Socioeconomic Development** (whole team) | — | all | 3 pitch-ready ideas |
+| | 16:15–16:45 | Online meeting with mentors: confirm submission format, pitch length/language | — | LEAD | §5 updated |
 | | 21:00 | Sleep early | — | all | — |
-| **Fri 20/11** | **09:00–09:30** | **Brief published + random team formation** → assign roles (LEAD, DE, AN, PO, ST, RQ) | — | LEAD | role table |
-| | 09:30–10:00 | Paste brief into **Đề bài** → `brief.json`; list provided data | 002 flow | LEAD + PO | brief.json saved for the dataset |
-| | 10:00–10:45 | Workshop Viet Nguyen-Tien (LSE) — PO/AN/ST attend; DE runs pipeline #1 on organisers' data | 004 recipe closest to the brief | DE | pipeline green #1 |
-| | 11:00–11:30 | **Workshop Sacha Dray (World Bank) — dashboard** (whole team) | — | all | 3 dashboard principles noted |
-| | 12:30 | **CP1**: one decision question, data identified, pipeline runs | — | PO | go/no-go |
-| | 12:30–16:30 | Extra sources + conformed dims; select 3–5 tested insights; draft recommendation | 004 recipes, 007 if built | DE/AN/PO | **CP2 16:30** |
-| | **17:15–17:45** | **Mentor check-in #1** | — | PO | adjustments list |
+| **Fri 20/11** | **09:00–09:30** | **Opening + Challenge Briefing + team formation** → assign roles (LEAD, DE, AN, PO, ST, RQ) | — | LEAD | role table |
+| | **09:30–10:15** | **Workshop Sacha Dray (World Bank) — dashboard** (whole team); paste brief into **Đề bài** → `brief.json` | 002 flow | all | 3 dashboard principles noted, brief.json saved |
+| | 10:15–11:30 | DE runs pipeline #1 on organisers' data; PO/AN list provided data, draft the decision question | 004 recipe closest to the brief | DE | pipeline green #1 |
+| | 12:30 | **CP1** (lunch 11:30–13:00): one decision question, data identified, pipeline runs | — | PO | go/no-go |
+| | 13:00–15:30 | Extra sources + conformed dims; select 3–5 tested insights; draft recommendation | 004 recipes, 007 if built | DE/AN/PO | **CP2 15:30** |
+| | **16:00–16:30** | **Mentor check-in #1** | — | PO | adjustments list |
 | | 20:00 | **CP3** scope frozen; then deck v1 via one-click export, story, decision page | 009, 002 | DE/ST/PO | deck v1 |
 | | 23:00–24:00 | Full pitch run #1 (timed) | — | PO | notes |
 | **Sat 21/11** | 09:00–10:30 | Deck v2 (`--lang` per organisers), screenshots/video on contest data, Q&A drill | 003, 010 T1008 | ST/DE/PO | deck v2 |
@@ -51,7 +52,7 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 | | 12:00 | **CP4** content locked; final one-click export bundle | 009 | LEAD | bundle + checksums |
 | | **12:40** | **Submit (target)** — screenshot confirmation | — | LEAD | receipt |
 | | **13:00** | **Submission deadline** (13:00–13:15 per agenda) | — | — | — |
-| | **13:15–15:15** | **Pitch + Q&A** | — | PO (+ DE for technical Qs) | — |
+| | **13:15–15:15** | **Pitch + Q&A** (awards 15:45–16:45) | — | PO (+ DE for technical Qs) | — |
 
 ## Go/no-go gates before the contest
 | Gate | When | Condition | If no-go |

@@ -1,84 +1,228 @@
 # VietLeap Insight Kit — From Data to Decision
 
-Bộ công cụ cho **VietLeap Hackathon 2026** (UEH School of Public Finance × AVSE Economic Policy Network): thả dataset + đề bài → pipeline Data Engineering (Ingestion → Storage → Transform → Serving), insight có kiểm định thống kê, drivers & what-if, khuyến nghị quyết định, dashboard shadcn, AI Analyst "Hỏi AI", deck pitch. Mọi con số đến từ engine/DuckDB — không bịa số.
+[![CI](https://github.com/ducvuathuduc/vietleap2026/actions/workflows/ci.yml/badge.svg)](https://github.com/ducvuathuduc/vietleap2026/actions/workflows/ci.yml)
+[![Security](https://github.com/ducvuathuduc/vietleap2026/actions/workflows/security.yml/badge.svg)](https://github.com/ducvuathuduc/vietleap2026/actions/workflows/security.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](requirements.txt)
+[![Node.js 20+](https://img.shields.io/badge/node-20%2B-339933.svg)](web/package.json)
 
-> Đọc thêm: [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md) (kế hoạch theo giờ hôm thi, chia vai) · [`docs/CONTEXT.md`](docs/CONTEXT.md) (bối cảnh cuộc thi → miền đề có thể ra) · [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md) (kiến trúc, trạng thái).
+**Thả dataset + đề bài → pipeline Data Engineering chuẩn, insight có kiểm định thống kê, khuyến nghị chính sách, dashboard và deck pitch song ngữ — mọi con số đến từ engine/DuckDB, không bịa số.**
 
-## 1. Cài đặt (một lần, ~5–10 phút)
+Bộ công cụ mã nguồn mở cho **VietLeap Hackathon 2026 — From Data to Decision** (UEH School of Public Finance × AVSE Economic Policy Network),
+chạy được trên laptop 2 CPU / 7 GB RAM, offline khi không có khoá LLM.
 
-Cần: Python ≥ 3.11, Node.js ≥ 20, `make`, Git. Linux/macOS (Windows: dùng WSL2).
+> English summary: [below](#english-summary).
+
+## Mục lục
+[Tính năng](#tính-năng) · [Kiến trúc](#kiến-trúc) · [Bắt đầu nhanh](#bắt-đầu-nhanh) · [Cách dùng](#cách-dùng) · [Cấu trúc thư mục](#cấu-trúc-thư-mục) ·
+[Nguyên tắc Data Engineering](#nguyên-tắc-data-engineering) · [Nguyên tắc phân tích](#nguyên-tắc-phân-tích) · [Bảo mật](#bảo-mật) · [Kiểm thử & CI](#kiểm-thử--ci) ·
+[Lộ trình](#lộ-trình) · [Đóng góp](#đóng-góp) · [Giấy phép](#giấy-phép) · [Ghi nhận](#ghi-nhận)
+
+## Tính năng
+- **Ingestion 6 loại nguồn** — file (CSV/XLSX/JSON/Parquet/ZIP), REST API (phân trang, rate limit, retry + exponential backoff, cache đĩa), SQL qua SQLAlchemy (chỉ `SELECT`), web scraping (tôn trọng robots.txt, có delay), social listening (RSS, Google Trends tuỳ chọn), số đếm CV (YOLO + ByteTrack, tuỳ chọn).
+- **Storage medallion** — DuckDB `bronze / silver / gold / meta` + Parquet lake; bronze giữ dữ liệu thô kèm `_src`, `_ingested_at`, `_row_hash`.
+- **Transform** — làm sạch theo kiểu số/ngày Việt Nam, missing / duplicate / outlier (3×IQR, **gắn cờ, không xoá**), điểm chất lượng 0–100 trước/sau, nhật ký làm sạch; tự dựng **OBT, Star schema (Kimball), Snowflake, Data Vault 2.0** + ERD; conformed dimensions nhiều nguồn (tỉnh 63 → 34 theo NQ 202/2025/QH15, năm, quận/huyện) kèm độ phủ ghép nối.
+- **Phân tích** — hồ sơ dữ liệu (EDA), so sánh nhóm (Kruskal–Wallis / Mann–Whitney + effect size), tương quan Spearman có hiệu chỉnh Bonferroni + tương quan riêng phần, drivers (Ridge + gradient boosting, CV 5-fold, permutation importance), what-if có khoảng bootstrap 90%, phân khúc k-means, dự báo có khoảng 80% và MAE holdout.
+- **Quyết định** — "So what → Now what" kèm tác động ước tính và mức tin cậy; đề bài → `brief.json` (câu hỏi, biến mục tiêu, người quyết định, KPI) mở đầu deck và câu chuyện.
+- **Serving** — FastAPI (OpenAPI), dashboard Next.js 16 + shadcn/ui `dashboard-01` (Tổng quan, Đề bài, Nguồn, Pipeline, Chất lượng, Mô hình, SQL Explorer read-only, Hồ sơ, Insight, Drivers & What-if, Phân khúc, Quyết định, AI Analyst), dashboard HTML tĩnh, executive summary MD/HTML/PDF.
+- **AI Analyst & "Hỏi AI"** — Vercel AI SDK với tool chỉ đọc; Groq hoặc mọi endpoint OpenAI-compatible (kể cả Ollama cục bộ); **chế độ offline** trả lời bằng số do engine tính; câu chuyện insight có kiểm tra số chống bịa.
+- **Deck & pitch song ngữ** — `deck.pptx` (EN) / `deck.vi.pptx` (VI) và `pitch.md` (VI, Marp) / `pitch.en.md`, chọn bằng `--lang vi|en|both`; chuỗi cố định do người viết và duyệt (không dịch máy), hai ngôn ngữ mang cùng con số.
+
+## Kiến trúc
+
+```mermaid
+flowchart LR
+  subgraph ING["1 · Ingestion"]
+    F[File CSV/XLSX/JSON/Parquet/ZIP]
+    A[Public API<br/>paging · rate limit · retry/backoff · cache]
+    S[SQL / JDBC-style<br/>SQLAlchemy, SELECT only]
+    W[Web scraping<br/>robots.txt · delay]
+    R[Social listening<br/>RSS · Trends]
+    C[CV counts<br/>YOLO + ByteTrack]
+  end
+  subgraph STO["2 · Storage — DuckDB + Parquet"]
+    B[(bronze<br/>raw + _src, _ingested_at, _row_hash)]
+    SI[(silver<br/>typed · deduplicated · flagged)]
+    G[(gold<br/>OBT · Star · Snowflake · Data Vault)]
+    M[(meta<br/>runs · lineage · quality · sources)]
+  end
+  subgraph TRF["3 · Transform"]
+    Q[Quality checks<br/>missing · duplicate · outlier 3×IQR<br/>score before → after]
+    MO[Modeling<br/>OBT · Star · Snowflake · Data Vault 2.0]
+    CD[Conformed dims<br/>province 63→34 · year · district]
+    AN[Analysis<br/>tests · drivers · what-if · forecast]
+  end
+  subgraph SRV["4 · Serving"]
+    API[FastAPI :8000<br/>read-only SQL]
+    WEB[Next.js dashboard :3000<br/>shadcn/ui]
+    AI[AI Analyst<br/>offline fallback]
+    DK[Deck + pitch VI/EN<br/>summary · static dashboard]
+  end
+  F & A & S & W & R & C --> B
+  B --> Q --> SI --> MO --> G
+  CD --> G
+  G --> AN
+  G --> API
+  AN --> API
+  API --> WEB & AI
+  AN --> DK
+  B -. lineage / provenance .-> M
+  G -. lineage .-> M
+```
+
+Chi tiết: [`docs/SPEC.md`](docs/SPEC.md) · luồng nghiệp vụ và ánh xạ 6 bước của mentor: [`docs/WORKFLOW.md`](docs/WORKFLOW.md) · kế hoạch tổng: [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md).
+
+## Bắt đầu nhanh
+
+Cần: Python 3.11+ (CI dùng 3.12), Node.js 20+ (CI dùng 22), `make`, Git. Linux/macOS (Windows: WSL2).
 
 ```bash
 git clone https://github.com/ducvuathuduc/vietleap2026.git && cd vietleap2026
-make setup                       # .venv + requirements.txt + npm install + Chromium headless (xuất PNG/PDF)
-cp web/.env.example web/.env.local   # rồi điền khoá LLM nếu có (mục 3)
+make setup                            # .venv + requirements.txt + npm install + Chromium headless (xuất PNG/PDF) — một lần, ~5–10 phút
+make demo                             # chạy 3 dataset trong data/practice/ → out/<tên>/
+make api                              # terminal 1: FastAPI http://localhost:8000 (tài liệu: /docs)
+make web                              # terminal 2: build + chạy dashboard http://localhost:3000
 ```
 
-Máy có proxy: `export NO_PROXY=localhost,127.0.0.1` (Makefile đã tự đặt cho `api`/`demo`).
+Máy có proxy: `export NO_PROXY=localhost,127.0.0.1` (Makefile đã đặt cho `api`/`demo`). Máy yếu: đừng chạy `make web` (build) cùng lúc với `make test` hay `make demo`.
 
-## 2. Chạy
-
-| Lệnh | Việc |
-|---|---|
-| `make demo` | Chạy lần lượt các dataset trong `data/practice/` qua toàn bộ pipeline → `out/<tên>/` (insight, deck.pptx 15 slide gồm pipeline/mô hình/chất lượng/provenance, pitch.md Marp, executive_summary, dashboard.html) |
-| `make api` | FastAPI `http://localhost:8000` (tài liệu: `/docs`) — terminal 1 |
-| `make web` | Build + chạy dashboard `http://localhost:3000` — terminal 2 (cần `make api`) |
-| `make web-dev` | Dashboard chế độ dev (hot reload, tốn RAM hơn) |
-| `make demo-online` | Demo nhiều nguồn: CSV + SQLite + World Bank API + Wikipedia + RSS → một warehouse |
-| `make brief F=scenarios/briefs/bds_gia_m2.md D=data/practice/synthetic_messy_bds.csv` | Đề bài → `brief.json` (câu hỏi, biến mục tiêu, phân khúc, loại quyết định) |
-| `make test` | pytest + unit test web + eslint (đừng chạy song song với `make web` trên máy yếu) |
-
-CLI trực tiếp: `python de.py file <file> --serve` · `python de.py run <sources.yaml> --primary <ds> --serve` · `python de.py tables` · `python de.py sql "SELECT ..."`.
-
-Nạp lại dữ liệu (`de.py file|run`, và trường `mode` của `POST /api/ingest`): `--mode replace` (mặc định, ghi đè bronze) · `--mode append` (thêm mọi dòng) ·
-`--mode incremental` (chỉ thêm dòng có `_row_hash` mới; bộ cột đổi → tự dựng lại bảng). Số dòng thêm/bỏ qua nằm trong `pipeline.json` (`load`) và `meta.runs`.
-
-## 3. Biến môi trường AI Analyst (`web/.env.local`)
-
-Không có khoá nào → AI chạy **offline**: trả lời bằng insight/pipeline/quality do engine tính (vẫn dùng được khi demo mất mạng).
+**AI Analyst (tuỳ chọn)** — `cp web/.env.example web/.env.local`, rồi điền một trong hai:
 
 ```dotenv
 API_URL=http://127.0.0.1:8000
-# Lựa chọn 1 — Groq (miễn phí, nhanh)
-GROQ_API_KEY=gsk_...
+GROQ_API_KEY=gsk_...                       # lựa chọn 1 — Groq
 GROQ_MODEL=llama-3.3-70b-versatile
-# Lựa chọn 2 — bất kỳ endpoint OpenAI-compatible (OpenRouter, Together, Ollama http://localhost:11434/v1, LM Studio…)
-OPENAI_COMPATIBLE_BASE_URL=
+OPENAI_COMPATIBLE_BASE_URL=                # lựa chọn 2 — OpenRouter, Together, Ollama http://localhost:11434/v1, LM Studio…
 OPENAI_COMPATIBLE_MODEL=
 OPENAI_COMPATIBLE_API_KEY=
 ```
 
-Groq được ưu tiên nếu cả hai cùng có. Không commit `.env*` có khoá thật.
+Không có khoá → AI chạy **offline** bằng kết quả engine. Groq được ưu tiên nếu có cả hai. Không commit `.env*`.
 
-## 4. Luồng dùng trong 1 phút
+**Docker** (đã viết, **chưa chạy thử**): `docker compose up --build` → dashboard `http://localhost:3000`, API `http://localhost:8000/docs`; cổng chỉ mở trên 127.0.0.1.
 
-**Đề bài** (dán đề → kế hoạch) → **Upload** (nút tải dữ liệu / trang Nguồn) → **Pipeline / Chất lượng / Mô hình** (giải thích cho giám khảo) → **Insight / Drivers & What-if / Phân khúc** → **Hỏi AI** (bật ở thanh trên, bấm vào bất kỳ thẻ/biểu đồ) → **Quyết định** → **Exports → deck.pptx**.
+## Cách dùng
 
-## 5. Bảo mật, CI, Docker
+| Lệnh | Việc |
+|---|---|
+| `make help` | Liệt kê mọi lệnh |
+| `make demo` | Chạy lần lượt các dataset practice qua toàn bộ pipeline |
+| `make demo-online` | Nhiều nguồn: CSV + SQLite + World Bank API + Wikipedia + RSS → một warehouse |
+| `make brief F=scenarios/briefs/bds_gia_m2.md D=data/practice/synthetic_messy_bds.csv` | Đề bài → kế hoạch + `brief.json` |
+| `make web-dev` | Dashboard chế độ dev (hot reload, tốn RAM hơn) |
+| `make test` · `make test-py` · `make test-web` | pytest · unit test web + eslint |
+| `make clean-out` | Xoá output sinh ra (`out/`, warehouse, lake) |
 
-- **Bảo mật** (chi tiết: [`SECURITY.md`](SECURITY.md), [`docs/security/threat-model.md`](docs/security/threat-model.md)): công cụ chạy cục bộ, không đăng nhập — API chỉ bind `127.0.0.1`.
-  SQL chỉ đọc (DuckDB `read_only`, tắt truy cập file/mạng, chặn hàm đọc file/env, timeout 20 s); nguồn gửi qua API bị chặn địa chỉ mạng nội bộ (SSRF) và đường dẫn ngoài thư mục cho phép;
-  upload giới hạn loại/kích thước; header bảo mật + CSP; CORS không wildcard; rate limit 60/phút (API) và 20/phút (`/api/chat`, `/api/story`); tool AI chỉ đọc, output tool là dữ liệu, không phải lệnh.
-  Khoá LLM chỉ để trong `web/.env.local` (đã git-ignore).
-- **CI** (GitHub Actions): `.github/workflows/ci.yml` — pytest + kiểm tra `openapi.json` không lệch (`python tools/export_openapi.py`), web `npm ci && npm test && npm run lint && npm run build`;
-  `.github/workflows/security.yml` — gitleaks (toàn lịch sử), pip-audit, `npm audit --audit-level=high`, CodeQL (Python + TS), chạy hằng tuần; Dependabot cho pip/npm/actions.
-- **Docker** (chưa chạy thử trên máy dev): `docker compose up --build` → dashboard `http://localhost:3000`, API `http://localhost:8000/docs`; cổng chỉ mở trên 127.0.0.1;
-  khoá LLM đọc từ `web/.env.local` nếu có.
+CLI trực tiếp:
 
-## 6. Spec & lộ trình
+```bash
+# Một file → bronze/silver/gold + insight + deck/pitch (VI và EN)
+python de.py file data/practice/synthetic_messy_bds.csv --serve --lang both
+# Nạp lại chỉ phần mới (bỏ dòng có _row_hash đã nạp); --mode replace|append|incremental
+python de.py file data/practice/synthetic_messy_bds.csv --serve --mode incremental
+# Nhiều nguồn khai báo trong YAML
+python de.py run scenarios/demo/sources.yaml --primary vn_housing --serve
+# Đề bài → brief.json (mở đầu deck bằng câu hỏi quyết định)
+python de.py brief scenarios/briefs/wdi_tax_revenue.md --data data/practice/wdi_asia_fiscal_panel.csv --out out/wdi_fiscal/brief.json
+# Warehouse
+python de.py tables
+python de.py sql "SELECT * FROM gold.obt_demo_multi LIMIT 5"     # OBT của dataset demo_multi (make demo-online)
+# Chỉ engine phân tích (không qua warehouse), chọn ngôn ngữ deck
+python run.py data/practice/wdi_asia_fiscal_panel.csv --name wdi_fiscal --target tax_revenue_pct_gdp --lang vi
+# Xuất lại OpenAPI sau khi đổi API (CI kiểm tra lệch)
+python tools/export_openapi.py
+```
 
-Spec Kit: [`specs/README.md`](specs/README.md) (feature 001 đã xong; 002–011 là phần còn lại, có ước lượng và phụ thuộc) · lịch 16–21/11: [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Đầu ra trong `out/<dataset>/`: `results.json`, `pipeline.json`, `quality.json`, `lineage.json`, `provenance.json`, `conformed.json` (khi nhiều nguồn), `clean.parquet`,
+`charts/*.png`, `deck.pptx` / `deck.vi.pptx`, `pitch.md` / `pitch.en.md`, `executive_summary.{md,html,pdf}`, `dashboard.html`.
+Dashboard: **Đề bài** → **Upload** → **Pipeline / Chất lượng / Mô hình** → **Insight / Drivers & What-if / Phân khúc** → **Hỏi AI** → **Quyết định** → **Exports** (chọn Tiếng Việt / English).
 
-## 7. Cấu trúc
+## Cấu trúc thư mục
 
 ```
-engine/vlkit/      engine Python: de/ (connectors, warehouse DuckDB, quality, modeling, flow), insights, stats, brief, report
-api/               FastAPI (routes/, jobs nền)
-web/               Next.js 16 + shadcn/ui dashboard-01 + Vercel AI SDK + driver.js
-scenarios/         packs/ (7 miền đề), briefs/ (11 đề mẫu), demo/ (nguồn nhiều loại), conformed/, cv_counting/
-specs/             Spec Kit: 001 (đã xong) + 002–011 (còn lại)
-.github/           CI + Security workflows, Dependabot
-docs/  slides/  tests/  tools/
+engine/vlkit/        engine Python
+  de/                  connectors, netguard (SSRF/path), warehouse DuckDB, quality, modeling, conformed, lineage, flow
+  profile.py stats.py insights.py decision.py   EDA, kiểm định, insight, khuyến nghị
+  brief.py report.py i18n.py fmt.py             đề bài, deck/pitch/summary, chuỗi VI/EN, định dạng số
+api/                 FastAPI: routes/ (datasets, pipeline, analysis, brief, agent), security middleware, jobs nền
+web/                 Next.js 16 + shadcn/ui dashboard-01 + Vercel AI SDK + driver.js
+scenarios/           packs/ (7 gói kịch bản), briefs/ (đề mẫu), demo/ (nguồn nhiều loại), conformed/, cv_counting/
+data/practice/       3 dataset luyện tập (giấy phép: docs/licenses.md)
+specs/               Spec Kit: 001 lõi, 002–011 tính năng (spec, plan, tasks, contracts)
+.specify/            constitution (8 nguyên tắc bắt buộc)
+docs/                MASTER_PLAN, SPEC, WORKFLOW, ROADMAP, PLAYBOOK, CONTEST_ANALYSIS, licenses, security/
+slides/  tests/  tools/  .github/ (CI, Security, Dependabot, mẫu issue/PR)
 ```
 
-Toàn bộ open-source (Apache-2.0, xem `LICENSE`). Dữ liệu sinh ra (`out/`, `data/warehouse.duckdb`, `data/lake/`, `data/raw/`) không được commit.
+## Nguyên tắc Data Engineering
+
+| Nguyên tắc | Cách kit làm | Ở đâu |
+|---|---|---|
+| Idempotency | `--mode replace` dựng lại bronze; `--mode incremental` chỉ chèn dòng có `_row_hash` mới — chạy lại không sinh trùng | `engine/vlkit/de/warehouse.py`, `flow.py` |
+| Incremental load | Theo hash nội dung `_row_hash`; bộ cột đổi → tự dựng lại bảng. *Chưa có watermark/cursor theo thời gian cho API* | `de.py --mode`, `POST /api/ingest` `mode` |
+| Retry + backoff | `tenacity` exponential (1–30 s) cho 429/5xx, tôn trọng `Retry-After`, rate limit theo nguồn | `de/connectors.py` |
+| Logging / audit | `meta.runs` (bước, trạng thái, thời gian), `pipeline.json` (timings, inserted/skipped), cleaning log | `de/warehouse.py`, `de/flow.py` |
+| Giữ dữ liệu thô | bronze không sửa, có `_src`, `_ingested_at`; mọi bước làm sạch chạy lại được | `de/warehouse.py` |
+| Medallion | bronze → silver → gold, thêm schema `meta` | DuckDB `data/warehouse.duckdb` + `data/lake/` |
+| Mô hình chiều (Kimball) | Star schema tự sinh (fact + dim thời gian/địa lý/nhóm), kèm OBT, Snowflake, Data Vault 2.0 và lý do chọn | `de/modeling.py`, trang Mô hình |
+| Chất lượng dữ liệu | missing, trùng dòng + khoá ứng viên, outlier gắn cờ, kiểu số/ngày VN, điểm trước/sau | `de/quality.py`, trang Chất lượng |
+| Lineage & provenance | đồ thị nguồn → bronze → silver → gold → serving; provenance từng nguồn (thời điểm, giấy phép, fingerprint) | `lineage.json`, `provenance.json`, slide Provenance |
+| Data dictionary | **Chưa có bản xuất** — đang là khoảng trống, xem [`MASTER_PLAN.md`](docs/MASTER_PLAN.md) §0 "Gaps" | — |
+
+## Nguyên tắc phân tích
+- **EDA trước kết luận** — hồ sơ cột (kiểu, % thiếu, phân phối, skew, outlier), tương quan, chất lượng trước/sau.
+- **Không kết luận nhân quả từ dữ liệu quan sát** — mọi driver, tương quan, what-if được gọi là "liên đới"; deck, pitch và AI luôn kèm caveat nhân quả.
+- **Mỗi insight kèm kiểm định** — tên kiểm định, p-value (Bonferroni khi nhiều phép thử), effect size, n; p ≥ 0,05 được dán nhãn "bằng chứng yếu" và không làm căn cứ cho khuyến nghị số 1.
+- **Bất định được hiển thị** — what-if có khoảng bootstrap 90%, dự báo có khoảng 80% và MAE holdout.
+- **Hạn chế nói trước** — slide Limitations: caveat nhân quả trước, rồi giới hạn độ phủ với số thật (ô thiếu, dòng không ghép được).
+- **Không bịa số** — số trong UI/deck/AI phải truy được về engine hoặc SQL trên gold; câu LLM chứa số không có trong nguồn bị thay bằng câu của engine.
+
+Các nguyên tắc này là luật của dự án: [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
+
+## Bảo mật
+Kit chạy cục bộ, không đăng nhập; API bind `127.0.0.1`. SQL cho người dùng/AI **chỉ đọc** (DuckDB `read_only`, tắt truy cập file/mạng, chặn hàm đọc file/env, timeout 20 s);
+nguồn gửi qua API bị chặn địa chỉ mạng nội bộ (SSRF) và đường dẫn ngoài thư mục cho phép; upload giới hạn loại và kích thước; header bảo mật + CSP; CORS không wildcard;
+rate limit 60/phút (API) và 20/phút (`/api/chat`, `/api/story`); tool AI chỉ đọc, output tool là dữ liệu, không phải lệnh (chống prompt injection).
+Chi tiết và cách báo lỗ hổng: [`SECURITY.md`](SECURITY.md) · mô hình đe doạ STRIDE: [`docs/security/threat-model.md`](docs/security/threat-model.md).
+
+## Kiểm thử & CI
+- `make test-py` (pytest: pipeline DE, deck/pitch song ngữ, hợp đồng JSON Schema/OpenAPI, bảo mật SQL/SSRF/upload…) rồi `make test-web` (unit test `node --test` + eslint), rồi `cd web && npm run build` — chạy **tuần tự**.
+- GitHub Actions: [`ci.yml`](.github/workflows/ci.yml) — pytest, kiểm tra `openapi.json` không lệch, web `npm ci` / test / lint / build;
+  [`security.yml`](.github/workflows/security.yml) — gitleaks (toàn lịch sử), pip-audit, `npm audit --audit-level=high`, CodeQL (Python + TypeScript), chạy hằng tuần; Dependabot cho pip/npm/actions.
+
+## Lộ trình
+Tính năng còn lại (Spec Kit, có ưu tiên, ước lượng và phụ thuộc): [`specs/README.md`](specs/README.md) · lịch theo ngày: [`docs/ROADMAP.md`](docs/ROADMAP.md) ·
+khoảng trống so với yêu cầu của mentor: [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md) §0. Lịch sử thay đổi: [`CHANGELOG.md`](CHANGELOG.md).
+
+## Đóng góp
+Xem [`CONTRIBUTING.md`](CONTRIBUTING.md) (cài môi trường, chạy kiểm tra tuần tự, Conventional Commits, quy trình Spec Kit) và
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) (Contributor Covenant 2.1). Dùng mẫu issue/PR trong `.github/`.
+
+## Giấy phép
+Mã nguồn: [Apache License 2.0](LICENSE). Thư viện, dữ liệu và tài sản bên thứ ba giữ giấy phép riêng — danh sách đầy đủ ở [`docs/licenses.md`](docs/licenses.md).
+Thành phần tuỳ chọn `ultralytics` (AGPL-3.0) **không** cài mặc định, chỉ dùng trong script độc lập `scenarios/cv_counting/count.py`.
+
+## Ghi nhận
+- **Dữ liệu** (chi tiết và điều khoản: [`docs/licenses.md`](docs/licenses.md)): World Bank — World Development Indicators (CC BY 4.0); bảng Wikipedia trong demo scraping (CC BY-SA 4.0);
+  RSS VnExpress trong demo social (theo điều khoản nhà xuất bản, chỉ tiêu đề/đường dẫn); báo cáo tài chính DN niêm yết 2021 lấy từ
+  github.com/ThaiDat/Vietnamese-Financial-Data và github.com/youngsu-park-69/vietnam-stock-data (chỉ dùng luyện tập — kiểm tra giấy phép từng repo trước khi phân phối lại);
+  bảng ánh xạ tỉnh 63 → 34 tổng hợp từ Nghị quyết 202/2025/QH15 và danh mục vùng của GSO; dữ liệu BĐS mẫu do kit tự sinh.
+- **Mã nguồn mở**: shadcn/ui, Next.js, FastAPI, DuckDB, pandas, scikit-learn, statsmodels, python-pptx, Vercel AI SDK, driver.js, Recharts, Mermaid… (giấy phép trong `docs/licenses.md`).
+- **Workshop & mentor**: Lưu Đức Cảnh (Data Engineer, Tasco) — workshop *Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp*, VietLeap Hackathon 2026.
+
+---
+
+## English summary
+
+**VietLeap Insight Kit** turns a raw dataset plus a problem statement into a reproducible data-engineering pipeline
+(**Ingestion → Storage → Transform → Serving**), statistically tested insights, policy recommendations, a shadcn/ui dashboard,
+an AI analyst with an offline fallback, and a bilingual pitch deck — every number comes from the engine or a DuckDB query.
+
+- **Ingest** files, REST APIs (paging, rate limits, retry with exponential backoff, disk cache), SQL (SELECT only), web pages (robots.txt-aware), RSS/Trends and CV counts.
+- **Store** in a DuckDB medallion (bronze/silver/gold/meta) with a Parquet lake; raw rows keep `_src`, `_ingested_at`, `_row_hash`; incremental loads skip rows whose hash is already loaded.
+- **Transform**: quality checks (missing, duplicates, 3×IQR outliers flagged not deleted, score before/after), OBT, Kimball star schema, snowflake and Data Vault 2.0 with ERDs, conformed dimensions (Vietnam's 63 → 34 provinces).
+- **Analyse** with tests, effect sizes, Bonferroni correction, bootstrap intervals and forecasts with holdout error; associations are never presented as causal effects.
+- **Serve** through FastAPI (read-only SQL), a Next.js dashboard, a static HTML dashboard, executive summaries and `deck.pptx` / `deck.vi.pptx` + Marp pitch (`--lang vi|en|both`).
+
+Quick start: `make setup && make demo`, then `make api` and `make web` (http://localhost:3000). Known gaps (data dictionary export, EDA report file,
+offline data pack, scheduled collection workflow) are listed in `docs/MASTER_PLAN.md` §0. Licence: Apache-2.0. Contributions: see `CONTRIBUTING.md`.

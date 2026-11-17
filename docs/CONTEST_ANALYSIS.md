@@ -11,7 +11,7 @@
 2. **Giám khảo thiên kinh tế học / chính sách công**: UEH Khoa Tài chính công (chủ nhà), AVSE Economic Policy Network, Sacha Dray (World Bank – chính sách tài khoá, thuế), Viet Nguyen-Tien (LSE – kinh tế năng lượng, xe điện, công nghệ số), cùng giảng viên Western Sydney, Coventry, Roehampton và FiinGroup. → Họ sẽ chấm **câu hỏi chính sách + bằng chứng + giới hạn** nặng hơn độ "kỹ thuật" của pipeline.
 3. **Giải thưởng chính thức: "tổng hơn 20 triệu VNĐ"**. Con số "giải nhất 25 triệu" **không tìm thấy trong nguồn chính thức nào** → [CHƯA XÁC NHẬN]. Có 2 "competition track": *Data & Analytics* và *Presentation*.
 4. **Không tìm thấy tiêu chí chấm chính thức** (web, UEH, Facebook, Gmail đều không có) → tiêu chí ở mục 3 là suy ra. Nên hỏi BTC trên nhóm Zalo trước 19/11.
-5. Thời gian thi thật: **09:30 20/11 → 13:00 21/11 ≈ 27,5 giờ** (trừ workshop/ăn). Pitch 13:15–15:15 (120 phút cho mọi đội; độ dài mỗi đội [CHƯA XÁC NHẬN]).
+5. Thời gian thi thật (agenda vietleap2026.com, 17/11): **09:00 20/11 (Challenge Briefing) → 13:00 21/11**; hacking bắt đầu sau workshop Dashboard (10:15). Pitch 13:15–15:15 (120 phút cho mọi đội; độ dài mỗi đội [CHƯA XÁC NHẬN]).
 6. Đề có khả năng cao nhất (suy ra): **tài chính công / chính sách kinh tế cấp tỉnh hoặc quốc gia**, kế đến **dữ liệu doanh nghiệp niêm yết (FiinGroup)** và **chỉ số phát triển (World Bank)**. Đề giao thông/CV xếp thấp hơn mức kit đang đầu tư (Chi‑Yu Lee là nhà thần kinh học, Tasco chỉ dạy workshop DE chung).
 7. Kit thiếu: **pack "mobility/Tasco"**, kịch bản pitch **tiếng Anh** (giám khảo và diễn giả nước ngoài; ngôn ngữ pitch [CHƯA XÁC NHẬN]), và **gói dữ liệu offline** cho các nguồn mở.
 
@@ -66,32 +66,40 @@
 | Ban tổ chức có cấp dữ liệu (FiinGroup) hay đội tự thu thập? | [CHƯA XÁC NHẬN]. Bài FB: "cơ hội làm việc với các công cụ thực tế" → [SUY RA] có thể có quyền truy cập công cụ/dữ liệu FiinGroup | S8 |
 | Lần tổ chức đầu tiên? | [SUY RA] Đây là lần đầu – không thấy kỳ trước. Lưu ý **"VietLeap AI Accelerator"** (NIC/BambuUP, Hà Nội) là chương trình **khác, chỉ trùng tên** | tìm kiếm web |
 
-### 1.3 Lịch chính thức (agenda PDF trong mail S3 = poster S5) [XÁC NHẬN]
+### 1.3 Lịch chính thức — agenda hiện hành trên vietleap2026.com (đọc 17/11/2026; trang sửa 17/11 ~18:55) [XÁC NHẬN]
+Nguồn: https://vietleap2026.com/ (agenda trong site, đọc ngày 17/11/2026). Lịch này **thay thế** agenda PDF trong mail (S3) / poster (S5):
+talk LSE chuyển từ 20/11 10:00 sang **19/11 15:30**, workshop Dashboard từ 11:00 sang **09:30**, mentor check‑in #1 từ 17:15 sang **16:00**, trao giải từ 16:00 sang **15:45**.
+
 | Ngày | Giờ | Nội dung |
 |---|---|---|
-| **16/11 (Thứ Hai)** | 19:00, online | Workshop "Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp" – **Lưu Đức Cảnh, Data Engineer, Tasco**: 4 giai đoạn Ingestion–Storage–Transform–Serving; nguồn Database/JDBC, Public API, file, Web scraping, Social listening (quyền truy cập, giới hạn API, chống chặn); làm sạch missing/duplicate/outlier; chọn mô hình **OBT / Star / Snowflake / Data Vault** "phù hợp quy mô & thời gian hackathon" (S4) |
-| **19/11** | 12:00–15:00 | Đăng ký + nhận phòng KTX UEH Green Living Hub |
-| | 15:00–15:30 | Khai mạc |
-| | 15:30–16:00 | Workshop "From observation to data – Object tracking in computer vision" – **Chi‑Yu Lee, ĐH Konstanz** (UEH ghi 15:30–16:30) |
-| | 16:45–18:30 | City Bus Tour |
-| | 18:30–20:30 | Ăn tối + networking |
-| **20/11** | 07:00–09:00 | Thiền + ăn sáng |
-| | **09:00–09:30** | **Phổ biến đề + chia đội** |
-| | 09:30–10:00 | Hacking |
-| | 10:00–10:45 | Workshop "Unlocking the Data Economy" – **Viet Nguyen‑Tien, LSE** |
-| | 11:00–11:30 | Workshop Dashboard – **Sacha Dray, World Bank Việt Nam** |
-| | 11:30–12:30 | Ăn trưa |
-| | 12:30–17:15 | Hacking |
-| | **17:15–17:45** | **Mentor check‑in #1** |
-| | 17:45– | Hacking tiếp + ăn tối (không ghi giờ kết thúc) |
-| **21/11** | 07:00–09:00 | Thiền + ăn sáng |
-| | 09:00–10:30 | Hacking |
+| **16/11 (Thứ Hai)** | 19:00, online | Workshop "Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp" – **Lưu Đức Cảnh, Data Engineer, Tasco** (đã diễn ra; theo agenda PDF S3/S5): 4 giai đoạn Ingestion–Storage–Transform–Serving; nguồn Database/JDBC, Public API, file, Web scraping, Social listening; làm sạch missing/duplicate/outlier; chọn mô hình **OBT / Star / Snowflake / Data Vault** (S4) |
+| **19/11** | 09:00–11:30 và 13:30–14:45 | Check‑in UEH Green Living Hub |
+| | **14:45–15:30** | Workshop "From observation to data – Object tracking" – **Chi‑Yu Lee, ĐH Konstanz** |
+| | **15:30–16:15** | **"Data to Decision" – Viet Nguyen‑Tien, LSE** (tên talk trên site: *Combining Data for Socioeconomic Development*) |
+| | 16:15–16:45 | Họp online với mentors |
+| | 16:45–17:30 | Ăn tối |
+| | 18:30–20:15 | Bus tour (tự chọn) |
+| **20/11** | **09:00–09:30** | **Khai mạc + Challenge Briefing + ghép đội** |
+| | **09:30–10:15** | **Workshop Dashboard – Sacha Dray, World Bank Việt Nam** |
+| | 10:15–11:30 | Hacking |
+| | 11:30–13:00 | Ăn trưa |
+| | 13:00–16:00 | Hacking |
+| | **16:00–16:30** | **Mentor check‑in #1** |
+| | 16:30–17:30 | Hacking |
+| | 17:30–19:00 | Ăn tối |
+| | từ 19:00 | Hacking xuyên đêm |
+| **21/11** | 09:00–10:30 | Hacking |
 | | **10:30–11:00** | **Mentor check‑in #2** |
 | | 11:00–12:00 | Ăn trưa |
 | | 12:00–13:00 | Nước rút |
 | | **13:00–13:15** | **Hạn nộp bài** |
 | | **13:15–15:15** | **Pitch + Q&A** |
-| | 16:00–17:00 | Trao giải + bế mạc |
+| | 15:45–16:45 | Trao giải |
+| | 17:00–21:00 | Gala |
+
+Mentor/giám khảo liệt kê trên vietleap2026.com (17/11): Nguyễn Phúc Cảnh (UEH), Nguyễn Tiến Việt (LSE), Nguyễn Văn Phúc (WSU), Đặng Hoàng Nhật Tâm (UEH),
+Nguyễn Trí Dũng (Coventry), Karan Vishwanath (Leicester), Lê Minh Phương (VinUni), Lưu Đức Cảnh (Tasco), Đinh Xuân Phan Anh (FiinGroup).
+Site **không** đăng rubric, thể lệ, FAQ, chính sách AI/dữ liệu, định dạng nộp, thời lượng pitch hay ngôn ngữ — vẫn [CHƯA XÁC NHẬN].
 
 Ghi chú: 16/11/2026 là **Thứ Hai**.
 
@@ -114,7 +122,7 @@ Ghi chú: 16/11/2026 là **Thứ Hai**.
 | **UEH Khoa Tài chính công** (chủ nhà, viết đề khả năng cao) | Ngân sách, thuế, đầu tư công, phân cấp tỉnh; lập luận chính sách theo NQ 57; ngôn ngữ khuyến nghị chính sách | Khuyến nghị phải có **chủ thể ra quyết định là cơ quan nhà nước** (Bộ TC, UBND tỉnh…) |
 | **AVSE Economic Policy Network** | Phân tích dựa trên bằng chứng nối nhà nghiên cứu – nhà hoạch định | Phân biệt **tương quan vs nhân quả**, có slide giới hạn |
 | **World Bank (Sacha Dray)** – dạy dashboard | Chỉ số phát triển, so sánh quốc tế/ASEAN, tài khoá, thương mại, năng suất; dashboard **ít mà rõ, có nguồn** | Dashboard 1 trang, mỗi biểu đồ trả lời 1 câu hỏi, ghi nguồn + năm dưới mỗi biểu đồ |
-| **LSE (Viet Nguyen‑Tien)** – "Unlocking the Data Economy" | Giá trị của dữ liệu, dữ liệu thay thế/dữ liệu lớn hành chính, năng lượng/EV/chuyển đổi xanh, công nghệ số & năng suất | Ghi điểm nếu **kết hợp nguồn dữ liệu phi truyền thống** (Google Trends, scrape, API) với số liệu chính thức |
+| **LSE (Viet Nguyen‑Tien)** – "Data to Decision / Combining Data for Socioeconomic Development" (19/11 15:30) | Giá trị của dữ liệu, dữ liệu thay thế/dữ liệu lớn hành chính, năng lượng/EV/chuyển đổi xanh, công nghệ số & năng suất | Ghi điểm nếu **kết hợp nguồn dữ liệu phi truyền thống** (Google Trends, scrape, API) với số liệu chính thức |
 | **FiinGroup** (đối tác dữ liệu, có thể là giám khảo) | Dữ liệu doanh nghiệp/ngành/thị trường vốn VN, chất lượng & chuẩn hoá dữ liệu | Nếu đề có dữ liệu DN: dùng đúng chỉ số tài chính (ROE, ROA, đòn bẩy), chú ý ngành tài chính tách riêng |
 | **Tasco (Lưu Đức Cảnh)** – chỉ dạy workshop online | Quy trình DE chuyên nghiệp 4 giai đoạn; mô hình dữ liệu phù hợp quy mô | Dùng đúng thuật ngữ workshop trong pitch; **không** chọn Data Vault cho hackathon trừ khi giải thích được |
 | **Chi‑Yu Lee** (CV, nhà tổ chức) | Từ quan sát → dữ liệu; tư duy khoa học, phản biện, kể chuyện từ dữ liệu | Có phần "chúng tôi đã kiểm tra giả thuyết ngược lại" |
@@ -129,7 +137,7 @@ Xác suất là ước lượng chủ quan (tổng ≈100%), dựa trên: ai là
 | 1 | **Tài chính công / chính sách kinh tế cấp tỉnh hoặc quốc gia** (thu–chi NSNN, thuế, đầu tư công, FDI, tăng trưởng, việc làm; sáp nhập 63→34 tỉnh) | ~30% | Chủ nhà là Khoa TCC + AVSE policy + Sacha Dray (tài khoá/thuế) dạy ngay sau khi phát đề | Niên giám & số liệu thống kê (gso.gov.vn / nso.gov.vn), Bộ Tài chính – công khai ngân sách (mof.gov.vn), PCI (pcivietnam.vn), PAPI (papi.org.vn), WB Viet Nam Economic Update |
 | 2 | **Doanh nghiệp / thị trường vốn** (hiệu quả DN theo ngành, rủi ro tín dụng, tác động chính sách lên DN niêm yết) | ~20% | FiinGroup là đối tác dữ liệu duy nhất; Viet Nguyen‑Tien có nghiên cứu dữ liệu DN VN | Dữ liệu FiinPro/FiinTrade (nếu BTC cấp), BCTC công bố, thư viện vnstock, WB Enterprise Survey VN |
 | 3 | **Chỉ số phát triển & so sánh quốc tế** (VN vs ASEAN: năng suất, thu thuế/GDP, nợ công, giáo dục, nghèo) | ~15% | Workshop dashboard của World Bank; dữ liệu mở sạch, dễ làm trong 27 giờ | World Bank WDI API (api.worldbank.org/v2), IMF WEO, Our World in Data, Open Development Mekong (data.opendevelopmentmekong.net) |
-| 4 | **Kinh tế dữ liệu / chuyển đổi số / chuyển đổi xanh** (năng lượng, EV, số hoá, thương mại điện tử) | ~15% | Workshop LSE "Unlocking the Data Economy" cùng sáng phát đề; NQ 57 | Google Trends, Ember/IEA, VECOM e‑commerce index, OWID energy, WDI digital, dữ liệu tin đăng (scrape) |
+| 4 | **Kinh tế dữ liệu / chuyển đổi số / chuyển đổi xanh** (năng lượng, EV, số hoá, thương mại điện tử) | ~15% | Talk LSE "Combining Data for Socioeconomic Development" chiều 19/11; NQ 57 | Google Trends, Ember/IEA, VECOM e‑commerce index, OWID energy, WDI digital, dữ liệu tin đăng (scrape) |
 | 5 | **Tác động xã hội** (y tế, giáo dục, ô nhiễm PM2.5, wellbeing) | ~10% | Nhà tài trợ Goodstart ưu tiên tác động cộng đồng | OpenAQ, IQAir, WHO GHO, VHLSS (tóm tắt), dữ liệu Bộ GD&ĐT |
 | 6 | **Giao thông / di chuyển / thị giác máy tính** (đếm xe từ camera, ETC, ùn tắc) | ~10% | Workshop CV ngày 19/11 và diễn giả Tasco (VETC). **Nhưng** Chi‑Yu Lee nghiên cứu hành vi động vật, Tasco không phải đơn vị ra đề, và đối tượng là SV kinh tế → khó ra đề CV thuần | Camera giao thông TP.HCM (giaothong.hochiminhcity.gov.vn), video công khai, dữ liệu xe đăng ký/VAMA, OSM |
 
@@ -186,20 +194,20 @@ Xác suất là ước lượng chủ quan (tổng ≈100%), dựa trên: ai là
 ### 4.2 Timeline theo giờ (19/11–21/11)
 | Thời điểm | Việc | Chủ trì | Đầu ra |
 |---|---|---|---|
-| **19/11** 12:00–15:00 | Check‑in KTX; test laptop + wifi UEH; `make api` + `make web` chạy được trên mạng địa điểm | LEAD | Kit chạy tại chỗ |
-| 15:30–16:00 | Nghe Chi‑Yu Lee; ghi thuật ngữ, ý "observation → data" | Tất cả | Ghi chú 5 dòng |
-| 18:30–20:30 | Networking: hỏi BTC/mentor về format nộp bài, độ dài pitch, ngôn ngữ, dữ liệu | LEAD | Trả lời các câu ở 3.1 |
+| **19/11** 09:00–11:30 / 13:30–14:45 | Check‑in UEH Green Living Hub; test laptop + wifi; `make api` + `make web` chạy được trên mạng địa điểm | LEAD | Kit chạy tại chỗ |
+| 14:45–15:30 | Nghe Chi‑Yu Lee; ghi thuật ngữ, ý "observation → data" | Tất cả | Ghi chú 5 dòng |
+| 15:30–16:15 | **Cả đội** nghe talk LSE "Data to Decision" (tìm "góc" kết hợp dữ liệu cho phát triển KT‑XH) | Tất cả | 3 ý dùng được trong pitch |
+| 16:15–16:45 | Họp online với mentors: hỏi format nộp bài, độ dài pitch, ngôn ngữ, dữ liệu | LEAD | Trả lời các câu ở 3.1 |
 | 21:00–22:30 | Ngủ sớm (đêm 20/11 có thể thức khuya) | Tất cả | — |
-| **20/11** 09:00–09:30 | Nhận đề, gặp đội. 10 phút giới thiệu kỹ năng → chốt vai | LEAD | Bảng vai |
-| 09:30–10:00 | Dán đề vào **Đề bài**; đọc đề to cho cả đội; liệt kê dữ liệu được cấp | LEAD + PO | brief.json, danh sách dữ liệu |
-| 10:00–10:45 | PO + AN + ST nghe workshop LSE (tìm "góc" data economy). DE ở lại: upload dữ liệu BTC, chạy pipeline lần 1 | DE / PO | Pipeline xanh lần 1 |
-| 11:00–11:30 | **Cả đội** nghe workshop Dashboard World Bank (khả năng là người chấm phần dashboard) | Tất cả | 3 nguyên tắc dashboard của diễn giả |
-| 11:30–12:30 | Ăn trưa + **họp chốt hướng**: 1 câu hỏi quyết định, người ra quyết định, 2–3 giả thuyết | PO | **CHECKPOINT 1 (12:30)** |
-| 12:30–14:30 | DE: thêm 1–2 nguồn ngoài (WDI/GSO/scrape) + conformed dim; AN: duyệt Insight/Drivers; RQ: bối cảnh + nguồn; ST: khung deck theo 4.4 | Từng người | Gold tables, danh sách insight ứng viên |
-| 14:30–16:30 | AN chọn 3–5 insight (kiểm định, cỡ mẫu); DE sửa lỗi dữ liệu, bật What‑if; PO viết bản nháp khuyến nghị | AN / PO | **CHECKPOINT 2 (16:30)** |
-| 16:30–17:15 | Chuẩn bị 3 câu hỏi cho mentor + bản pitch 2 phút | PO | — |
-| **17:15–17:45** | **Mentor check‑in #1**: trình bày câu hỏi + 3 insight + khuyến nghị nháp; xin phản hồi về độ phù hợp đề | PO (nói), cả đội ghi | Danh sách điều chỉnh |
-| 17:45–20:00 | Ăn tối; xử lý phản hồi mentor; khoá dữ liệu nguồn | DE / AN | **CHECKPOINT 3 (20:00) – đóng băng phạm vi** |
+| **20/11** 09:00–09:30 | Khai mạc + Challenge Briefing + ghép đội. 10 phút giới thiệu kỹ năng → chốt vai | LEAD | Bảng vai |
+| 09:30–10:15 | **Cả đội** nghe workshop Dashboard World Bank (khả năng là người chấm phần dashboard); DE tranh thủ dán đề vào **Đề bài** | Tất cả | 3 nguyên tắc dashboard của diễn giả, brief.json |
+| 10:15–11:30 | DE: upload dữ liệu BTC, chạy pipeline lần 1; PO + AN: đọc đề to, liệt kê dữ liệu được cấp, phác câu hỏi quyết định | DE / PO | Pipeline xanh lần 1 |
+| 11:30–13:00 | Ăn trưa + **họp chốt hướng**: 1 câu hỏi quyết định, người ra quyết định, 2–3 giả thuyết | PO | **CHECKPOINT 1 (12:30)** |
+| 13:00–14:30 | DE: thêm 1–2 nguồn ngoài (WDI/GSO/scrape) + conformed dim; AN: duyệt Insight/Drivers; RQ: bối cảnh + nguồn; ST: khung deck theo 4.4 | Từng người | Gold tables, danh sách insight ứng viên |
+| 14:30–15:30 | AN chọn 3–5 insight (kiểm định, cỡ mẫu); DE sửa lỗi dữ liệu, bật What‑if; PO viết bản nháp khuyến nghị | AN / PO | **CHECKPOINT 2 (15:30)** |
+| 15:30–16:00 | Chuẩn bị 3 câu hỏi cho mentor + bản pitch 2 phút (ghi câu hỏi chính sách + giả thuyết trước check‑in) | PO | — |
+| **16:00–16:30** | **Mentor check‑in #1**: trình bày câu hỏi + 3 insight + khuyến nghị nháp; xin phản hồi về độ phù hợp đề | PO (nói), cả đội ghi | Danh sách điều chỉnh |
+| 16:30–20:00 | Xử lý phản hồi mentor; ăn tối 17:30–19:00; khoá dữ liệu nguồn | DE / AN | **CHECKPOINT 3 (20:00) – đóng băng phạm vi** |
 | 20:00–23:00 | DE: dashboard + "Câu chuyện" driver.js + Quyết định; ST + PO: deck v1 + kịch bản; RQ: soát số | Từng người | Deck v1, dashboard v1 |
 | 23:00–24:00 | Chạy thử pitch toàn phần lần 1 (bấm giờ) | PO | Ghi chú sửa |
 | 00:00–06:30 | **Ngủ luân phiên**: ít nhất 5 tiếng cho người pitch; DE ngủ từ 01:00 | LEAD | — |
@@ -209,13 +217,13 @@ Xác suất là ước lượng chủ quan (tổng ≈100%), dựa trên: ai là
 | 11:00–12:00 | Ăn trưa + sửa theo mentor; **CHECKPOINT 4 (12:00) – khoá nội dung** | LEAD | — |
 | 12:00–12:40 | Chỉ sửa lỗi chính tả/định dạng; chạy pitch 2 lần; kiểm tra file mở được trên máy khác | ST / PO | Bản cuối |
 | **12:40** | **Nộp bài (sớm 20 phút so với hạn 13:00)**; chụp màn hình xác nhận | LEAD | Biên nhận |
-| 13:15–15:15 | Pitch + Q&A | PO (+ DE trả lời câu kỹ thuật) | — |
+| 13:15–15:15 | Pitch + Q&A (trao giải 15:45–16:45) | PO (+ DE trả lời câu kỹ thuật) | — |
 
 ### 4.3 Checkpoint go/no‑go
 | Checkpoint | Điều kiện "GO" | Nếu "NO‑GO" |
 |---|---|---|
 | **CP1 – 20/11 12:30** | Có 1 câu hỏi quyết định viết được thành 1 câu; biết dữ liệu nào trả lời nó; pipeline lần 1 chạy | Thu hẹp câu hỏi (1 ngành / 1 vùng / 1 chỉ số); bỏ nguồn ngoài, chỉ dùng dữ liệu BTC |
-| **CP2 – 20/11 16:30** | ≥3 insight có số + kiểm định + liên quan trực tiếp tới quyết định | Đổi sang phân tích mô tả + so sánh nhóm đơn giản (t‑test / so sánh trung vị); bỏ mô hình phức tạp |
+| **CP2 – 20/11 15:30** (trước check‑in #1 16:00) | ≥3 insight có số + kiểm định + liên quan trực tiếp tới quyết định | Đổi sang phân tích mô tả + so sánh nhóm đơn giản (t‑test / so sánh trung vị); bỏ mô hình phức tạp |
 | **CP3 – 20/11 20:00** | Mentor xác nhận hướng phù hợp đề; dữ liệu đã khoá | Nếu mentor nói lệch đề: dành tối đa 2 giờ xoay hướng, giữ nguyên pipeline, đổi câu hỏi |
 | **CP4 – 21/11 12:00** | Deck hoàn chỉnh, pitch ≤ thời lượng, mọi số đã soát | Cắt slide, không thêm tính năng; nếu dashboard lỗi → dùng ảnh chụp + video |
 

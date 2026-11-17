@@ -9,7 +9,7 @@ Giờ Việt Nam (Asia/Saigon). Đội ngẫu nhiên 4–5 người, chưa chắ
 | 16/11 19:00 | Nghe workshop Lưu Đức Cảnh (Tasco): Ingestion–Storage–Transform–Serving, nguồn DB/API/file/scraping/social, missing/duplicate/outlier, OBT/Star/Snowflake/Data Vault | Ghi lại thuật ngữ giám khảo dùng → dùng đúng các từ đó trong pitch |
 | 17–18/11 | Trên **laptop thi**: `git pull && make setup && make demo`; `make api` + `make web`; mở `http://localhost:3000` | 3 dataset practice có insight + deck; trang Pipeline/Chất lượng/Mô hình hiện đủ |
 | 18/11 | Điền `web/.env.local` (Groq key) — thử "Hỏi AI" cả khi rút mạng (chế độ offline) | AI trả lời có số; offline không lỗi |
-| 19/11 15:30 | Nghe Chi-Yu Lee (Konstanz) — object tracking. Nếu có thể ra đề video: `pip install ultralytics supervision`, tải sẵn `yolov8n.pt` (xem `scenarios/cv_counting/`) | `count.py --help` chạy |
+| 19/11 14:45 | Nghe Chi-Yu Lee (Konstanz) — object tracking (15:30–16:15: talk LSE *Data to Decision*; 16:15 họp online với mentors). Nếu có thể ra đề video: `pip install ultralytics supervision`, tải sẵn `yolov8n.pt` (xem `scenarios/cv_counting/`) | `count.py --help` chạy |
 | 19/11 tối | Sạc pin, mang ổ cắm/USB; mang sẵn `data/practice` & bản build web; ngủ đủ | — |
 
 ## 1. Vai trò trong đội ngẫu nhiên (gán trong 10 phút đầu)
@@ -40,11 +40,11 @@ Giờ Việt Nam (Asia/Saigon). Đội ngẫu nhiên 4–5 người, chưa chắ
 | Giờ | Captain | Data engineer | Analyst | Storyteller | Researcher/QA |
 |---|---|---|---|---|---|
 | **20/11 09:00–09:30** | Nghe đề, chụp đề, chia vai | Bật `make api` + `make web`, tải dữ liệu đề vào `data/raw/` | Đọc đề cùng Captain | Lập file ghi chú chung | Ghi lại tiêu chí chấm |
-| 09:30–10:00 | Dán đề vào **Đề bài**, chốt câu hỏi quyết định | Upload → chạy pipeline; báo lỗi định dạng | Xem **Hồ sơ dữ liệu**, cột mục tiêu đúng chưa | Phác storyline 7 phần | Tìm nguồn chính thống liên quan |
-| 10:00–12:00 (talk LSE 10:00, workshop Dashboard World Bank 11:00) | Nghe talk, ghi ý có thể dùng trong pitch | Bổ sung nguồn ngoài (API/scrape) nếu đề cho phép; join theo tỉnh/năm | Lọc insight, kiểm chứng bằng SQL Explorer | Nghe workshop Dashboard → áp dụng vào bố cục demo | Đối chiếu số với nguồn chính thống |
-| 12:00–13:00 | Ăn trưa; **checkpoint 1**: câu hỏi + target + dữ liệu đã sạch | — | — | — | — |
-| 13:00–16:00 | Chốt 3 insight & khuyến nghị nháp | Sửa chất lượng (impute/outlier), ổn định pipeline, ghi provenance | Drivers, what-if, phân khúc cho 3 insight | Viết slide Problem, Data, Pipeline, Model | Viết slide Bối cảnh, Limitations |
-| 16:00–18:00 | **Checkpoint 2**: kể thử câu chuyện 3 phút | Tạo lại deck sau khi chốt dữ liệu | Hỏi AI để rà caveat từng insight | Ráp deck + `pitch.md` | Soát "mỗi số trên slide ↔ bảng gold" |
+| 09:30–10:15 (workshop Dashboard World Bank) | Nghe workshop, dán đề vào **Đề bài** | Upload → chạy pipeline; báo lỗi định dạng | Xem **Hồ sơ dữ liệu**, cột mục tiêu đúng chưa | Nghe workshop Dashboard → áp dụng vào bố cục demo | Tìm nguồn chính thống liên quan |
+| 10:15–12:00 | Chốt câu hỏi quyết định, ghi ý dùng trong pitch | Bổ sung nguồn ngoài (API/scrape) nếu đề cho phép; join theo tỉnh/năm | Lọc insight, kiểm chứng bằng SQL Explorer | Phác storyline 7 phần | Đối chiếu số với nguồn chính thống |
+| 11:30–13:00 | Ăn trưa; **checkpoint 1**: câu hỏi + target + dữ liệu đã sạch | — | — | — | — |
+| 13:00–15:30 | Chốt 3 insight & khuyến nghị nháp; ghi câu hỏi chính sách + giả thuyết cho check-in | Sửa chất lượng (impute/outlier), ổn định pipeline, ghi provenance | Drivers, what-if, phân khúc cho 3 insight | Viết slide Problem, Data, Pipeline, Model | Viết slide Bối cảnh, Limitations |
+| 16:00–18:00 | **Mentor check-in #1 (16:00–16:30)**, rồi **checkpoint 2**: kể thử câu chuyện 3 phút | Tạo lại deck sau khi chốt dữ liệu | Hỏi AI để rà caveat từng insight | Ráp deck + `pitch.md` | Soát "mỗi số trên slide ↔ bảng gold" |
 | 18:00–22:00 | Viết khuyến nghị chính sách: ai/làm gì/ở đâu/KPI | Quay video demo dự phòng (2 phút) | Bổ sung kiểm định ổn định (segment khác, năm khác) | Hoàn thiện slide, hình | Chuẩn bị Q&A (10 câu giám khảo hay hỏi) |
 | 22:00 | Về nghỉ — **đừng thức trắng** | Push code, sao lưu `out/` | — | — | — |
 | **21/11 08:00–10:00** | Tập pitch lần 1 (bấm giờ 7 phút) | Kiểm tra demo chạy từ đầu trên laptop thi | Rà lại số liệu | Sửa slide theo góp ý | Đóng vai giám khảo hỏi xoáy |

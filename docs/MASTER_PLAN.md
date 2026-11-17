@@ -6,10 +6,10 @@
 
 ## 0. TRẠNG THÁI (cập nhật 17/11/2026) — đọc mục này trước
 
-**Lịch BTC đã xác nhận (giờ Việt Nam):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 15:30** Chi-Yu Lee (Konstanz) *From observation to data* (object tracking CV) · **20/11 09:00** công bố đề + chia đội ngẫu nhiên · **20/11 10:00** Viet Nguyen-Tien (LSE) *Unlocking the Data Economy* · **20/11 11:00** Sacha Dray (World Bank VN) workshop Dashboard · **21/11 13:00** hạn nộp · **21/11 13:15** pitch.
+**Lịch BTC đã xác nhận (giờ Việt Nam; agenda trên https://vietleap2026.com/, đọc 17/11 — site đổi lịch 17/11 ~18:55):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 14:45–15:30** Chi-Yu Lee (Konstanz) *From observation to data — Object tracking* · **19/11 15:30–16:15** Viet Nguyen-Tien (LSE) *Data to Decision / Combining Data for Socioeconomic Development* · 19/11 16:15–16:45 họp online với mentors · **20/11 09:00–09:30** khai mạc + Challenge Briefing + ghép đội · **20/11 09:30–10:15** Sacha Dray (World Bank VN) workshop Dashboard · **20/11 16:00–16:30** mentor check-in #1 · **21/11 10:30–11:00** check-in #2 · **21/11 13:00–13:15** hạn nộp · **21/11 13:15–15:15** pitch + Q&A · 21/11 15:45–16:45 trao giải. Chi tiết: [`CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) §1.3.
 
 **Kiểm tra lần cuối (17/11, commit `4e098e5`, feature 003)**: `pytest -q tests` 236 pass + 1 skip + 2 xfail · `npm test` 33 pass · `npm run lint` sạch · `npm run build` pass (chạy tuần tự trên máy 2 CPU).
-CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `74de518`, `5aa4194` — feature 003; `3e39ad4` và `c0bd0e4` — feature 002, `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16–17/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
+CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `74de518`, `5aa4194`, `a19048a` — feature 003, CI của `4e098e5` bị huỷ do push kế tiếp cùng nhóm concurrency, `a19048a` chứa cùng code và xanh; `3e39ad4` và `c0bd0e4` — feature 002, `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16–17/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
 
 ### Đã xong & đã push
 
@@ -33,6 +33,7 @@ CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift
 | 002 Phase A — câu hỏi chính sách mở đầu deck/pitch | `report.load_brief()` đọc `out/<ds>/brief.json`; slide 2 "Decision question" (câu hỏi trích nguyên văn, WHO DECIDES, SUCCESS KPI; không có đề → "(no brief — generic question)"); slide insight EVIDENCE → FOR THE DECISION → LIMITATION, insight có khuyến nghị đứng trước, p ≥ 0,05 ghi "Weak evidence" và không làm bằng chứng cho khuyến nghị #1; slide Limitations: nhân quả trước, rồi số thật (ô thiếu, dòng không ghép); `pitch.md` mở bằng "## 0 · Câu hỏi quyết định" (timing §4.6, 7 phút mặc định) | bdcb571 |
 | 002 Phase B — brief endpoint + web story | `GET /api/datasets/{ds}/brief` (404 khi chưa có, id không cho bắt đầu bằng dấu chấm), `has_brief` trong summary; `Story.question` (trích đề, không gửi LLM) + `Story.limits` (≤ 3 caveat); thẻ "Câu hỏi quyết định" trên Tổng quan; "Câu chuyện": bước đầu = câu hỏi, bước cuối = Hạn chế; kiểm tra Chromium headless có/không brief | 76c9e37 |
 | 003 deck/pitch song ngữ | `engine/vlkit/i18n.py` (bảng chuỗi EN/VI đã duyệt, không dịch máy); caveats + insight caveat + câu VI của engine mang **cùng con số** với EN (định dạng VI `1.234,5`, `p<0,001`); `run.py`/`de.py file\|run --lang vi\|en\|both`, API `lang` (form upload + `IngestIn`, 422 trước khi chạy job); file cố định theo ngôn ngữ `deck.pptx` (EN) · `deck.vi.pptx` · `pitch.md` (VI) · `pitch.en.md`, export `deck_vi`/`pitch_md`/`pitch_en`; web: ToggleGroup Tiếng Việt/English ở Exports (ngôn ngữ chưa xuất bị khoá + tooltip); test SC-301/SC-302 trên 3 dataset practice | 74de518, 5aa4194, 4e098e5 |
+| Tài liệu mã nguồn mở | README chuẩn open-source (badge, kiến trúc mermaid, nguyên tắc DE/phân tích, bảo mật, CI), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, mẫu issue/PR, `CHANGELOG.md`; `WORKFLOW.md` §0 ánh xạ 6 bước mentor; lịch thi theo vietleap2026.com (17/11); mục Gaps bên dưới | (commit docs 17/11) |
 
 Đã chạy thật: `scenarios/demo/sources.yaml` (5 loại nguồn: CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress); Hà Nội 81.681 tin (điểm chất lượng 84,9 → 92,4); 3 dataset practice (`data/practice/`).
 
@@ -45,6 +46,16 @@ P1: ~~002 câu hỏi chính sách mở đầu deck/story~~ (xong `bdcb571`, `76c
 P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K · 006 NL→SQL · 010 ảnh chụp + video demo.
 Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) và deck tiếng Việt (`deck.vi.pptx`) mới kiểm bằng `deck_overflow()` + parity số, chưa xem ảnh render PNG/LibreOffice; nhật ký làm sạch/provenance trong deck VI giữ nguyên văn tiếng Anh của engine (ghi trong spec 003 §Clarifications).
 
+### Gaps — chỉ liệt kê, chưa làm (17/11; đối chiếu slide mentor DE "6 bước" + kiểm tra API từ sandbox 17/11)
+Ánh xạ từng bước mentor → kit: [`WORKFLOW.md`](WORKFLOW.md) §0. Mỗi mục cần spec Spec Kit riêng trước khi code.
+1. **Xuất data dictionary** (`data_dictionary.md/.csv` từ gold: cột, kiểu, đơn vị, nguồn, công thức) — slide mentor đòi đích danh; kit chưa có.
+2. **Xuất báo cáo EDA dạng file** (profiling, missing, outlier, time gap → HTML/MD) — hiện chỉ xem trên trang Hồ sơ/Chất lượng; chưa có kiểm tra time gap riêng.
+3. **Gói dữ liệu offline + cache sẵn** (WDI VN + ASEAN, IMF, UN SDG VN, tỷ giá, NSO tỉnh/quý) — 17/11 từ sandbox: World Bank API trả 502, IMF datamapper 403, Open-Meteo forecast 429.
+4. **GitHub Actions `collect_data.yml`** (cron + `workflow_dispatch` chạy `de.py run`) — repo mới có `ci.yml`/`security.yml`; notebook lab mentor coi lịch chạy là mức tối thiểu.
+5. **Pack theo tháng** (`macro_monitoring`: YoY, MA3, KPI giải ngân đầu tư công) + brief mẫu.
+6. **Connector/recipe UN SDG** (M49 = 704), **tỷ giá open.er-api**, **Open-Meteo archive** (mẫu `sources.yaml`).
+7. Incremental theo watermark/cursor thời gian cho API (hiện incremental theo `_row_hash`).
+
 ---
 
 ## 1. Ban tổ chức đã hé lộ gì (và suy ra gì)
@@ -53,9 +64,9 @@ Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy 
 |---|---|---|---|
 | Tên: *From Data to Decision*; 2 track: **Data & Analytics** (dashboard + data pipeline) và **Presentation** | vietleap2026.com | Chấm cả pipeline lẫn dashboard lẫn câu chuyện ra quyết định | Pipeline có lineage nhìn thấy được, dashboard, trang "Decision" |
 | Workshop 16/11 19:00 online — *Hướng dẫn xây dựng luồng dữ liệu & dashboard chuyên nghiệp* (Lưu Đức Cảnh, Data Engineer – Tasco): **Ingestion → Storage → Transform → Serving**; nguồn **Database/JDBC, Public API, file tải trực tiếp, Web Scraping, Social listening** (quyền truy cập, giới hạn API, chống chặn); làm sạch **missing, duplicate, outlier**; mô hình **OBT / Star Schema / Snowflake / Data Vault** "phù hợp quy mô và thời gian hackathon" | poster BTC | Đề rất có thể cho **dữ liệu rải rác nhiều nguồn/nhiều file**, yêu cầu tự thu thập bổ sung, và giám khảo hỏi "các bạn mô hình dữ liệu thế nào, vì sao" | Connector đủ 5 loại nguồn, DuckDB bronze/silver/gold, nhật ký làm sạch, sinh **OBT + Star schema** tự động, sơ đồ lineage + ERD trên dashboard |
-| Talk Chi-Yu Lee (Konstanz) **19/11 15:30**: *From observation to data — object tracking in computer vision* | agenda | Có thể có đề đếm/đếm luồng (giao thông, người) từ video/ảnh | `scenarios/cv_counting` (YOLO + ByteTrack → CSV đếm theo thời gian → đưa vào pipeline) |
-| Talk Viet Nguyen-Tien (LSE) **20/11 10:00**: *Unlocking the Data Economy* (dữ liệu mở, kinh tế dữ liệu; từng làm open property data) | agenda | Giá trị của dữ liệu mở/dữ liệu thay thế; có thể là dữ liệu BĐS (giá/m², quận, diện tích) | Domain pack BĐS (đã có, Hà Nội 81.681 tin đã chạy) |
-| Sacha Dray (World Bank VN) **20/11 11:00** — workshop Dashboard | agenda | Dữ liệu vĩ mô/WDI, chỉ số phát triển | Domain pack vĩ mô (đã có, WDI Asia) |
+| Talk Chi-Yu Lee (Konstanz) **19/11 14:45–15:30**: *From observation to data — object tracking in computer vision* | vietleap2026.com (17/11) | Có thể có đề đếm/đếm luồng (giao thông, người) từ video/ảnh | `scenarios/cv_counting` (YOLO + ByteTrack → CSV đếm theo thời gian → đưa vào pipeline) |
+| Talk Viet Nguyen-Tien (LSE) **19/11 15:30–16:15**: *Data to Decision / Combining Data for Socioeconomic Development* (dữ liệu mở, kết hợp dữ liệu; từng làm open property data) | vietleap2026.com (17/11) | Giá trị của dữ liệu mở/dữ liệu thay thế; có thể là dữ liệu BĐS (giá/m², quận, diện tích) | Domain pack BĐS (đã có, Hà Nội 81.681 tin đã chạy) |
+| Sacha Dray (World Bank VN) **20/11 09:30–10:15** — workshop Dashboard | vietleap2026.com (17/11) | Dữ liệu vĩ mô/WDI, chỉ số phát triển | Domain pack vĩ mô (đã có, WDI Asia) |
 | Host: UEH **School of Public Finance** + AVSE **Economic Policy Network** | website | Ngôn ngữ chính sách công, tài khóa, ngân sách tỉnh; khuyến nghị phải "evidence-based" | Trang Decision: khuyến nghị + mức tin cậy + caveat nhân quả; chuẩn hoá 63→34 tỉnh (NQ 202/2025/QH15) |
 | Partner **FiinGroup** (dữ liệu thị trường VN), RAF | poster | Có thể là dữ liệu doanh nghiệp niêm yết/tài chính | Domain pack tài chính DN (đã có, HOSE vs UPCoM ROE) |
 | Sponsor Goodenough College / **Goodstart Fellow** (dự án tác động cộng đồng: y tế, giáo dục, môi trường, wellbeing) | website | Đề có thể mang màu "social impact" | Template câu chuyện tác động xã hội trong deck |
@@ -202,9 +213,9 @@ Lý do chọn (để trả lời giám khảo):
 
 | Thời điểm | Việc |
 |---|---|
-| 19/11 | 15:30 nghe Chi-Yu Lee (CV tracking); tối: `git pull`, `make setup`, `make demo` trên laptop thi; tải sẵn model YOLOv8n; kiểm tra wifi UEH |
-| 20/11 09:00 | Nghe briefing, chụp đề. Dán đề vào trang **Brief** |
-| 20/11 10:00–12:00 | Talk LSE *Unlocking the Data Economy* (10:00) + workshop Dashboard World Bank (11:00): 1–2 người nghe & ghi ý giám khảo, phần còn lại chạy pipeline |
+| 19/11 | 14:45 nghe Chi-Yu Lee (CV tracking), 15:30 talk LSE *Data to Decision*; tối: `git pull`, `make setup`, `make demo` trên laptop thi; tải sẵn model YOLOv8n; kiểm tra wifi UEH |
+| 20/11 09:00 | Challenge Briefing + ghép đội, chụp đề. Dán đề vào trang **Brief** |
+| 20/11 09:30–10:15 | Workshop Dashboard World Bank (Sacha Dray): cả đội nghe & ghi nguyên tắc; sau đó chạy pipeline. Mentor check-in #1 lúc 16:00 |
 | +30' | Thả dataset (Upload) → pipeline chạy bronze/silver/gold + insight. Đọc Quality & Data Model |
 | +2h | Bổ sung nguồn ngoài (API/scrape) nếu đề cho phép → join conformed dim |
 | Chiều 20/11 | Chọn 3 insight mạnh nhất (effect size lớn, p nhỏ, liên quan quyết định); what-if; viết khuyến nghị |
