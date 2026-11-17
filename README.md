@@ -166,6 +166,14 @@ Nếu dùng PowerShell hoặc cần chỉ định lại cột mục tiêu, chạ
 
 **Gói ZIP để nộp.** Mở **Exports → Xuất báo cáo**, chọn ngôn ngữ và **Tạo gói ZIP**. Gói kèm deck, pitch, báo cáo, dashboard và README có checksum. Chromium in dashboard từ web tại `WEB_URL` (mặc định `http://127.0.0.1:3000`) và dùng HTML tĩnh khi web chưa chạy.
 
+Khi API và web đang chạy, `python tools/llm_smoke.py --offline --dataset wdi_asean` kiểm tra câu trả lời và Câu chuyện từ engine. `python tools/llm_smoke.py --dataset <id>` kiểm tra model khi đã cấu hình và tự bỏ qua nếu server báo offline.
+
+### Ảnh và video tập pitch
+
+[Tổng quan](docs/screenshots/01-tong-quan.png) · [Pipeline](docs/screenshots/04-pipeline.png) · [Insight](docs/screenshots/09-insights.png) · [Hỏi AI](docs/screenshots/hoi-ai.png)
+
+Chạy `make screenshots` và `make demo-video` sau khi mở API và web. Dùng `DATASET=<id>` để chọn bộ dữ liệu. [Kịch bản VI/EN](docs/DEMO_SCRIPT.md)
+
 ## Cấu trúc thư mục
 
 ```

@@ -258,7 +258,7 @@ make setup | api | web | web-dev | demo | demo-online | brief F=.. D=.. | test |
 - Không vượt captcha/đăng nhập/robots.txt khi scrape.
 
 ## Hạn chế đã biết
-- **LLM chưa được kiểm thử với khoá thật** trong CI/phiên dev: đường offline có unit test; đường LLM (Groq/OpenAI-compatible) chỉ kiểm qua kiểu và xử lý lỗi.
+- **LLM chưa được kiểm thử với khoá thật** trong CI/phiên dev. Analyst, Câu chuyện và Python SSE offline đã chạy trên `wdi_asean`. Kết quả và lệnh smoke nằm trong [checklist 011](../011-real-key-validation/checklists/llm-run.md).
 - **YOLO chưa chạy thật** (cần `pip install ultralytics supervision` + video có giấy phép); test dùng sự kiện tổng hợp/clip tổng hợp.
 - DuckDB một writer: job ingest tuần tự qua khoá; đọc trong lúc ghi sẽ chờ.
 - Brief parser rule-based: đề diễn đạt lạ có thể không khớp concept → cảnh báo và để engine tự chọn target.

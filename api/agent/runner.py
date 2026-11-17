@@ -145,7 +145,7 @@ def _mentioned_cols(ctx: T.Context, q: str) -> list[str]:
 
 
 def _insight_md(i: dict, rec: dict | None, k: int, lang: str) -> str:
-    title = i["title_vi"] if lang == "vi" else i["title_en"]
+    title = (i.get("title_vi") or i["title_en"]) if lang == "vi" else i["title_en"]
     sent = i["sentence_vi"] if lang == "vi" else i["sentence_en"]
     ev = f"{i['test']}" + (f", {fmt.p(i['p_value'])}" if i["p_value"] is not None else "")
     lines = [f"### {k}. {title}", sent, f"*{'Bằng chứng' if lang == 'vi' else 'Evidence'}:* {ev}; {'điểm xếp hạng' if lang == 'vi' else 'rank score'} {i['score']:.2f}."]

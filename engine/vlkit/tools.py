@@ -153,7 +153,7 @@ def make_chart(ctx: Context, kind: str, x: str, y: str | None = None, agg: str =
 
 
 def ranked_insights(ctx: Context, top_n: int = 5) -> dict:
-    keep = ("id", "rank", "type", "title_en", "sentence_en", "sentence_vi", "test", "p_value", "effect", "score", "value", "chart")
+    keep = ("id", "rank", "type", "title_en", "title_vi", "sentence_en", "sentence_vi", "test", "p_value", "effect", "score", "value", "chart")
     return {"insights": [{k: i.get(k) for k in keep} for i in ctx.results["insights"][: int(top_n)]],
             "recommendations": ctx.results["recommendations"][:5]}
 

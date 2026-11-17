@@ -48,3 +48,7 @@ As the **DE**, I want one end-to-end CV run (video → `counts.csv` → `cv` con
 - **SC-1101**: 5/5 scripted questions pass (tool used, VI, 0 ungrounded numbers) or each failure has an issue + fix task.
 - **SC-1102**: Injection probe and rate-limit rows pass.
 - **SC-1103**: (P3) one real CV run recorded with licence and accuracy check.
+
+## Clarifications
+
+- Use the configured analyst's mode as the guard. A real-key smoke run skips when the server reports offline. Use `--offline --dataset wdi_asean` for a deterministic check with the ready practice dataset. The live checklist's default dataset remains `wdi_fiscal`.

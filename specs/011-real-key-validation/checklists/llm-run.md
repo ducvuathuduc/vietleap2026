@@ -1,6 +1,12 @@
 # LLM real-key run — results (fill from tools/llm_smoke.py output; no keys, no raw transcripts)
 
-**Date**: ____ (Asia/Saigon) · **Commit**: ____ · **Provider/model** (from `GET /api/chat`): ____ · **Dataset**: wdi_fiscal
+**Date** 18/11/2026 (Asia/Saigon) · **Dataset** `wdi_asean` · **Mode** offline (`GET /api/chat`)
+
+- Analyst Q1 used `getInsights` and returned a Vietnamese answer in 0.04 s, with 0 unmatched number tokens and 0 stream errors.
+- Story returned 5 engine steps, the brief question and 3 limitations.
+- The Python offline agent emitted two tool calls, two tool results, `verification` and `done`. The Vietnamese title regression has a test.
+- The local route rate-limited at request 21 of 25 with the default 20/minute limit. Probe requests were validation-only and made no model calls.
+- Real-key web and Python runs skipped because the processes had no model credentials. The provider-error and invalid-key checks remain open.
 
 | Id | Tools called | Expected tool hit? | Answer in VI with diacritics? | Ungrounded numbers | Latency (s) | Pass? | Notes |
 |---|---|---|---|---|---|---|---|
@@ -15,4 +21,4 @@
 | story (Câu chuyện) | | n/a | | steps fallen back to engine: | | | |
 | python agent SSE | | | | | | | events seen |
 
-After the run: `gitleaks detect --no-banner` → result: ____ . Summary copied to `docs/MASTER_PLAN.md` §0: ☐
+Local `gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .` reported no leaks. Local and CI checks are recorded in `docs/MASTER_PLAN.md` §0.

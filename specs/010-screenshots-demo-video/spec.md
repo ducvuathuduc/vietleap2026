@@ -46,3 +46,7 @@ As the **DE**, I want an automated Playwright recording following a written stor
 ## Success criteria
 - **SC-1001**: `docs/screenshots/` has ≥ 13 PNGs from a real run, index lists commit hash.
 - **SC-1002**: `demo.webm` plays ≤ 95 s, follows the storyboard; reviewed by PO on 18/11.
+
+## Clarifications
+
+- Use `wdi_asean` for the first capture and recording. It is the dataset validated with the current offline contest command. Screenshots of the SQL and upload pages show their normal initial prompts.
