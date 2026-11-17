@@ -170,6 +170,8 @@ Khi API và web đang chạy, `python tools/llm_smoke.py --offline --dataset wdi
 
 ### Ảnh và video tập pitch
 
+Dùng **Ctrl+K** (macOS ⌘K) để tìm trang không dấu, chuyển dataset, mở file xuất hoặc nhập câu hỏi rồi mở AI Analyst để kiểm tra trước khi gửi.
+
 [Tổng quan](docs/screenshots/01-tong-quan.png) · [Pipeline](docs/screenshots/04-pipeline.png) · [Insight](docs/screenshots/09-insights.png) · [Hỏi AI](docs/screenshots/hoi-ai.png)
 
 Chạy `make screenshots` và `make demo-video` sau khi mở API và web. Dùng `DATASET=<id>` để chọn bộ dữ liệu. [Kịch bản VI/EN](docs/DEMO_SCRIPT.md)

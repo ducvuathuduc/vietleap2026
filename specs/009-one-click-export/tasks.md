@@ -10,7 +10,7 @@
 
 ## Phase C — Web
 - [x] T908 `3c02c26` Dataset URL and standalone `/print` with `data-print-ready` marker.
-- [x] T909 `3c02c26` `/report` and Exports link with shadcn export dialog. Command palette entry follows feature 005.
+- [x] T909 `3c02c26` `/report` and Exports link with shadcn export dialog. Command palette entry added in `80bd00d`.
 - [ ] T910 `3c02c26` Local browser exported and reopened the bilingual ZIP in 39.01 s. All 12 required archive members found, hashes checked, PDF/deck KPI matched. [Screenshot](../../docs/screenshots/export.png). Second-machine rehearsal is pending.
 - [x] T911 `3c02c26` Publish one-click export and update docs.
 

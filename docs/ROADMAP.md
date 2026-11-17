@@ -19,6 +19,7 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - 011 (`0b9d869`): web and Python offline modes verified on `wdi_asean`. Provider checks skipped with no model credentials.
 - 010 (`0b9d869`): 14 route captures, three dark-theme views and an 89.88 s recording in `out/demo/demo.webm`. Team review and upload remain open.
 - `c4fe091`: removed the standalone shadcn CLI dependency and retained the original MIT stylesheet. `ee175c8`: export freshness and explicit decision questions covered by regression tests.
+- 005 (`80bd00d`): Ctrl+K, shared NAV, VI/EN matching, actions and query prefills verified in Chromium. Gzip delta remains unmeasured.
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |

@@ -21,7 +21,7 @@ Hours are single-developer estimates for the 2-CPU laptop, written 2026-11-16 (n
 | [011](011-real-key-validation/) | Real-key LLM test (+ optional YOLO real run) | **P1** LLM / P3 YOLO | Offline smoke passed. Provider checks skipped without credentials. | LEAD/DE + AN | 3 (+2) | 001 (006 for q4) | T1101–T1110 |
 | [007](007-whatif-sliders/) | What-if sliders page (multi-driver, joint CI90) | P2 | 🟡 | DE + AN | 4 | 001 | T701–T711 |
 | [008](008-province-choropleth/) | 34-province choropleth → Hỏi AI | P2 | 🟡 | DE + RQ | 5 | 001 (boundary licence gate T801) | T801–T811 |
-| [005](005-command-palette/) | Ctrl+K command palette (shadcn Command/cmdk) | P2 | 🟡 | DE | 2.5 | 001 | T501–T508 |
+| [005](005-command-palette/) | Ctrl+K command palette (shadcn Command/cmdk) | P2 | `80bd00d`, browser verified | DE | 2.5 | 001 | T501–T508 |
 | [006](006-nl-to-sql/) | NL→SQL in AI Analyst (read-only guard, inline chart, cited query, offline templates) | P2 | 🟡 | DE + AN | 5 | 001 (T061 done) | T601–T612 |
 | [010](010-screenshots-demo-video/) | Screenshots + 90 s demo video script | P2 | Captured locally. Team review and sharing pending. | ST + DE | 3 | best after 005/007/008/009 | T1001–T1008 |
 

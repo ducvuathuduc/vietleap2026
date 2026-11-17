@@ -54,6 +54,8 @@ P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K 
 
 **Rà soát trước thi**: `ee175c8` ẩn gói ZIP/PDF từ lượt phân tích trước, bỏ mô hình what-if cũ và ưu tiên câu có dấu hỏi trong brief. `c4fe091` tách CLI shadcn khỏi app, giữ nguyên stylesheet MIT đang dùng. `npm audit --omit=dev --audit-level=high` không còn lỗi.
 
+**Lệnh nhanh 005** (`80bd00d`): Ctrl+K tìm trang không dấu, gọi Hỏi AI/Câu chuyện/Hướng dẫn, chuyển dataset và mở file xuất. Analyst nhận câu hỏi đã nhập để người dùng kiểm tra trước khi gửi. Browser kiểm tra chuyển trang bằng Enter, Esc và đóng inspect. Web 36 test, lint/build đạt. Mức tăng gzip còn chưa đo.
+
 Hạn chế đã biết: LLM chưa chạy với khoá thật. YOLO chưa chạy với video thật. Docker chưa chạy thử. Deck tiếng Việt đã kiểm `deck_overflow()` và đối chiếu số, còn thiếu lượt xem ảnh render PowerPoint. Nhật ký làm sạch và provenance trong deck VI giữ nguyên văn tiếng Anh của engine (spec 003, mục Clarifications).
 
 **Blockers vận hành**: API World Bank trả 502 trong GitHub Actions, artifact Collect data hoàn tất bằng panel practice. Live S3 và LLM thiếu cấu hình. Chưa kiểm tra bundle trên máy thứ hai. Tệp ngân sách hiện có phục vụ bài toán bổ sung có mục tiêu, còn cần dữ liệu thu và chi cấp tỉnh để phân tích tự chủ.
