@@ -3,11 +3,11 @@
 **Legend**: `[P]` parallel-safe · `→` depends on · test-first. **Done for every task**: pytest → web test/lint/build (sequential), commit `thanhdicode`, push `origin main`, tick with hash.
 
 ## Phase A — Engine support
-- [ ] T401 Test-first `tests/test_conformed.py::test_agg_mapping_and_ratio_recompute` — two old provinces merging into one new province: additive columns summed, ratio = Σnum/Σden (not mean of ratios); string `agg` still works.
-- [ ] T402 `engine/vlkit/de/conformed.py` per-column `agg` + `ratios`; diagnostics summary → T401.
-- [ ] T403 [P] Test-first `tests/test_conformed.py::test_post_sql_views_only` — `post_sql` creates `gold.v_*` views; any other statement rejected; `IngestIn` rejects `post_sql`.
-- [ ] T404 `engine/vlkit/de/sources.py` + `flow.py` `post_sql` (writer connection, regex `^CREATE OR REPLACE VIEW gold\.\w+ AS SELECT`) → T403.
-- [ ] T405 Commit + push "feat(conformed): T401–T404 per-column agg, ratio recompute, post_sql views".
+- [x] T401 `2cf9d34` Test-first per-column aggregation and ratio recomputation across a provincial merger.
+- [x] T402 `2cf9d34` Implement per-column `agg` and `ratios`, preserving string `agg`.
+- [x] T403 `2cf9d34` Test `gold.v_*` views, blocked SQL and rejection by `IngestIn`.
+- [x] T404 `2cf9d34` Execute validated `post_sql` views in one transaction on the writer connection.
+- [x] T405 `2cf9d34` Commit engine support and tests.
 
 ## Phase B — Recipes & packs
 - [ ] T406 [P] `scenarios/wdi_asean/{sources.yaml,views.sql,README.md}`; offline test using `data/practice/wdi_asia_fiscal_panel.csv` filtered to ASEAN (`tests/test_conformed.py::test_wdi_asean_gap_view_offline`) → T404.

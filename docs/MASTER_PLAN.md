@@ -44,7 +44,7 @@ Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. M�
 Danh sách đầy đủ, ước lượng giờ, vai phụ trách và đồ thị phụ thuộc: [`specs/README.md`](../specs/README.md). Lịch theo ngày 16/11–21/11 (workshop 16/11 19:00, đóng băng tính năng 18/11 22:00, nộp 21/11 13:00, pitch 13:15): [`docs/ROADMAP.md`](ROADMAP.md).
 P1: ~~002 câu hỏi chính sách mở đầu deck/story~~ (xong `bdcb571`, `76c9e37`) · ~~003 deck/pitch song ngữ~~ (xong `74de518`, `5aa4194`, `4e098e5`) · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
 P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K · 006 NL→SQL · 010 ảnh chụp + video demo.
-**Tạm dừng 17/11 21:04** (bàn giao cho agent khác). `main` xanh tại commit này. Việc tiếp: 004 T401 — test viết trước cho T401/T403 nằm trên nhánh `wip/004-t401` (chưa merge, đang đỏ vì chưa có code). Sau đó 009 → 011 → 010; feature freeze 18/11 22:00.
+**Tiến độ 17/11**: 004 T401–T405 (`2cf9d34`) đã thêm gộp theo cột, tính lại tỷ lệ từ tổng và view `gold.v_*` từ recipe CLI. Kiểm tra local: pytest 238 pass, 1 skip, 2 xfail; web 33 pass, lint/build đạt; OpenAPI khớp. Tiếp theo: recipe và dry run 004, các gap ưu tiên, rồi 009 → 011 → 010. Feature freeze 18/11 22:00.
 
 Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) và deck tiếng Việt (`deck.vi.pptx`) mới kiểm bằng `deck_overflow()` + parity số, chưa xem ảnh render PNG/LibreOffice; nhật ký làm sạch/provenance trong deck VI giữ nguyên văn tiếng Anh của engine (ghi trong spec 003 §Clarifications).
 

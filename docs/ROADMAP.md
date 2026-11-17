@@ -12,8 +12,8 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - ✅ 002 done & pushed (`bdcb571`, `76c9e37`; CI + Security green) — Tue 17/11 08:00–12:00 slot is freed.
 - ✅ 003 done & pushed (`74de518` string table + caveats, `5aa4194` `--lang vi|en|both`, `4e098e5` web toggle; CI + Security green for `74de518`, `5aa4194`, `a19048a`) — includes the web toggle originally planned for Wed 18/11 (T310–T312).
 - ✅ Open-source README + community files; contest schedule synced with vietleap2026.com (17/11); mentor 6-step mapping + gaps in `WORKFLOW.md` §0 / `MASTER_PLAN.md` §0.
-- ⏸ PAUSED 17/11 21:04 by the user (handoff to another coding agent). 004 not started on `main`; failing test-first tests for T401/T403 kept on branch `wip/004-t401` (not merged).
-- Next: 004 T401 (engine support for scenario packs) — start by cherry-picking the tests from `wip/004-t401`.
+- 004 T401–T405 (`2cf9d34`): per-column aggregation, recomputed ratios and guarded recipe views. Local pytest 238 pass, 1 skip, 2 xfail; web 33 pass, lint/build green.
+- Next: recipes and dry runs (004 T406–T413), then the priority gaps in MASTER_PLAN §0.
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |
