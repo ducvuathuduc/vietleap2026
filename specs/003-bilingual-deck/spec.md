@@ -55,5 +55,15 @@ As the **PO**, I want caveats and the "likely judge questions" card in the deck 
 - **SC-303**: ST can switch language in the web without the CLI (manual check, screenshot in `docs/screenshots/`).
 
 ## Open questions
-- [NEEDS CLARIFICATION: pitch language required by organisers (VI, EN or either) — ask on the Zalo group; default both.]
-- [NEEDS CLARIFICATION: whether the submission form takes .pptx, .pdf or a link — affects 009 more than this feature.]
+- [NEEDS CLARIFICATION: pitch language required by organisers (VI, EN or either) — ask on the Zalo group; default both.] → **Default applied**: `--lang both` is the default for CLI and API.
+- [NEEDS CLARIFICATION: whether the submission form takes .pptx, .pdf or a link — affects 009 more than this feature.] → **Deferred to 009**; this feature only writes .pptx/.md.
+
+## Clarifications — defaults chosen during implementation (2026-11-17)
+1. **File names are fixed per language (FR-303 wins over the wording of US1 #1–#2)**: `deck.pptx` is always English, `deck.vi.pptx` always Vietnamese, `pitch.md` always Vietnamese, `pitch.en.md` always English. `--lang vi` therefore writes `deck.vi.pptx` + `pitch.md` only; outputs of the other language left by an earlier run are deleted so `results.json.files`, the export endpoint and the web toggle agree.
+2. **Engine logs stay verbatim**: cleaning-log lines, provenance cells (source, kind, URI, licence note) and statistical test names are engine/technical text with no `*_vi` field; the VI deck prints them as-is and labels the card "(NHẬT KÝ GỐC)". Nothing is machine-translated (NFR-302).
+3. **Causal wording fixed while moving strings to the table** (constitution III): deck title "What drives X?" → "What is X associated with?"; VI pitch title "Điều gì quyết định X?" → "Những yếu tố nào gắn với X?".
+4. **Brief in another language** than the deck: prefix "Brief (original language):" / "Đề bài (nguyên văn):"; the question is quoted unchanged.
+5. **Profile issues** gain `issue_vi` (additive) so the VI data-quality caveat reads in Vietnamese; `results.json` gains `caveats_vi`.
+6. **Dates inside caveats** are written so both languages carry the same digits (`2025-07-01` / `01/07/2025`).
+7. **Number formatting**: VI uses `.` thousands and `,` decimals through `vlkit.fmt` (`count`, `dec`, `p(pv, lang)`); missing p-value prints `p=—` in VI, `p=n/a` in EN.
+

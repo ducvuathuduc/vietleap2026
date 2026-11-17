@@ -12,6 +12,11 @@ def _is_money(col: str | None) -> bool:
                                 "assets", "equity", "vốn", "liabilit", "nợ", "income", "thu nhập", "cogs", "npat"]) and "pct" not in k and "%" not in k
 
 
+def _vi_decimal(s: str) -> str:
+    """'1,234.5' → '1.234,5' (Vietnamese thousands '.' and decimal ',')."""
+    return s.replace(",", "_").replace(".", ",").replace("_", ".")
+
+
 def num(v, col: str | None = None, lang: str = "en", digits: int = 3) -> str:
     if v is None or (isinstance(v, float) and (math.isnan(v) or math.isinf(v))):
         return "n/a"
@@ -35,9 +40,7 @@ def num(v, col: str | None = None, lang: str = "en", digits: int = 3) -> str:
         s = f"{v:.{digits}g}"
     else:
         s = f"{v:.2g}"
-    if lang == "vi":
-        s = s.replace(",", "_").replace(".", ",").replace("_", ".")
-    return s
+    return _vi_decimal(s) if lang == "vi" else s
 
 
 def pct(v, lang: str = "en") -> str:
@@ -47,7 +50,25 @@ def pct(v, lang: str = "en") -> str:
     return s.replace(".", ",") if lang == "vi" else s
 
 
-def p(pv) -> str:
+def p(pv, lang: str = "en") -> str:
     if pv is None:
-        return "p=n/a"
-    return "p<0.001" if pv < 0.001 else f"p={pv:.3f}"
+        return "p=—" if lang == "vi" else "p=n/a"
+    s = "p<0.001" if pv < 0.001 else f"p={pv:.3f}"
+    return _vi_decimal(s) if lang == "vi" else s
+
+
+def count(x, lang: str = "en") -> str:
+    """Integer with thousands separators ('1,234' EN · '1.234' VI); '—' when not a number."""
+    try:
+        s = f"{int(x):,}"
+    except (TypeError, ValueError):
+        return "—"
+    return _vi_decimal(s) if lang == "vi" else s
+
+
+def dec(v, lang: str = "en") -> str:
+    """A number exactly as the engine stored it, with the decimal comma in Vietnamese; '—' when missing."""
+    if v is None:
+        return "—"
+    s = str(v)
+    return _vi_decimal(s) if lang == "vi" and isinstance(v, (int, float)) else s

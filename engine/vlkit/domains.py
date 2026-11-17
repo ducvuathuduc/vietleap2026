@@ -176,21 +176,30 @@ def apply_domain(domain: str, df: pd.DataFrame, roles: dict, log: list[str]) -> 
     return fn(df, roles, log)
 
 
-CAVEATS = {
+CAVEATS: dict[str, list[dict[str, str]]] = {  # {en, vi} pairs, same order and numbers (feature 003)
     "property": [
-        "Listing (asking) prices are not transaction prices; asking prices usually exceed final sale prices.",
-        "Listings over-represent sellers who advertise online; the sample is not a random sample of the housing stock.",
-        "Duplicate listings of the same property by several brokers may remain after exact-duplicate removal.",
+        {"en": "Listing (asking) prices are not transaction prices; asking prices usually exceed final sale prices.",
+         "vi": "Giá rao bán không phải giá giao dịch; giá rao thường cao hơn giá bán cuối cùng."},
+        {"en": "Listings over-represent sellers who advertise online; the sample is not a random sample of the housing stock.",
+         "vi": "Tin rao đại diện quá mức cho người bán đăng tin trực tuyến; mẫu không phải mẫu ngẫu nhiên của quỹ nhà ở."},
+        {"en": "Duplicate listings of the same property by several brokers may remain after exact-duplicate removal.",
+         "vi": "Sau khi loại dòng trùng hoàn toàn, vẫn có thể còn nhiều tin của cùng một bất động sản do nhiều môi giới đăng."},
     ],
     "public_finance": [
-        "Budget figures mix plan (dự toán) and actual (quyết toán) depending on the year; check definitions before comparing.",
-        "Administrative boundaries changed on 1 Jul 2025 (63 → 34 provinces); time series across the merger need re-aggregation.",
-        "Per-capita figures depend on the population source (GSO census vs. annual estimates).",
+        {"en": "Budget figures mix plan (dự toán) and actual (quyết toán) depending on the year; check definitions before comparing.",
+         "vi": "Số liệu ngân sách lẫn giữa dự toán và quyết toán tuỳ năm; kiểm tra định nghĩa trước khi so sánh."},
+        {"en": "Administrative boundaries changed on 2025-07-01 (63 → 34 provinces); time series across the merger need re-aggregation.",
+         "vi": "Địa giới hành chính thay đổi từ 01/07/2025 (63 → 34 tỉnh); chuỗi thời gian qua thời điểm sáp nhập cần cộng gộp lại."},
+        {"en": "Per-capita figures depend on the population source (GSO census vs. annual estimates).",
+         "vi": "Chỉ số bình quân đầu người phụ thuộc nguồn dân số (Tổng điều tra của GSO hay ước tính hằng năm)."},
     ],
     "firm": [
-        "Ratios from a single quarter are not annualised; compare like periods only.",
-        "Banks, insurers and securities firms use different statement templates; their margins are not comparable to non-financial firms.",
-        "Accounting values are book values; market-value metrics need price data.",
+        {"en": "Ratios from a single quarter are not annualised; compare like periods only.",
+         "vi": "Tỷ số của một quý chưa được năm hoá; chỉ so sánh các kỳ tương đương."},
+        {"en": "Banks, insurers and securities firms use different statement templates; their margins are not comparable to non-financial firms.",
+         "vi": "Ngân hàng, bảo hiểm và công ty chứng khoán dùng mẫu báo cáo khác; biên lợi nhuận của họ không so sánh được với doanh nghiệp phi tài chính."},
+        {"en": "Accounting values are book values; market-value metrics need price data.",
+         "vi": "Giá trị kế toán là giá trị sổ sách; chỉ số theo giá thị trường cần dữ liệu giá."},
     ],
     "generic": [],
 }

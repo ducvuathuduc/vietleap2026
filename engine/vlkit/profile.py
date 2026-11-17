@@ -4,7 +4,16 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from . import fmt
+from .i18n import LANGS, t
 from .stats import r
+
+
+def _issue(severity: str, column: str, key: str, **values) -> dict:
+    """A quality issue in both languages (issue = EN, issue_vi = VI); numeric values get the language's decimal mark."""
+    def text(lang: str) -> str:
+        return t(lang, key, **{k: v if isinstance(v, str) else fmt.dec(v, lang) for k, v in values.items()})
+    return {"severity": severity, "column": column, "issue": text("en"), "issue_vi": text("vi")}
 
 
 def profile(df: pd.DataFrame, roles: dict, numeric_reports: dict, outlier_counts: dict) -> dict:
@@ -36,15 +45,17 @@ def profile(df: pd.DataFrame, roles: dict, numeric_reports: dict, outlier_counts
             info["parsing"] = numeric_reports[c]
         cols.append(info)
         if miss > 0.3:
-            issues.append({"severity": "high" if miss > 0.6 else "medium", "column": c, "issue": f"{miss:.0%} missing values"})
+            issues.append(_issue("high" if miss > 0.6 else "medium", c, "issue_missing", pct=f"{miss:.0%}"))
         if roles.get(c) == "constant":
-            issues.append({"severity": "low", "column": c, "issue": "constant column (no information)"})
-        if info.get("negative_pct") and info["negative_pct"] > 0 and any(w in c.lower() for w in ["area", "dien", "diện", "price", "gia", "giá", "population", "dân"]):
-            issues.append({"severity": "medium", "column": c, "issue": f"{info['negative_pct']}% negative values in a quantity that should be positive"})
-        if info.get("skew") and abs(info["skew"]) > 5:
-            issues.append({"severity": "low", "column": c, "issue": f"heavily skewed (skew {info['skew']}); use medians/log scale"})
+            issues.append(_issue("low", c, "issue_constant"))
+        neg = info.get("negative_pct")
+        if neg and neg > 0 and any(w in c.lower() for w in ["area", "dien", "diện", "price", "gia", "giá", "population", "dân"]):
+            issues.append(_issue("medium", c, "issue_negative", pct=neg))
+        skew = info.get("skew")
+        if skew and abs(skew) > 5:
+            issues.append(_issue("low", c, "issue_skew", skew=skew))
         if c in numeric_reports and numeric_reports[c].get("failed"):
-            issues.append({"severity": "low", "column": c, "issue": f"{numeric_reports[c]['failed']} values could not be parsed as numbers"})
+            issues.append(_issue("low", c, "issue_unparsed", n=numeric_reports[c]["failed"]))
     total_missing = float(df[[c for c in df.columns if not c.startswith('_')]].isna().mean().mean())
     return {"rows": n, "columns": len(cols), "missing_overall_pct": r(total_missing * 100),
             "roles": {k: sum(1 for c in cols if c["role"] == k) for k in sorted({c["role"] for c in cols})},
@@ -52,17 +63,22 @@ def profile(df: pd.DataFrame, roles: dict, numeric_reports: dict, outlier_counts
             "outlier_rows_pct": r(float(df["_outlier_any"].mean()) * 100) if "_outlier_any" in df else 0}
 
 
-def caveats(prof: dict, domain_caveats: list[str], time_col: str | None, n: int) -> list[str]:
-    out = ["Observational data: relationships reported are associations, not causal effects."]
-    out += domain_caveats
+def _caveat_lines(lang: str, prof: dict, domain_caveats: list[dict[str, str]], time_col: str | None, n: int) -> list[str]:
+    out = [t(lang, "cav_causal")] + [c[lang] for c in domain_caveats]
     hi = [i for i in prof["issues"] if i["severity"] in ("high", "medium")]
     if hi:
-        out.append(f"{len(hi)} column(s) have notable data-quality issues (e.g. {hi[0]['column']}: {hi[0]['issue']}); results using them are less reliable.")
+        issue = hi[0].get("issue_vi") if lang == "vi" else None
+        out.append(t(lang, "cav_quality", n=len(hi), column=hi[0]["column"], issue=issue or hi[0]["issue"]))
     if prof.get("outlier_rows_pct", 0) > 1:
-        out.append(f"{prof['outlier_rows_pct']}% of rows contain extreme values; they are flagged, not removed, and robust statistics are used.")
+        out.append(t(lang, "cav_outliers", pct=fmt.dec(prof["outlier_rows_pct"], lang)))
     if not time_col:
-        out.append("No time dimension detected: findings describe one snapshot and say nothing about trends.")
+        out.append(t(lang, "cav_no_time"))
     if n < 200:
-        out.append(f"Small sample (n={n}): statistical power is limited and effect estimates are noisy.")
-    out.append("Multiple comparisons: many tests are run; treat p-values near 0.05 as exploratory.")
+        out.append(t(lang, "cav_small_n", n=n))
+    out.append(t(lang, "cav_multiple"))
     return out
+
+
+def caveats(prof: dict, domain_caveats: list[dict[str, str]], time_col: str | None, n: int) -> dict[str, list[str]]:
+    """Caveats as parallel lists {"en": [...], "vi": [...]}: same order, same numbers; the causal caveat first."""
+    return {lang: _caveat_lines(lang, prof, domain_caveats, time_col, n) for lang in LANGS}

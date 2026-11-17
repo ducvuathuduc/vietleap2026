@@ -179,7 +179,7 @@ def run(path: str | Path, out_root: str | Path = "out", target: str | None = Non
             "geo_col": geo_col, "rows": len(df), "columns": int(df.shape[1]), "roles": roles,
             "domain_metrics": dinfo.get("metrics", []), "created": time.strftime("%Y-%m-%d %H:%M:%S"),
             "category_cols": [c for c, r in roles.items() if r in ("category", "geo") and 2 <= df[c].nunique() <= 60]}
-    results = {"meta": meta, "cleaning_log": log, "profile": prof, "caveats": cav, "kpis": kpis, "timeseries": ts,
+    results = {"meta": meta, "cleaning_log": log, "profile": prof, "caveats": cav["en"], "caveats_vi": cav["vi"], "kpis": kpis, "timeseries": ts,
                "insights": insights, "recommendations": recs, "drivers": drivers, "segments": seg,
                "correlations": extras.get("correlations")}
     if whatif:
