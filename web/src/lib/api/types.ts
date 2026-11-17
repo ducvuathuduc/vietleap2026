@@ -67,7 +67,21 @@ export interface Insight {
   evidence: Record<string, unknown>
   columns: string[]
   caveat: string | null
+  /** VI text of `caveat` (feature 003); absent in results.json written earlier */
+  caveat_vi?: string | null
 }
+
+/** Allowlisted downloads of GET /api/datasets/{id}/files/{kind} (api/routes/datasets.py EXPORTS). */
+export type ExportKind =
+  | "deck"
+  | "deck_vi"
+  | "pitch_md"
+  | "pitch_en"
+  | "dashboard"
+  | "summary_pdf"
+  | "summary_md"
+  | "results"
+  | "clean_csv"
 
 export interface Recommendation {
   so_what_en: string

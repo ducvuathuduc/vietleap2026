@@ -19,13 +19,25 @@ import Link from "next/link"
 import { LayoutDashboardIcon, ChartBarIcon, Settings2Icon, DatabaseIcon, FileChartColumnIcon, FileIcon, FileTextIcon, GavelIcon, LightbulbIcon, NetworkIcon, ShieldCheckIcon, SlidersHorizontalIcon, SparklesIcon, PresentationIcon, ChartNoAxesCombinedIcon, TerminalSquareIcon, UploadCloudIcon, WorkflowIcon } from "lucide-react"
 
 import { useDataset } from "@/components/dataset-provider"
+import { ExportLangToggle } from "@/components/export-lang-toggle"
+import { useStoredExportLang } from "@/hooks/use-export-lang"
 import { api } from "@/lib/api/client"
+import type { ExportKind } from "@/lib/api/types"
+import { availableLangs, exportKinds, pickLang } from "@/lib/export-lang"
 
 const API_DOCS = process.env.NEXT_PUBLIC_API_DOCS_URL ?? "http://localhost:8000/docs"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { datasetId } = useDataset()
-  const file = (kind: Parameters<typeof api.fileUrl>[1]) => (datasetId ? api.fileUrl(datasetId, kind) : "#")
+  const { datasetId, detail } = useDataset()
+  const [storedLang, setStoredLang] = useStoredExportLang()
+  const file = (kind: ExportKind) => (datasetId ? api.fileUrl(datasetId, kind) : "#")
+  const files = detail?.meta.name === datasetId ? detail?.files : undefined
+  const lang = pickLang(files, storedLang)
+  const langDocuments = (lang ? exportKinds(files, lang) : []).map((kind) =>
+    kind.startsWith("deck")
+      ? { name: "Pitch deck (.pptx)", url: file(kind), icon: <PresentationIcon /> }
+      : { name: "Kịch bản pitch (.md)", url: file(kind), icon: <FileTextIcon /> }
+  )
   const data = {
     user: {
       name: "VietLeap Team",
@@ -51,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       { title: "Tài liệu API", url: `${API_DOCS}`, icon: <Settings2Icon /> },
     ],
     documents: [
-      { name: "Pitch deck (.pptx)", url: file("deck"), icon: <PresentationIcon /> },
+      ...langDocuments,
       { name: "Dashboard tĩnh (HTML)", url: file("dashboard"), icon: <FileChartColumnIcon /> },
       { name: "Tóm tắt điều hành (PDF)", url: file("summary_pdf"), icon: <FileIcon /> },
     ],
@@ -73,7 +85,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
+        <NavDocuments
+          items={data.documents}
+          toolbar={<ExportLangToggle value={lang} available={availableLangs(files)} onChange={setStoredLang} />}
+        />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

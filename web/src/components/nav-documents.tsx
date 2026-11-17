@@ -21,18 +21,22 @@ import { MoreHorizontalIcon, FolderIcon, ShareIcon } from "lucide-react"
 
 export function NavDocuments({
   items,
+  toolbar,
 }: {
   items: {
     name: string
     url: string
     icon: React.ReactNode
   }[]
+  /** rendered above the items (feature 003: EN/VI export toggle) */
+  toolbar?: React.ReactNode
 }) {
   const { isMobile } = useSidebar()
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Exports</SidebarGroupLabel>
       <SidebarMenu>
+        {toolbar && <SidebarMenuItem>{toolbar}</SidebarMenuItem>}
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton render={<a href={item.url} target="_blank" rel="noreferrer" />}>

@@ -14,6 +14,7 @@ import type {
   WarehouseTable,
   DatasetDetail,
   DatasetSummary,
+  ExportKind,
   DriversResponse,
   Insight,
   Job,
@@ -106,5 +107,5 @@ export const api = {
   models: (id: string) => request<ModelsResponse>(`${ds(id)}/models`),
   conformed: (id: string) => request<ConformedResponse>(`${ds(id)}/conformed`),
   provenance: (id: string) => request<Provenance[]>(`${ds(id)}/provenance`),
-  fileUrl: (id: string, kind: "deck" | "dashboard" | "summary_pdf" | "summary_md" | "results" | "clean_csv") => `${BASE}${ds(id)}/files/${kind}`,
+  fileUrl: (id: string, kind: ExportKind) => `${BASE}${ds(id)}/files/${kind}`,
 }
