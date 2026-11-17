@@ -60,6 +60,7 @@ export interface Insight {
   test: string
   effect: number | null
   p_value: number | null
+  weak?: boolean
   relevance: number | null
   score: number
   chart: ChartSpec | null
@@ -73,6 +74,9 @@ export interface Insight {
 
 /** Allowlisted downloads of GET /api/datasets/{id}/files/{kind} (api/routes/datasets.py EXPORTS). */
 export type ExportKind =
+  | "dictionary_csv"
+  | "dictionary_md"
+  | "eda_md"
   | "deck"
   | "deck_vi"
   | "pitch_md"
@@ -507,6 +511,7 @@ export interface BriefTarget {
 
 export interface DecisionTemplate {
   who: string
+  question?: string
   what: string
   where: string
   kpi: string

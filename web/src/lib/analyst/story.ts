@@ -26,7 +26,7 @@ export interface StoryQuestion {
   who: string | null
   what: string | null
   kpi: string | null
-  source: "brief"
+  source: "brief" | "pack"
 }
 
 export interface Story {
@@ -58,10 +58,13 @@ function field(value: string | undefined, max: number): string | null {
 /** The brief's first question (else its title) with who / what / KPI from the matched pack; null without a brief. */
 export function storyQuestion(brief: Brief | null | undefined): StoryQuestion | null {
   if (!brief) return null
-  const text = field(brief.questions.find((q) => q.trim()), MAX_LEN.text) ?? field(brief.title, MAX_LEN.text)
-  if (!text) return null
   const tpl = brief.pack?.decision_template
-  return { text, who: field(tpl?.who, MAX_LEN.who), what: field(tpl?.what, MAX_LEN.what), kpi: field(tpl?.kpi, MAX_LEN.kpi), source: "brief" }
+  const quoted = field(brief.questions.find((q) => q.trim()), MAX_LEN.text)
+  const packQuestion = field(tpl?.question, MAX_LEN.text)
+  const text = quoted ?? packQuestion ?? field(brief.title, MAX_LEN.text)
+  if (!text) return null
+  return { text, who: field(tpl?.who, MAX_LEN.who), what: field(tpl?.what, MAX_LEN.what), kpi: field(tpl?.kpi, MAX_LEN.kpi),
+    source: !quoted && packQuestion ? "pack" : "brief" }
 }
 
 function fmtNum(x: number, digits = 2): string {
@@ -84,17 +87,17 @@ const CAUSAL_NOTE = "Đây là quan hệ liên đới từ dữ liệu quan sát
 /** Deterministic story: every sentence is engine output; the question is quoted brief text. */
 export function offlineStory(insights: Insight[], recs: Recommendation[], datasetName: string, n = STORY_SIZE, ctx: StoryContext = {}): Story {
   const top = pickInsights(insights, n)
-  const recBy = new Map(recs.map((r) => [r.from_insight, r]))
+  const action = recs.find((r) => top.some((i) =>
+    i.id === r.from_insight && !i.weak && (i.p_value === null || i.p_value < 0.05)))
   const steps = top.map<StoryStep>((i) => ({
     id: i.id,
     rank: i.rank,
     title: i.title_vi,
     narration: i.sentence_vi,
     stats: statsLine(i),
-    action: recBy.get(i.id)?.now_what_vi ?? null,
+    action: action?.from_insight === i.id ? action.now_what_vi : null,
     source: "engine",
   }))
-  const first = recs.find((r) => top.some((i) => i.id === r.from_insight))
   return {
     mode: "offline",
     model: null,
@@ -102,7 +105,7 @@ export function offlineStory(insights: Insight[], recs: Recommendation[], datase
       ? `${top.length} phát hiện mạnh nhất trong dữ liệu “${datasetName}”, xếp theo độ lớn hiệu ứng × ý nghĩa thống kê × mức liên quan.`
       : `Engine chưa tìm thấy insight có ý nghĩa thống kê cho “${datasetName}”.`,
     steps,
-    closing: `${first ? `Khuyến nghị ưu tiên: ${first.now_what_vi} ` : ""}${CAUSAL_NOTE}`,
+    closing: CAUSAL_NOTE,
     question: storyQuestion(ctx.brief),
     limits: (ctx.caveats ?? []).slice(0, MAX_LIMITS),
   }

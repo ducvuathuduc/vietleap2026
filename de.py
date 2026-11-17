@@ -68,6 +68,7 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("file"); f.add_argument("path"); f.add_argument("--name")
     r = sub.add_parser("run"); r.add_argument("yaml"); r.add_argument("--primary")
+    r.add_argument("--offline", action="store_true", help="dùng tệp local hoặc snapshot đã chuẩn bị")
     for p in (f, r):
         p.add_argument("--impute", choices=["median"]); p.add_argument("--serve", action="store_true")
         p.add_argument("--target"); p.add_argument("--out")
@@ -78,6 +79,16 @@ def main(argv=None):
     q = sub.add_parser("sql"); q.add_argument("query"); q.add_argument("--limit", type=int, default=50)
     b = sub.add_parser("brief", help="đề bài (.md/.txt) → brief.json"); b.add_argument("path")
     b.add_argument("--data", help="dataset file to resolve the target column against"); b.add_argument("--out", help="write brief.json here")
+    c = sub.add_parser("contest", help="chạy toàn bộ từ đề bài đến báo cáo song ngữ offline")
+    c.add_argument("pack", help="tên pack hoặc đường dẫn sources.yaml")
+    c.add_argument("brief", type=Path)
+    c.add_argument("--out", type=Path)
+    c.add_argument("--target")
+    c.add_argument("--lang", choices=REPORT_LANGS, default=DEFAULT_REPORT_LANG)
+    snapshot = sub.add_parser("snapshot", help="chuẩn bị nguồn của pack để chạy offline")
+    snapshot.add_argument("pack", help="tên pack hoặc đường dẫn sources.yaml")
+    sync = sub.add_parser("sync", help="đồng bộ bản sao Parquet gold")
+    sync.add_argument("--to", choices=["s3"], required=True)
     a = ap.parse_args(argv)
     if a.cmd in ("file", "run"):
         sk = {"lang": a.lang, **({"target": a.target} if a.target else {})}
@@ -88,10 +99,29 @@ def main(argv=None):
             recipe = load_recipe(a.yaml)
             s = run_flow(recipe.dataset, recipe.sources, impute=a.impute, serve=a.serve, primary=a.primary or recipe.primary,
                          serve_kwargs=sk, out_root=a.out, keys=recipe.keys, mode=a.mode, post_sql=recipe.post_sql,
-                         analysis_table=recipe.analysis_table)
+                         analysis_table=recipe.analysis_table, offline=a.offline)
         _print(s)
     elif a.cmd == "brief":
         _brief(a)
+    elif a.cmd in ("contest", "snapshot", "sync"):
+        try:
+            if a.cmd == "contest":
+                from vlkit.de.contest import run_contest
+
+                outputs = run_contest(a.pack, a.brief, out_root=a.out, lang=a.lang, target=a.target)
+            elif a.cmd == "snapshot":
+                from vlkit.de.contest import pack_recipe
+                from vlkit.de.snapshots import prepare_snapshot
+
+                outputs = prepare_snapshot(pack_recipe(a.pack))
+            else:
+                from vlkit.de.mirror import sync_gold
+
+                outputs = sync_gold()
+        except (ValueError, OSError, RuntimeError) as error:
+            ap.exit(1, f"{error}\n")
+        for output in outputs:
+            print(output)
     elif a.cmd == "tables":
         wh = Warehouse()
         for t in wh.tables():

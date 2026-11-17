@@ -32,6 +32,7 @@ recipe:
   - "Phân cụm doanh nghiệp (k-means) để tìm nhóm rủi ro/hiệu quả."
 decision_template:
   who: "Nhà đầu tư / cơ quan quản lý thị trường / ban điều hành doanh nghiệp"
+  question: "Nhóm doanh nghiệp nào cần rà soát trước khi ROE thấp đi kèm đòn bẩy cao qua các kỳ tương đương?"
   what: "Ưu tiên/giám sát nhóm ngành–sàn theo hiệu quả và đòn bẩy"
   where: "Ngành/sàn có ROE thấp và nợ cao (nhóm rủi ro)"
   kpi: "ROE, nợ/vốn chủ, biên LN ròng theo quý"

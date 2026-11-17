@@ -18,9 +18,11 @@ from pathlib import Path
 from ..vn import ascii_key
 from .conformed import build_conformed
 from .connectors import ingest
+from .exports import write_dictionary
 from .lineage import lineage_graph, lineage_mermaid
 from .modeling import build_models, erd
 from .quality import quality_step
+from .snapshots import ingest_offline
 from .sources import Source, now_iso, validate_post_sql
 from .warehouse import KIT, Warehouse, ident
 
@@ -37,7 +39,8 @@ def _dump(obj, p: Path):
 def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = None, wh: Warehouse | None = None,
              impute: str | None = None, primary: str | None = None, serve: bool = False,
              serve_kwargs: dict | None = None, keys: dict | None = None, mode: str = "replace",
-             post_sql: list[str] | None = None, analysis_table: str | None = None) -> dict:
+             post_sql: list[str] | None = None, analysis_table: str | None = None,
+             brief_text: str | None = None, offline: bool = False) -> dict:
     """mode: replace | append | incremental — how bronze tables are loaded (see Warehouse.write_bronze).
     Silver and gold are always rebuilt from the full bronze table: de-duplication, outlier fences and models need
     every row, and a re-run that inserted nothing still yields identical silver/gold."""
@@ -57,10 +60,14 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         for src in sources:
             st = now_iso()
             try:
-                res = ingest(src)
+                res = ingest_offline(src) if offline else ingest(src)
+                if offline and not any(not frame.empty for frame in res.frames.values()):
+                    raise ValueError(f"Nguồn offline {src.name!r} không có dữ liệu")
             except Exception as e:  # one broken source must not kill the run
                 wh.log_run(run_id, ds, f"ingest:{src.name}", "failed", st, {"error": repr(e)})
                 steps.append({"step": f"ingest:{src.name}", "status": "failed", "error": repr(e)})
+                if offline:
+                    raise
                 continue
             provenance.append(res.provenance)
             src_load = {}
@@ -117,6 +124,8 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             except Exception as e:  # integration is an add-on: never lose the single-source models
                 wh.log_run(run_id, ds, "conform", "failed", st, {"error": repr(e)})
                 steps.append({"step": "conform", "status": "failed", "error": repr(e)})
+                if offline:
+                    raise
             if conformed:
                 c = conformed["diagnostics"]
                 for t in silver:
@@ -176,6 +185,7 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         _dump(summary, out / "pipeline.json")
         _dump(quality, out / "quality.json")
         _dump(provenance, out / "provenance.json")
+        write_dictionary(wh, summary, lineage_graph(wh, ds), out)
         if conformed:
             _dump(conformed["diagnostics"], out / "conformed.json")
         elif (out / "conformed.json").exists():
@@ -190,8 +200,17 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             if serving_table not in summary["gold"]:
                 raise ValueError(f"analysis_table was not produced in this run: {serving_table}")
             obt = wh.lake / "gold" / f"{serving_table.split('.', 1)[1]}.parquet"
-            served = insight_run(obt, out_root=out.parent, name=ds, **(serve_kwargs or {}))
+            options = dict(serve_kwargs or {})
+            if brief_text is not None:
+                from ..brief import parse_brief
+
+                brief = parse_brief(brief_text, columns=[column["name"] for column in wh.columns(serving_table)])
+                _dump(brief, out / "brief.json")
+                options.setdefault("target", brief["run_config"]["target"])
+                options.setdefault("domain", brief["run_config"]["domain"])
+            served = insight_run(obt, out_root=out.parent, name=ds, **options)
             summary["analysis_table"] = serving_table
+            summary["report_files"] = served["files"]
             wh.lineage(ds, serving_table, "serving:dashboard", "serve")
             wh.lineage(ds, serving_table, "serving:insights+deck", "serve")
             timings["serve"] = round(time.time() - t0, 2)

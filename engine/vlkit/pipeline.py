@@ -187,11 +187,14 @@ def run(path: str | Path, out_root: str | Path = "out", target: str | None = Non
                "correlations": extras.get("correlations")}
     if whatif:
         dump(whatif, out / "whatif.json")
+    from .de.exports import write_eda
+
+    results["files"] = {"eda_md": write_eda(results, out)}
     if reports:
         t3 = time.time()
         from . import report
         files = report.build_all(results, df, whatif, out, lang=lang)
-        results["files"] = files
+        results["files"].update(files)
         timings["reports_s"] = round(time.time() - t3, 2)
     timings["total_s"] = round(time.time() - t0, 2)
     results["timings"] = timings

@@ -19,6 +19,7 @@ python de.py brief scenarios/briefs/bds_gia_m2.md --data data/practice/synthetic
 | chinh_sach_luong.md | (tự thu thập) | — | economic_policy |
 | du_lieu_mo_bds.md | (scraping + API) | — | data_economy_property |
 | chi_so_phat_trien.md | WDI API | — | development_indicators |
+| vi_mo_thang.md | `data/raw/macro_monthly.csv` do đội cung cấp | cpi_yoy_pct | macro_monitoring |
 | tac_dong_xa_hoi.md | (tự thu thập) | — | social_impact |
 | dem_xe_giao_thong.md | video → CV | — | cv_observation |
 

@@ -19,9 +19,10 @@ recipe:
   - "Drivers của thu thuế/GDP: GDP/người, đô thị hoá, FDI (liên đới)."
 decision_template:
   who: "Chính phủ / nhà tài trợ phát triển"
+  question: "Chỉ số phát triển nào của Việt Nam nên được ưu tiên rà soát theo khoảng cách với nhóm ASEAN cùng năm?"
   what: "Ưu tiên cải cách ở chỉ số VN tụt hậu xa nhất so với nhóm so sánh"
   where: "Chỉ số/giai đoạn có khoảng cách lớn và xu hướng xấu đi"
-  kpi: "Chỉ số WDI tương ứng, theo năm"
+  kpi: "Khoảng cách với trung vị ASEAN, thay đổi khoảng cách theo thời gian, số nước có quan sát cùng năm"
   caveat: "WDI có độ trễ và thiếu số liệu; so sánh quốc tế khác định nghĩa."
 deck_storyline:
   - "VN đang ở đâu so với khu vực"

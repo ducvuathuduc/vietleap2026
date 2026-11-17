@@ -20,6 +20,7 @@ recipe:
   - "Khả năng chi trả theo vùng; lợi suất thuê theo loại."
   - "Giá trị dữ liệu: so sánh kết luận khi có/không có nguồn mở bổ sung (scrape/API) — minh hoạ data economy."
 decision_template:
+  question: "Khu vực nào cần rà soát trước về khả năng chi trả nhà ở và độ phủ dữ liệu giao dịch?"
   who: "Bộ Xây dựng / UBND tỉnh / ngân hàng chính sách"
   what: "Ưu tiên nhà ở xã hội và công khai dữ liệu giao dịch ở khu vực khả năng chi trả thấp nhất"
   where: "Vùng/tỉnh có price-to-income cao nhất"

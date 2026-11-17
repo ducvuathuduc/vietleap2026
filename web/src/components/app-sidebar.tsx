@@ -64,6 +64,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ],
     documents: [
       ...langDocuments,
+      ...(files?.dictionary_csv ? [{ name: "Từ điển dữ liệu (CSV)", url: file("dictionary_csv"), icon: <DatabaseIcon /> }] : []),
+      ...(files?.dictionary_md ? [{ name: "Từ điển dữ liệu (Markdown)", url: file("dictionary_md"), icon: <FileTextIcon /> }] : []),
+      ...(files?.eda_md ? [{ name: "Phân tích khám phá (EDA)", url: file("eda_md"), icon: <FileChartColumnIcon /> }] : []),
       { name: "Dashboard tĩnh (HTML)", url: file("dashboard"), icon: <FileChartColumnIcon /> },
       { name: "Tóm tắt điều hành (PDF)", url: file("summary_pdf"), icon: <FileIcon /> },
     ],

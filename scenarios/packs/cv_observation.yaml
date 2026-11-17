@@ -17,6 +17,7 @@ recipe:
   - "Chuỗi thời gian: cao điểm, so sánh khung giờ (Kruskal–Wallis), xu hướng."
   - "Kiểm tra độ chính xác: đếm tay 1–2 phút mẫu để báo sai số."
 decision_template:
+  question: "Khung giờ và điểm quan sát nào nên được ưu tiên kiểm tra lưu lượng?"
   who: "Sở GTVT / UBND quận / ban quản lý khu vực"
   what: "Điều chỉnh pha đèn, phân luồng, bố trí xe buýt trong giờ cao điểm"
   where: "Nút/khung giờ có lưu lượng cao nhất"

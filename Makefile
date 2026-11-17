@@ -3,7 +3,7 @@ SHELL := /bin/bash
 ENV   := source tools/env.sh && export NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
 PORT  ?= 8000
 
-.PHONY: help setup api web web-dev demo demo-online brief test test-py test-web lint clean-out
+.PHONY: help setup api web web-dev demo demo-online brief contest test test-py test-web lint clean-out
 
 help:            ## list commands
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 16
@@ -28,6 +28,10 @@ demo-online:     ## multi-source demo: file + SQLite + World Bank API + Wikipedi
 
 brief:           ## parse a problem statement: make brief F=scenarios/briefs/bds_gia_m2.md D=data/practice/synthetic_messy_bds.csv
 	$(ENV) && python de.py brief $(F) $(if $(D),--data $(D),)
+
+export PACK BRIEF CONTEST_LANG
+contest:         ## build all contest deliverables: make contest PACK=wdi_asean BRIEF=scenarios/briefs/chi_so_phat_trien.md
+	$(ENV) && python de.py contest "$$PACK" "$$BRIEF" --lang "$${CONTEST_LANG:-both}"
 
 test: test-py test-web ## all checks (never run together with a build on weak machines)
 

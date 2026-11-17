@@ -86,6 +86,8 @@ def test_packs_are_complete(kit_root):
         for key in ("id", "title", "sponsor", "domain", "keywords", "expected_columns", "kpis", "recipe", "decision_template", "deck_storyline"):
             assert p.get(key), (p.get("id"), key)
         assert {"who", "what", "where", "kpi", "caveat"} <= set(p["decision_template"])
+        assert p["decision_template"]["question"].endswith("?")
+        assert len(p["decision_template"]["kpi"].split(",")) == 3
 
 
 def test_split_sentences_handles_markdown_lists():

@@ -10,6 +10,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
+from vlkit.de.exports import DICTIONARY_CSV, DICTIONARY_MD, EDA_MD
 from vlkit.vn import slug
 
 from .. import jobs
@@ -20,13 +21,15 @@ from ..store import NotFound, Store, get_store
 router = APIRouter(prefix="/api", tags=["datasets"])
 ALLOWED = {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".xlsm", ".json", ".parquet"}
 MAX_BYTES = 200 * 1024 * 1024
+DATA_EXPORTS = {"dictionary_csv": (DICTIONARY_CSV, "text/csv"), "dictionary_md": (DICTIONARY_MD, "text/markdown"),
+                "eda_md": (EDA_MD, "text/markdown")}
 EXPORTS = {"deck": ("deck.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
            "dashboard": ("dashboard.html", "text/html"), "summary_pdf": ("executive_summary.pdf", "application/pdf"),
            "summary_md": ("executive_summary.md", "text/markdown"), "results": ("results.json", "application/json"),
            "clean_csv": ("clean_sample.csv", "text/csv"),
            # feature 003 — names fixed per language (vlkit.report DECK_FILES / PITCH_FILES)
            "deck_vi": ("deck.vi.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
-           "pitch_md": ("pitch.md", "text/markdown"), "pitch_en": ("pitch.en.md", "text/markdown")}
+           "pitch_md": ("pitch.md", "text/markdown"), "pitch_en": ("pitch.en.md", "text/markdown"), **DATA_EXPORTS}
 
 
 def ds_or_404(store: Store, ds_id: str):
@@ -83,7 +86,8 @@ def job_status(job_id: str):
 def summary(ds_id: str, store: Store = Depends(get_store)):
     ds = ds_or_404(store, ds_id)
     r = ds.results
-    return {"meta": r["meta"], "kpis": r["kpis"], "caveats": r["caveats"], "timings": r.get("timings"), "files": r.get("files", {}),
+    files = {**r.get("files", {}), **{key: filename for key, (filename, _) in DATA_EXPORTS.items() if (ds.path / filename).is_file()}}
+    return {"meta": r["meta"], "kpis": r["kpis"], "caveats": r["caveats"], "timings": r.get("timings"), "files": files,
             "recommendations": r["recommendations"], "has_brief": (ds.path / "brief.json").is_file()}
 
 
@@ -146,7 +150,7 @@ def export(ds_id: str, kind: str, store: Store = Depends(get_store)):
         raise HTTPException(404, f"dataset '{ds_id}' not found")
     fname, mime = EXPORTS[kind]
     p = d / fname
-    if not p.exists():
+    if not p.is_file() or not p.resolve().is_relative_to(store.out_dir.resolve()):
         raise HTTPException(404, f"{fname} was not generated for this dataset (run with reports enabled)")
     return FileResponse(p, media_type=mime, filename=f"{ds_id}_{fname}")
 

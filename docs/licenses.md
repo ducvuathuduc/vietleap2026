@@ -15,6 +15,7 @@ asset here **and** in the source's `license:` field in `sources.yaml` (it flows 
 | python-pptx | MIT | | plotly, kaleido | MIT |
 | FastAPI, pydantic, uvicorn | MIT / MIT / BSD-3 | | jsonschema | MIT |
 | playwright (optional) | Apache-2.0 | | pytrends (optional) | Apache-2.0 |
+| tzdata (Windows) | Apache-2.0 | | DuckDB httpfs extension | MIT |
 | supervision (optional) | MIT | | trackers (optional) | Apache-2.0 |
 | **ultralytics (optional)** | **AGPL-3.0** — not installed by default; used only by the stand-alone script `scenarios/cv_counting/count.py`; if a submission must avoid AGPL, use `--events` mode or another detector | | | |
 

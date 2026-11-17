@@ -34,6 +34,7 @@ recipe:
   - "Drivers: hồi quy chuẩn hoá thu/đầu người theo GRDP/người, đô thị hoá, FDI (bootstrap CI) — liên đới, không nhân quả."
 decision_template:
   who: "Bộ Tài chính / HĐND–UBND tỉnh"
+  question: "Tỉnh nào cần được ưu tiên rà soát bổ sung cân đối sau khi đối chiếu thu và chi trên địa giới mới?"
   what: "Điều chỉnh tỷ lệ phân chia nguồn thu và cơ chế bổ sung có mục tiêu cho nhóm tỉnh tự chủ thấp; đặt chỉ tiêu thực hiện dự toán"
   where: "Nhóm tỉnh/vùng có KPI thấp nhất trong bảng xếp hạng"
   kpi: "Tỷ lệ tự chủ ngân sách, tỷ lệ thực hiện dự toán, chi đầu tư phát triển/tổng chi"

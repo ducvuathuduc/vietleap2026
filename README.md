@@ -146,6 +146,24 @@ và `conform.ratios: {tu_chu: [thu, chi]}` để tính tỷ lệ từ tổng thu
 - [Việt Nam và ASEAN qua WDI](scenarios/wdi_asean/README.md)
 - [Năng lượng và xe điện](scenarios/energy/README.md)
 
+## Ngày thi · một lệnh
+
+```bash
+make contest PACK=wdi_asean BRIEF=scenarios/briefs/chi_so_phat_trien.md
+```
+
+Thay `BRIEF` bằng file đề. `PACK` nhận tên `public_finance`, `listed_firms`, `wdi_asean`, `energy`, `macro_monitoring` hoặc đường dẫn recipe YAML của đội. Lệnh chọn biến mục tiêu từ đề và các cột gold thực tế, mặc định xuất VI và EN. Đường dẫn `brief.json`, mô hình Kimball, `results.json`, `data_dictionary.{csv,md}`, `eda.md`, dashboard HTML, deck và pitch được in sau khi chạy. Menu **Exports** mở các file đã tạo. WDI có panel practice offline, còn ngân sách tỉnh dùng snapshot dự toán bổ sung có mục tiêu nếu chưa đặt `data/raw/provincial_budget.csv`. [Đối chiếu scope theo pack](specs/004-scenario-packs/checklists/dry-run.md)
+
+Nếu dùng PowerShell hoặc cần chỉ định lại cột mục tiêu, chạy CLI với cùng đầu vào:
+
+```powershell
+.\.venv\Scripts\python.exe de.py contest wdi_asean scenarios/briefs/chi_so_phat_trien.md --target gdp_per_capita_usd
+```
+
+**Chuẩn bị cache khi có mạng.** `python de.py snapshot energy` tải và kiểm tra nguồn cho pack năng lượng. `python de.py snapshot wdi_asean` chuẩn bị bản API khi World Bank truy cập được. `contest` chỉ dùng dữ liệu local hoặc snapshot. Lệnh `python de.py run <sources.yaml> --offline --serve` cũng dùng chế độ này. Khi dùng artifact **Collect data**, giải nén các thư mục gói vào `data/cache/snapshots/` và đọc `source_mode.txt` để biết đó là API hay panel practice. Workflow chạy hằng ngày lúc 07:15 giờ Việt Nam và có thể chạy thủ công. [GitHub Actions](https://github.com/ducvuathuduc/vietleap2026/actions/workflows/collect_data.yml)
+
+**Mirror tuỳ chọn.** Đặt `KIT_S3_ENDPOINT`, `KIT_S3_BUCKET`, `KIT_S3_ACCESS_KEY_ID` và `KIT_S3_SECRET_ACCESS_KEY` qua môi trường, sau đó chạy `python de.py sync --to s3`. Lệnh dùng DuckDB `httpfs` và ghi Parquet gold vào `gold/` trong bucket. DuckDB + Parquet local là kho chính. Cloudflare R2 Standard có mức miễn phí lưu trữ 10 GB-tháng và không tính phí egress. [Giá Cloudflare R2](https://developers.cloudflare.com/r2/pricing/) · [DuckDB httpfs](https://duckdb.org/docs/current/core_extensions/httpfs/s3api)
+
 ## Cấu trúc thư mục
 
 ```

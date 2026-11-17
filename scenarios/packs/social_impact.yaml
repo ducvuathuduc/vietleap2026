@@ -2,7 +2,7 @@ id: social_impact
 title: Tác động xã hội — y tế, giáo dục, môi trường, wellbeing
 sponsor: Goodenough College — Goodstart Fellow
 domain: generic
-keywords: [y te, benh vien, suc khoe, giao duc, truong hoc, hoc sinh, diem thi, moi truong, o nhiem, chat luong khong khi, pm2 5, nuoc sach, rac thai, wellbeing, hanh phuc, suc khoe tam than, cong dong, tac dong xa hoi, health, education, environment, air quality, pollution, mental health, wellbeing, community, social impact, gender]
+keywords: [y te, benh vien, suc khoe, giao duc, truong hoc, hoc sinh, diem thi, moi truong, o nhiem, chat luong khong khi, pm2 5, nuoc sach, rac thai, wellbeing, hanh phuc, suc khoe tam than, cong dong, tac dong xa hoi, muc tieu phat trien ben vung, chenh lech tiep can, health, education, environment, air quality, pollution, mental health, wellbeing, community, social impact, gender]
 expected_columns:
   - "Đơn vị: tỉnh/quận/trường/cơ sở y tế × thời gian"
   - "Chỉ số kết quả: điểm thi, tỷ lệ bỏ học, tỷ lệ mắc bệnh, PM2.5, chỉ số hài lòng"
@@ -19,9 +19,10 @@ recipe:
   - "Câu chuyện con người: 1 nhóm bị bỏ lại phía sau, có số liệu đi kèm."
 decision_template:
   who: "Sở Y tế/Giáo dục/TN-MT, tổ chức xã hội"
+  question: "Nhóm dân cư nào cần được ưu tiên hỗ trợ sau khi kiểm tra khoảng cách tiếp cận và độ phủ dữ liệu SDG?"
   what: "Phân bổ nguồn lực có mục tiêu cho nhóm có kết quả kém nhất"
   where: "Nhóm/vùng có khoảng cách lớn nhất và có ý nghĩa thống kê"
-  kpi: "Chỉ số kết quả chuẩn hoá theo dân số, đo hằng năm"
+  kpi: "Tỷ lệ tiếp cận dịch vụ, khoảng cách giữa các nhóm, nguồn lực trên đầu người"
   caveat: "Kết quả xã hội chịu nhiều yếu tố; dữ liệu hành chính có thể thiếu ở vùng khó khăn."
 deck_storyline:
   - "Một con người/cộng đồng cụ thể → vấn đề"

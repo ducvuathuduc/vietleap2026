@@ -248,11 +248,14 @@ def _generic_question(meta: dict, lang: str) -> str:
 def _decision_frame(res: dict, brief: dict | None, lang: str = "en") -> dict:
     """Who decides what, where, measured by which KPI — from the brief; blanks stay '____' (never invented)."""
     meta = res["meta"]
-    question = next((q.strip() for q in (brief or {}).get("questions") or [] if q.strip()), "") or ((brief or {}).get("title") or "").strip()
     tpl = ((brief or {}).get("pack") or {}).get("decision_template") or {}
+    explicit = next((q.strip() for q in (brief or {}).get("questions") or [] if q.strip()), "")
+    pack_question = str(tpl.get("question") or "").strip() if not explicit else ""
+    question = explicit or pack_question or ((brief or {}).get("title") or "").strip()
     frame = {k: (str(tpl.get(k) or "").strip() or BLANK) for k in DECISION_KEYS}
     if brief and question:
-        return {**frame, "question": question, "source": "brief", "language": brief.get("language") or "vi",
+        return {**frame, "question": question, "source": "pack" if pack_question else "brief",
+                "language": "vi" if pack_question else brief.get("language") or "vi",
                 "stale": bool(brief.get("stale")), "target_column": ((brief.get("target") or {}).get("column"))}
     return {**frame, "kpi": t(lang, "generic_kpi", target=meta["target"]), "question": _generic_question(meta, lang),
             "source": "generic", "language": lang, "stale": False, "target_column": None}
@@ -621,6 +624,8 @@ def _note(slot: str, text_: str) -> str:
 def _pitch_question(frame: dict, lang: str) -> list[str]:
     if frame["source"] == "brief":
         quote = f"> *{_brief_prefix(frame, lang)}:* “{_md_text(frame['question'])}”"
+    elif frame["source"] == "pack":
+        quote = f"> {_md_text(frame['question'])}"
     else:
         quote = f"> *{t(lang, 'generic_tag')}* {_md_text(frame['question'])}"
     return [f"## {t(lang, 'pitch_q_heading')}", "", quote, "",

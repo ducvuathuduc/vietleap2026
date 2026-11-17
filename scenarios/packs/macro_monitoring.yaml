@@ -1,0 +1,25 @@
+id: macro_monitoring
+title: Theo dõi vĩ mô Việt Nam theo tháng
+sponsor: Chủ đề thực hành
+domain: generic
+keywords: [vi mo theo thang, dashboard vi mo, cpi theo thang, chi so san xuat cong nghiep, giai ngan dau tu cong, monthly macro dashboard, monthly monitoring, industrial production]
+expected_columns:
+  - "Ngày đầu tháng, CPI YoY, sản xuất công nghiệp YoY, tỷ lệ giải ngân đầu tư công"
+kpis:
+  - "Lạm phát CPI so với cùng kỳ (%)"
+  - "Tăng trưởng sản xuất công nghiệp so với cùng kỳ (%)"
+  - "Giải ngân đầu tư công so với kế hoạch (%)"
+recipe:
+  - "Chuẩn hoá về một dòng mỗi tháng. Kiểm tra tháng thiếu và phân biệt số sơ bộ với số đã cập nhật."
+  - "So sánh cùng kỳ và đánh dấu kỳ chỉ tiêu đổi hướng."
+decision_template:
+  who: "Tổ điều hành kinh tế vĩ mô"
+  question: "Chỉ số vĩ mô nào cần được rà soát trước trong kỳ cập nhật tháng tới?"
+  what: "Rà soát chỉ số có biến động rõ nhất cùng với đơn vị công bố."
+  where: "Việt Nam theo tháng"
+  kpi: "Lạm phát CPI YoY, tăng trưởng sản xuất công nghiệp YoY, tỷ lệ giải ngân đầu tư công"
+  caveat: "Số sơ bộ có thể được cập nhật. So sánh cùng kỳ chịu ảnh hưởng hiệu ứng nền."
+deck_storyline:
+  - "Chọn chỉ số cần rà soát"
+  - "Điểm đổi hướng và bằng chứng theo tháng"
+  - "Bước rà soát và giới hạn dữ liệu"

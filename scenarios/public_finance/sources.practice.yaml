@@ -7,6 +7,12 @@ sources:
     uri: ../../data/snapshots/provincial_earmarked_transfers_2024_2025.csv
     license: Official National Assembly resolutions (Article 15, Vietnam Intellectual Property Law)
     options:
+      column_metadata:
+        earmarked_transfers: {unit: triệu đồng, description: Tổng dự toán bổ sung có mục tiêu từ ngân sách trung ương}
+        earmarked_capex: {unit: triệu đồng, description: Bổ sung vốn đầu tư thực hiện chương trình và nhiệm vụ}
+        earmarked_current: {unit: triệu đồng, description: Bổ sung vốn sự nghiệp}
+        earmarked_programs: {unit: triệu đồng, description: Bổ sung kinh phí chương trình mục tiêu quốc gia}
+        earmarked_capex_share_ratio: {unit: tỷ số, description: Tổng vốn đầu tư chia tổng bổ sung có mục tiêu}
       origins:
         - https://datafiles.chinhphu.vn/cpp/files/vbpq/2023/12/105-qh15.signed.pdf
         - https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/160-qh15.signed.pdf

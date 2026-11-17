@@ -5,7 +5,7 @@ components:
     ExportKind:
       type: string
       # existing: deck, dashboard, summary_pdf, summary_md, results, clean_csv (api/routes/datasets.py EXPORTS)
-      enum: [deck, deck_vi, pitch_md, pitch_en, dashboard, summary_pdf, summary_md, results, clean_csv]
+      enum: [deck, deck_vi, pitch_md, pitch_en, dashboard, summary_pdf, summary_md, results, clean_csv, dictionary_csv, dictionary_md, eda_md]
 paths:
   /api/datasets:
     post:

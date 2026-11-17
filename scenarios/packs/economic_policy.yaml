@@ -19,9 +19,10 @@ recipe:
   - "Kiểm định độ vững: bỏ ngoại lai (đã gắn cờ 3×IQR), đổi khoảng thời gian."
 decision_template:
   who: "Cơ quan hoạch định chính sách (Bộ/ngành, NHNN, UBND tỉnh)"
+  question: "Nhóm nào nên được ưu tiên theo dõi sau lần điều chỉnh chính sách tiếp theo?"
   what: "Giữ/điều chỉnh/mở rộng chính sách theo nhóm có tác động rõ nhất"
   where: "Nhóm ngành/vùng có chênh lệch lớn và có ý nghĩa thống kê"
-  kpi: "Chỉ số mục tiêu đo theo quý, có nhóm đối chứng"
+  kpi: "Chỉ số mục tiêu theo quý, chênh lệch với nhóm đối chứng, độ phủ dữ liệu theo nhóm"
   caveat: "Dữ liệu quan sát: DiD cần giả định xu hướng song song; cú sốc đồng thời (COVID, sáp nhập) gây nhiễu."
 deck_storyline:
   - "Câu hỏi chính sách và mốc thời gian"

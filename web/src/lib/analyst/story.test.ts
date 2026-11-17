@@ -44,6 +44,13 @@ test("offlineStory with no insights says so", () => {
   assert.match(s.headline, /chưa tìm thấy/)
 })
 
+test("story includes one action tied to evidence and skips weak recommendations", () => {
+  const weak = ins("weak", 1, "Kết quả chưa chắc chắn.", { p_value: 0.2 })
+  const s = offlineStory([weak, A, B] as never, [rec("weak"), rec("a"), rec("b")], "bds")
+  assert.deepEqual(s.steps.map((step) => step.action), [null, "làm a", null])
+  assert.doesNotMatch(s.closing, /làm a/)
+})
+
 test("numberCandidates reads VN and EN separators", () => {
   assert.ok(numberCandidates("60,3").includes(60.3))
   assert.ok(numberCandidates("1.234").includes(1234))
@@ -123,6 +130,7 @@ test("storyQuestion: blanks → null, title fallback, no brief → null, long te
   assert.equal(storyQuestion(brief([], null))?.text, "Đề bài ngân sách tỉnh")
   assert.equal(storyQuestion(brief(["  "], { who: "", what: "x", where: "", kpi: " ", caveat: "" }))?.who, null)
   assert.equal(storyQuestion(brief(["a".repeat(5000)]))?.text.length, 2000)
+  assert.equal(storyQuestion(brief([], { question: "Tỉnh nào nên được rà soát trước?" }))?.source, "pack")
   const none = offlineStory([A] as never, [], "bds")
   assert.equal(none.question, null)
   assert.deepEqual(none.limits, [])
