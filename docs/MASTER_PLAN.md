@@ -8,7 +8,7 @@
 
 **Lịch BTC đã xác nhận (giờ Việt Nam; agenda trên https://vietleap2026.com/, đọc 17/11 — site đổi lịch 17/11 ~18:55):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 14:45–15:30** Chi-Yu Lee (Konstanz) *From observation to data — Object tracking* · **19/11 15:30–16:15** Viet Nguyen-Tien (LSE) *Data to Decision / Combining Data for Socioeconomic Development* · 19/11 16:15–16:45 họp online với mentors · **20/11 09:00–09:30** khai mạc + Challenge Briefing + ghép đội · **20/11 09:30–10:15** Sacha Dray (World Bank VN) workshop Dashboard · **20/11 16:00–16:30** mentor check-in #1 · **21/11 10:30–11:00** check-in #2 · **21/11 13:00–13:15** hạn nộp · **21/11 13:15–15:15** pitch + Q&A · 21/11 15:45–16:45 trao giải. Chi tiết: [`CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) §1.3.
 
-**Kiểm tra lần cuối (17/11, commit `4e098e5`, feature 003)**: `pytest -q tests` 236 pass + 1 skip + 2 xfail · `npm test` 33 pass · `npm run lint` sạch · `npm run build` pass (chạy tuần tự trên máy 2 CPU).
+**Kiểm tra local lần cuối (18/11, `0b9d869`)**: `pytest -q tests` 259 pass + 2 skip + 2 xfail · `npm test` 34 pass · `npm run lint` sạch · `npm run build` pass · audit production 0 lỗi. S3 live skip do thiếu env. Chạy tuần tự trên máy 2 CPU.
 CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `74de518`, `5aa4194`, `a19048a` — feature 003, CI của `4e098e5` bị huỷ do push kế tiếp cùng nhóm concurrency, `a19048a` chứa cùng code và xanh; `3e39ad4` và `c0bd0e4` — feature 002, `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16–17/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
 
 ### Đã xong & đã push
@@ -50,7 +50,13 @@ P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K 
 
 **Xuất báo cáo 009** (`3c02c26`, 18/11): `/report` thay mục More và tạo ZIP với deck/pitch VI+EN, PDF, dashboard HTML, các tệp tài liệu dữ liệu và README SHA-256. Browser dry run WDI 39,01 giây. KPI 250 dòng khớp trong deck và PDF. Còn kiểm tra mở gói trên máy thứ hai.
 
-Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) và deck tiếng Việt (`deck.vi.pptx`) mới kiểm bằng `deck_overflow()` + parity số, chưa xem ảnh render PNG/LibreOffice; nhật ký làm sạch/provenance trong deck VI giữ nguyên văn tiếng Anh của engine (ghi trong spec 003 §Clarifications).
+**LLM và demo (18/11)**: Analyst, Câu chuyện và Python SSE ở chế độ offline đã qua kiểm tra trên `wdi_asean`. Rate limit trả 429 từ yêu cầu thứ 21. Kiểm tra với khóa thật được bỏ qua vì thiếu cấu hình model. Local gitleaks sạch. Bộ ảnh và clip demo 89,88 giây dùng cùng dataset WDI. Clip trong `out/demo/demo.webm`, chờ PO duyệt và đội trưởng chia sẻ.
+
+**Rà soát trước thi**: `ee175c8` ẩn gói ZIP/PDF từ lượt phân tích trước, bỏ mô hình what-if cũ và ưu tiên câu có dấu hỏi trong brief. `c4fe091` tách CLI shadcn khỏi app, giữ nguyên stylesheet MIT đang dùng. `npm audit --omit=dev --audit-level=high` không còn lỗi.
+
+Hạn chế đã biết: LLM chưa chạy với khoá thật. YOLO chưa chạy với video thật. Docker chưa chạy thử. Deck tiếng Việt đã kiểm `deck_overflow()` và đối chiếu số, còn thiếu lượt xem ảnh render PowerPoint. Nhật ký làm sạch và provenance trong deck VI giữ nguyên văn tiếng Anh của engine (spec 003, mục Clarifications).
+
+**Blockers vận hành**: API World Bank trả 502 trong GitHub Actions, artifact Collect data hoàn tất bằng panel practice. Live S3 và LLM thiếu cấu hình. Chưa kiểm tra bundle trên máy thứ hai. Tệp ngân sách hiện có phục vụ bài toán bổ sung có mục tiêu, còn cần dữ liệu thu và chi cấp tỉnh để phân tích tự chủ.
 
 ### Gaps theo checklist mentor
 Ánh xạ từng bước mentor → kit: [`WORKFLOW.md`](WORKFLOW.md) §0. Mỗi mục cần spec Spec Kit riêng trước khi code.
@@ -58,8 +64,8 @@ Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy 
 2. `d45b374` — `make contest`, snapshot có checksum, lịch WDI hằng ngày và `python de.py sync --to s3` dùng bốn biến môi trường. Chạy WDI qua proxy không khả dụng đã tạo đủ file song ngữ. S3 đã test mock, test live skip do thiếu cấu hình.
 3. `d45b374` — `macro_monitoring` và brief mẫu. Đội cung cấp bảng CPI, sản xuất công nghiệp và giải ngân theo tháng. Kiểm tra khoảng trống kỳ và MA3 còn là bước phân tích.
 4. Nguồn bổ sung chờ xác nhận độ ổn định. Các lần thử trước ghi nhận World Bank 502 hoặc timeout, IMF 403 và Open-Meteo 429.
-6. **Connector/recipe UN SDG** (M49 = 704), **tỷ giá open.er-api**, **Open-Meteo archive** (mẫu `sources.yaml`).
-7. Incremental theo watermark/cursor thời gian cho API (hiện incremental theo `_row_hash`).
+5. **Connector/recipe UN SDG** (M49 = 704), **tỷ giá open.er-api**, **Open-Meteo archive** (mẫu `sources.yaml`).
+6. Incremental theo watermark/cursor thời gian cho API (hiện incremental theo `_row_hash`).
 
 ---
 

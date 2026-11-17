@@ -4,10 +4,10 @@
 
 ## Phase A — LLM (target 17/11)
 - [ ] T1101 AN: finalise `checklists/questions.yaml` (5 questions on `wdi_fiscal` + 1 injection probe + 1 offline check).
-- [ ] T1102 Test-first `tests/test_tools_scripts.py::test_llm_smoke_dry_run` (parses questions, number-guard port matches fixtures) → `tools/llm_smoke.py`.
+- [x] T1102 `0b9d869` Added smoke runner, test-first dry run and number verification fixture. See the [run checklist](checklists/llm-run.md).
 - [ ] T1103 Owner puts `GROQ_API_KEY` in `web/.env.local`; `make api` + `make web`; run `python tools/llm_smoke.py`; fill `checklists/llm-run.md` (model, latency, tools, ungrounded numbers, pass/fail). Then invalid-key run (offline fallback) and rate-limit row → T1102.
 - [ ] T1104 Python agent run (`LLM_BASE_URL/LLM_MODEL/LLM_API_KEY` → Groq OpenAI-compatible endpoint `https://api.groq.com/openai/v1` [verify]) — SSE events + verification row.
-- [ ] T1105 `gitleaks detect` locally (no findings); update `docs/MASTER_PLAN.md` §0 and `specs/001-vietleap-insight-kit/plan.md` known limitations with the summary (no keys/transcripts).
+- [x] T1105 `0b9d869` Local gitleaks history scan found no leaks. Updated master plan and run checklist with offline results and pending real-key checks.
 - [ ] T1106 Commit + push "test(llm): T1101–T1105 real-key run results"; open fix tasks for any failure (append below).
 
 ## Phase B — YOLO (optional, after 004/009)

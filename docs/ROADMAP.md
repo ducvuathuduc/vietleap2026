@@ -16,6 +16,9 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - 004 recipes and four dry runs (`ed2bd08`). Official provincial transfer snapshot reconciled. WDI ran offline after a live timeout. Provincial autonomy still needs complete inputs. Measured results are in the [dry-run checklist](../specs/004-scenario-packs/checklists/dry-run.md).
 - 012 (`d45b374`): offline `make contest` verified for WDI. Added dictionary/EDA, source snapshots, daily WDI collection, opt-in S3 and pack decision questions. Next: 009 export ZIP and UI.
 - 009 (`3c02c26`): verified bilingual ZIP and live dashboard PDF in 39.01 s. Second-machine rehearsal remains open.
+- 011 (`0b9d869`): web and Python offline modes verified on `wdi_asean`. Provider checks skipped with no model credentials.
+- 010 (`0b9d869`): 14 route captures, three dark-theme views and an 89.88 s recording in `out/demo/demo.webm`. Team review and upload remain open.
+- `c4fe091`: removed the standalone shadcn CLI dependency and retained the original MIT stylesheet. `ee175c8`: export freshness and explicit decision questions covered by regression tests.
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |
