@@ -14,7 +14,7 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - ✅ Open-source README + community files; contest schedule synced with vietleap2026.com (17/11); mentor 6-step mapping + gaps in `WORKFLOW.md` §0 / `MASTER_PLAN.md` §0.
 - 004 T401–T405 (`2cf9d34`): per-column aggregation, recomputed ratios and guarded recipe views. Local pytest 238 pass, 1 skip, 2 xfail; web 33 pass, lint/build green.
 - 004 recipes and four dry runs (`ed2bd08`). Official provincial transfer snapshot reconciled. WDI ran offline after a live timeout. Provincial autonomy still needs complete inputs. Measured results are in the [dry-run checklist](../specs/004-scenario-packs/checklists/dry-run.md).
-- Next: contest workflow gaps in MASTER_PLAN §0.
+- 012 (`d45b374`): offline `make contest` verified for WDI. Added dictionary/EDA, source snapshots, daily WDI collection, opt-in S3 and pack decision questions. Next: 009 export ZIP and UI.
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |

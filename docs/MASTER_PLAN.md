@@ -50,13 +50,12 @@ P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K 
 
 Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) và deck tiếng Việt (`deck.vi.pptx`) mới kiểm bằng `deck_overflow()` + parity số, chưa xem ảnh render PNG/LibreOffice; nhật ký làm sạch/provenance trong deck VI giữ nguyên văn tiếng Anh của engine (ghi trong spec 003 §Clarifications).
 
-### Gaps — chỉ liệt kê, chưa làm (17/11; đối chiếu slide mentor DE "6 bước" + kiểm tra API từ sandbox 17/11)
+### Gaps theo checklist mentor
 Ánh xạ từng bước mentor → kit: [`WORKFLOW.md`](WORKFLOW.md) §0. Mỗi mục cần spec Spec Kit riêng trước khi code.
-1. **Xuất data dictionary** (`data_dictionary.md/.csv` từ gold: cột, kiểu, đơn vị, nguồn, công thức) — slide mentor đòi đích danh; kit chưa có.
-2. **Xuất báo cáo EDA dạng file** (profiling, missing, outlier, time gap → HTML/MD) — hiện chỉ xem trên trang Hồ sơ/Chất lượng; chưa có kiểm tra time gap riêng.
-3. **Gói dữ liệu offline + cache sẵn** (WDI VN + ASEAN, IMF, UN SDG VN, tỷ giá, NSO tỉnh/quý) — 17/11 từ sandbox: World Bank API trả 502, IMF datamapper 403, Open-Meteo forecast 429.
-4. **GitHub Actions `collect_data.yml`** (cron + `workflow_dispatch` chạy `de.py run`) — repo mới có `ci.yml`/`security.yml`; notebook lab mentor coi lịch chạy là mức tối thiểu.
-5. **Pack theo tháng** (`macro_monitoring`: YoY, MA3, KPI giải ngân đầu tư công) + brief mẫu.
+1. `d45b374` — Data dictionary CSV/Markdown từ gold, file EDA Markdown và link tải qua API/Exports.
+2. `d45b374` — `make contest`, snapshot có checksum, lịch WDI hằng ngày và `python de.py sync --to s3` dùng bốn biến môi trường. Chạy WDI qua proxy không khả dụng đã tạo đủ file song ngữ. S3 đã test mock, test live skip do thiếu cấu hình.
+3. `d45b374` — `macro_monitoring` và brief mẫu. Đội cung cấp bảng CPI, sản xuất công nghiệp và giải ngân theo tháng. Kiểm tra khoảng trống kỳ và MA3 còn là bước phân tích.
+4. Nguồn bổ sung chờ xác nhận độ ổn định. Các lần thử trước ghi nhận World Bank 502 hoặc timeout, IMF 403 và Open-Meteo 429.
 6. **Connector/recipe UN SDG** (M49 = 704), **tỷ giá open.er-api**, **Open-Meteo archive** (mẫu `sources.yaml`).
 7. Incremental theo watermark/cursor thời gian cho API (hiện incremental theo `_row_hash`).
 

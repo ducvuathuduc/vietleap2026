@@ -1,8 +1,8 @@
 # Tasks
 
-- [ ] T1201 User-facing data dictionary and EDA files, FastAPI download and Exports links.
-- [ ] T1202 Prepare sources and verify offline replay using cache and checksums.
-- [ ] T1203 Wire `make contest` and verify complete bilingual output offline.
-- [ ] T1204 Daily and manual public-source collection with GitHub artifacts.
-- [ ] T1205 Optional S3 mirror with mock and conditional live test.
-- [ ] T1206 Add pack decision questions and KPIs. Verify the deck and story framing.
+- [x] T1201 `d45b374` Data dictionary, EDA, API file downloads and Exports links.
+- [x] T1202 `d45b374` Source preparation with checksums and an HTTP-denied replay test.
+- [x] T1203 `d45b374` `make contest` verified with both languages and blocked external HTTP proxies.
+- [x] T1204 `d45b374` Daily and manual public WDI snapshot workflow. Record source mode in the artifact.
+- [x] T1205 `d45b374` S3 mirror mock passed. Live test skips without environment configuration.
+- [x] T1206 `d45b374` Pack decision questions, KPIs, and one evidence-linked action in the story.
