@@ -1,7 +1,7 @@
 pandas>=2.2
 numpy>=1.26
 scipy>=1.18.1
-statsmodels>=0.14
+statsmodels>=0.15.0
 scikit-learn>=1.9.1
 plotly>=7.1.0
 openpyxl>=3.1
