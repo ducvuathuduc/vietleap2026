@@ -21,6 +21,7 @@ asset here **and** in the source's `license:` field in `sources.yaml` (it flows 
 
 ## JavaScript (web/package.json)
 next, react, react-dom (MIT) · shadcn/ui & `shadcn` CLI (MIT) · @base-ui/react (MIT) · tailwindcss, @tailwindcss/turbopack (MIT) ·
+cmdk (MIT) ·
 recharts (MIT) · mermaid (MIT) · driver.js (MIT) · ai, @ai-sdk/* (Apache-2.0) · zod (MIT) · lucide-react (ISC) · @tanstack/react-table (MIT) ·
 @dnd-kit/* (MIT) · sonner (MIT) · next-themes (MIT) · class-variance-authority (Apache-2.0) · tw-animate-css (MIT).
 

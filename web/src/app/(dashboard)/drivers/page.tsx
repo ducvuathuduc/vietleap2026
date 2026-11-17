@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 
 import { useDataset } from "@/components/dataset-provider"
 import { InsightChart } from "@/components/insight-chart"
@@ -18,17 +19,30 @@ import { fmtNum, fmtPct } from "@/lib/format"
 import { insightTarget } from "@/lib/insight-target"
 
 export default function DriversPage() {
+  return <React.Suspense fallback={<LoadingState />}><DriversQuery /></React.Suspense>
+}
+
+function DriversQuery() {
+  const params = useSearchParams()
+  const initialFeature = params.get("feature")
+  const value = Number(params.get("pct") ?? 10)
+  const initialPct = Number.isFinite(value) ? Math.max(-30, Math.min(30, value)) : 10
+  return <DriversContent key={`${initialFeature}:${initialPct}`} initialFeature={initialFeature} initialPct={initialPct} />
+}
+
+function DriversContent({ initialFeature, initialPct }: { initialFeature: string | null; initialPct: number }) {
   const { datasetId } = useDataset()
   const { data, error, loading } = useAsync(() => (datasetId ? api.drivers(datasetId) : null), [datasetId])
   const [picked, setPicked] = React.useState<{ ds: string | null; feature: string } | null>(null)
-  const [pct, setPct] = React.useState(10)
+  const [pct, setPct] = React.useState(initialPct)
   const [result, setResult] = React.useState<WhatIfResult | null>(null)
   const [wiErr, setWiErr] = React.useState<string | null>(null)
   const defaultFeature = React.useMemo(() => {
     if (!data) return null
+    if (data.whatif_features.some((feature) => feature.name === initialFeature)) return initialFeature
     const stable = data.drivers?.coefficients.find((c) => c.stable && data.whatif_features.some((f) => f.name === c.feature))
     return stable?.feature ?? data.whatif_features[0]?.name ?? null
-  }, [data])
+  }, [data, initialFeature])
   const feature = picked && picked.ds === datasetId ? picked.feature : defaultFeature
   const setFeature = (f: string) => setPicked({ ds: datasetId, feature: f })
   const curve = useAsync(() => (datasetId && feature ? api.whatIfCurve(datasetId, feature) : null), [datasetId, feature])

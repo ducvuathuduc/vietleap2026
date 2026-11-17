@@ -16,8 +16,9 @@ test("known page keeps only present elements and appends the header steps", () =
 test("page without hand-written steps uses discovered targets (deduped, capped at 5)", () => {
   const found = Array.from({ length: 8 }, (_, k) => ({ selector: `[data-insight-target="kpi:${k % 7}"]`, label: `KPI ${k % 7}` }))
   const steps = tourSteps("/sql", all, found)
-  assert.equal(steps.length, 5 + 2)
+  assert.equal(steps.length, 5 + 3)
   assert.equal(steps[0].title, "KPI 0")
+  assert.equal(steps.at(-1)?.selector, '[data-tour="command-button"]')
 })
 
 test("empty page falls back to dataset picker; nothing present → no steps (no crash)", () => {

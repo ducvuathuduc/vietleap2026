@@ -24,8 +24,11 @@ import { useStoredExportLang } from "@/hooks/use-export-lang"
 import { api } from "@/lib/api/client"
 import type { ExportKind } from "@/lib/api/types"
 import { availableLangs, exportKinds, pickLang } from "@/lib/export-lang"
+import { NAV } from "@/lib/nav"
 
 const API_DOCS = process.env.NEXT_PUBLIC_API_DOCS_URL ?? "http://localhost:8000/docs"
+const PAGE_ICONS = [LayoutDashboardIcon, FileTextIcon, UploadCloudIcon, WorkflowIcon, ShieldCheckIcon, NetworkIcon,
+  TerminalSquareIcon, DatabaseIcon, LightbulbIcon, SlidersHorizontalIcon, ChartBarIcon, GavelIcon, SparklesIcon, FileChartColumnIcon]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { datasetId, detail } = useDataset()
@@ -44,21 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       email: "UEH · 20–21/11/2026",
       avatar: "",
     },
-    navMain: [
-      { title: "Tổng quan", url: "/", icon: <LayoutDashboardIcon /> },
-      { title: "Đề bài", url: "/brief", icon: <FileTextIcon /> },
-      { title: "Nguồn dữ liệu", url: "/sources", icon: <UploadCloudIcon /> },
-      { title: "Pipeline", url: "/pipeline", icon: <WorkflowIcon /> },
-      { title: "Chất lượng dữ liệu", url: "/quality", icon: <ShieldCheckIcon /> },
-      { title: "Mô hình dữ liệu", url: "/model", icon: <NetworkIcon /> },
-      { title: "SQL Explorer", url: "/sql", icon: <TerminalSquareIcon /> },
-      { title: "Hồ sơ dữ liệu", url: "/profile", icon: <DatabaseIcon /> },
-      { title: "Insight", url: "/insights", icon: <LightbulbIcon /> },
-      { title: "Drivers & What-if", url: "/drivers", icon: <SlidersHorizontalIcon /> },
-      { title: "Phân khúc", url: "/segments", icon: <ChartBarIcon /> },
-      { title: "Quyết định", url: "/decision", icon: <GavelIcon /> },
-      { title: "AI Analyst", url: "/analyst", icon: <SparklesIcon /> },
-    ],
+    navMain: NAV.map((page, index) => ({ ...page, icon: React.createElement(PAGE_ICONS[index]) })),
     navSecondary: [
       { title: "Tài liệu API", url: `${API_DOCS}`, icon: <Settings2Icon /> },
     ],

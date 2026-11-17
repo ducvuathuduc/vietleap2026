@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { SendIcon, SparklesIcon, SquareIcon } from "lucide-react"
@@ -24,6 +25,16 @@ const SUGGESTIONS = [
 const MAX_INPUT = 2000
 
 export default function AnalystPage() {
+  return <React.Suspense fallback={null}><AnalystQuery /></React.Suspense>
+}
+
+function AnalystQuery() {
+  const params = useSearchParams()
+  const question = (params.get("q") ?? "").slice(0, MAX_INPUT)
+  return <AnalystContent key={question} initialInput={question} />
+}
+
+function AnalystContent({ initialInput }: { initialInput: string }) {
   const { datasetId } = useDataset()
   const config = useAsync(
     () => fetch("/api/chat", { cache: "no-store" }).then((r) => r.json() as Promise<{ mode: "llm" | "offline"; model: string | null }>),
@@ -31,7 +42,7 @@ export default function AnalystPage() {
   )
   const [transport] = React.useState(() => new DefaultChatTransport({ api: "/api/chat" }))
   const { messages, sendMessage, status, error, stop, clearError } = useChat({ transport })
-  const [input, setInput] = React.useState("")
+  const [input, setInput] = React.useState(initialInput)
   const busy = status === "submitted" || status === "streaming"
 
   const send = (text: string) => {

@@ -29,6 +29,7 @@ const TITLES: Record<string, string> = {
   "/decision": "Quyết định & khuyến nghị",
   "/analyst": "AI Analyst",
   "/brief": "Đề bài → kế hoạch phân tích",
+  "/report": "Xuất báo cáo",
 }
 
 export function SiteHeader() {
@@ -46,6 +47,8 @@ export function SiteHeader() {
         />
         <h1 className="text-base font-medium">{TITLES[pathname] ?? "VietLeap Insight"}</h1>
         <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" size="sm" data-tour="command-button" aria-label="Mở lệnh nhanh (Ctrl+K)"
+            onClick={() => window.dispatchEvent(new Event("vlk:open-command"))}>Ctrl+K</Button>
           <Button variant="ghost" size="sm" onClick={() => startTour(pathname)} data-tour="tour-button">
             <CompassIcon /> <span className="hidden md:inline">Hướng dẫn</span>
           </Button>

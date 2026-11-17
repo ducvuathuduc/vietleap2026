@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
+import { CommandMenu } from "@/components/command-menu"
 import { DatasetProvider } from "@/components/dataset-provider"
 import { InsightInspectorProvider } from "@/components/insight-inspector"
 import { SiteHeader } from "@/components/site-header"
@@ -8,6 +9,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <DatasetProvider>
       <InsightInspectorProvider>
+      <CommandMenu />
       <SidebarProvider
         style={
           {

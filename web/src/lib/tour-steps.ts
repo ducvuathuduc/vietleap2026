@@ -25,7 +25,10 @@ const DATASET: TourStep = {
 }
 
 /** Header steps shown after the page steps on every route. */
-const COMMON: TourStep[] = [INSPECT, STORY]
+const COMMON: TourStep[] = [INSPECT, STORY, {
+  selector: '[data-tour="command-button"]', title: "Lệnh nhanh (Ctrl+K)",
+  description: "Tìm trang, chuyển dataset hoặc mở file xuất. Nhập không dấu vẫn tìm được tên tiếng Việt.",
+}]
 
 const PAGES: Record<string, TourStep[]> = {
   "/": [

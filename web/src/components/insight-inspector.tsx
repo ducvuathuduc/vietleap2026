@@ -19,6 +19,7 @@ interface InspectorValue {
   /** Narrated top-insight walkthrough (AI or offline engine). */
   startStory: () => void
   storyLoading: boolean
+  stopInteractions: () => void
 }
 
 const InspectorContext = React.createContext<InspectorValue | null>(null)
@@ -123,6 +124,14 @@ export function InsightInspectorProvider({ children }: { children: React.ReactNo
     }
     tourRef.current = null
   }, [])
+
+  const stopInteractions = React.useCallback(() => {
+    stopTour()
+    storyRun.current += 1
+    setStoryLoading(false)
+    setInspecting(false)
+    setTarget(null)
+  }, [stopTour])
 
   const runTour = React.useCallback(
     (steps: DriveStep[]) => {
@@ -256,8 +265,8 @@ export function InsightInspectorProvider({ children }: { children: React.ReactNo
   }, [datasetId, pathname, router, runTour, stopTour])
 
   const value = React.useMemo(
-    () => ({ inspecting, setInspecting, startTour, startStory: () => void startStory(), storyLoading }),
-    [inspecting, startTour, startStory, storyLoading]
+    () => ({ inspecting, setInspecting, startTour, startStory: () => void startStory(), storyLoading, stopInteractions }),
+    [inspecting, startTour, startStory, storyLoading, stopInteractions]
   )
   return (
     <InspectorContext.Provider value={value}>
