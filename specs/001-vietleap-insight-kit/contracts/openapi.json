@@ -1481,6 +1481,17 @@
        }
       ],
       "title": "Name"
+     },
+     "lang": {
+      "type": "string",
+      "enum": [
+       "vi",
+       "en",
+       "both"
+      ],
+      "title": "Lang",
+      "description": "deck/pitch language(s)",
+      "default": "both"
      }
     },
     "type": "object",
@@ -1687,6 +1698,17 @@
       "title": "Mode",
       "description": "bronze load: replace | append | incremental (insert only rows whose _row_hash is new)",
       "default": "replace"
+     },
+     "lang": {
+      "type": "string",
+      "enum": [
+       "vi",
+       "en",
+       "both"
+      ],
+      "title": "Lang",
+      "description": "deck/pitch language(s) written when serve is true",
+      "default": "both"
      }
     },
     "type": "object",

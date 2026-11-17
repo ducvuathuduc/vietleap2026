@@ -6,7 +6,9 @@ import json
 import re
 from pathlib import Path
 
+import pandas as pd
 import pytest
+from vlkit import i18n
 
 from test_pipeline_smoke import _messy_property_csv
 
@@ -98,7 +100,7 @@ def test_short_uri_hides_paths():
 
 
 def test_pitch_md_marp_storyline(deck, tmp_path):
-    from vlkit import report
+    from vlkit import fmt, report
     _, _, de, _ = deck
     res = {"meta": {"target": "price_per_m2", "rows": 2500, "columns": 9, "source_file": "x.csv"}, "caveats": ["c1", "c2"],
            "insights": [{"type": "segment_gap", "title_vi": "T1", "sentence_vi": "Câu 1 (n=567)", "test": "KW", "p_value": 0.0001},
@@ -111,11 +113,13 @@ def test_pitch_md_marp_storyline(deck, tmp_path):
         assert t in md  # docs/CONTEST_ANALYSIS.md §4.6 (7-minute default)
     sections = re.findall(r"^## (.+)$", md, flags=re.M)
     assert sections[0] == "0 · Câu hỏi quyết định" and sections[1].startswith("1 · Dữ liệu")
-    assert report.GENERIC_TAG in md  # no brief → generic question, tagged
+    assert i18n.t("vi", "generic_tag") in md  # no brief → generic question, tagged
     template = (Path(report.__file__).resolve().parents[2] / "slides" / "pitch.md").read_text(encoding="utf-8")
     assert re.findall(r"^## (.+)$", template, flags=re.M)[0] == "0 · Câu hỏi quyết định"  # template mirrors the generator
     q = de["quality"][de["primary"]]
-    assert f"{q['score_before']} → {q['score_after']}" in md
+    assert f"{fmt.dec(q['score_before'], 'vi')} → {fmt.dec(q['score_after'], 'vi')}" in md  # VI decimal comma
+    en = report.pitch_md(res, de, None, "en")
+    assert f"{q['score_before']} → {q['score_after']}" in en and "From 2,500 records" in en
 
 
 
@@ -129,7 +133,7 @@ def test_pitch_md_opens_with_brief_question_escaped():
     sec0 = md.split("## 0 · Câu hỏi quyết định", 1)[1].split("---", 1)[0]
     assert "Đề bài:" in sec0 and "UBND tỉnh" in sec0 and "Chi/người" in sec0 and report.BLANK in sec0
     assert "<b>" not in md and "&lt;b&gt;" in sec0 and "--&gt;" in sec0  # no raw HTML / comment break-out into Marp
-    assert "\\*2018–2024\\*" in sec0 and report.GENERIC_TAG not in md
+    assert "\\*2018–2024\\*" in sec0 and i18n.t("vi", "generic_tag") not in md
 
 
 # ----------------------------------------------------------------------------- feature 002: decision-question deck
@@ -214,7 +218,7 @@ def test_slide2_decision_question(practice, ds):
     kpi = texts.index("SUCCESS KPI")
     assert texts[kpi + 1] == tpl["kpi"]
     assert f"{res['meta']['rows']:,} rows · {res['meta']['columns']} columns" in body  # scope from results.json.meta
-    assert report.GENERIC_TAG not in body
+    assert i18n.t("en", "generic_tag") not in body
     assert report.deck_overflow(path) == []  # NFR-202
     _assert_numbers_from_engine(prs, res, None, brief)
 
@@ -225,7 +229,7 @@ def test_slide2_generic_without_brief(practice, ds):
     res, out = practice[ds]
     prs, path = _deck(res, out, None, "nobrief.pptx")
     body = " | ".join(_texts(prs.slides[1]))
-    assert "Decision question" in body and report.GENERIC_TAG in body
+    assert "Decision question" in body and i18n.t("en", "generic_tag") in body
     assert "WHO DECIDES" in body and report.BLANK in body
     assert report.deck_overflow(path) == []
 
@@ -283,7 +287,7 @@ def test_insight_slide_evidence_decision_limitation(practice):
             assert decision == linked[ins["id"]]["so_what_en"]
         else:
             seen_unlinked = True
-            assert decision == report.NO_DECISION_LINK
+            assert decision == i18n.t("en", "no_decision_link")
         assert limitation == (ins.get("caveat") or res["caveats"][0])
         notes = slide.notes_slide.notes_text_frame.text
         assert ins["sentence_en"] in notes and "causal" in notes.lower()  # FR-208 Q&A hint
@@ -329,3 +333,143 @@ def test_limitations_causal_first_then_real_coverage_counts(deck):
         assert bullets[1] == f"• {int(q['missing_cells']):,} cells still missing after cleaning (not imputed unless --impute)"
     notes = lim.notes_slide.notes_text_frame.text
     assert "63" in notes and "34" in notes  # FR-208: the 63→34 question is pre-empted
+
+
+# ----------------------------------------------------------------------------- feature 003: --lang vi|en|both
+
+def _all_text(prs) -> list[str]:
+    """Per slide: every text frame and table cell, without the shared deck chrome."""
+    out = []
+    for slide in prs.slides:
+        parts = list(_texts(slide))
+        parts += [c.text for sh in slide.shapes if getattr(sh, "has_table", False) and sh.has_table for r in sh.table.rows for c in r.cells]
+        out.append(" | ".join(parts))
+    return out
+
+
+def _static_chunks(lang: str) -> set[str]:
+    """Fixed-text fragments (split at placeholders) of the string table that read as prose (≥ 3 words)."""
+    from vlkit.i18n import STRINGS, TECHNICAL
+    chunks = set()
+    for key, value in STRINGS[lang].items():
+        if key in TECHNICAL:
+            continue
+        for part in re.split(r"\{[^}]*\}", value):
+            part = part.strip(" ·:—()'")
+            if len(re.findall(r"[^\W\d_]{2,}", part)) >= 3:
+                chunks.add(part)
+    return chunks
+
+
+def test_deck_lang_matrix(practice):
+    """US1/FR-303: --lang both writes deck.pptx (EN) + deck.vi.pptx and pitch.md (VI) + pitch.en.md; a later --lang vi
+    run removes the English outputs so files and disk agree."""
+    from vlkit import report
+    res, out = practice["bds_practice"]
+    df = pd.read_parquet(out / "clean.parquet")
+    files = report.build_all(copy.deepcopy(res), df, None, out, lang="both")
+    assert {files["deck"], files["deck_vi"], files["pitch_md"], files["pitch_en"]} == {"deck.pptx", "deck.vi.pptx", "pitch.md", "pitch.en.md"}
+    for name in ("deck.pptx", "deck.vi.pptx"):
+        assert report.deck_overflow(out / name) == []
+    assert "## 0 · Câu hỏi quyết định" in (out / "pitch.md").read_text(encoding="utf-8")
+    assert "## 0 · Decision question" in (out / "pitch.en.md").read_text(encoding="utf-8")
+    files = report.build_all(copy.deepcopy(res), df, None, out, lang="vi")
+    assert "deck" not in files and "pitch_en" not in files and files["deck_vi"] == "deck.vi.pptx"
+    assert not (out / "deck.pptx").exists() and not (out / "pitch.en.md").exists()
+    with pytest.raises(ValueError):
+        report.build_all(res, df, None, out, lang="fr")
+
+
+@pytest.mark.parametrize("ds", list(PRACTICE))
+def test_lang_decks_use_only_their_table(practice, ds):
+    """SC-301: no slide kicker/title of one language's table appears in the other deck; no EN prose in the VI deck."""
+    from vlkit import report
+    from vlkit.i18n import STRINGS
+    res, out = practice[ds]
+    brief = report.load_brief(out, res["meta"]["target"])
+    decks = {lang: _deck_lang(res, out, brief, lang) for lang in ("en", "vi")}
+    for lang, other in (("en", "vi"), ("vi", "en")):
+        prs, path = decks[lang]
+        assert report.deck_overflow(path) == []
+        foreign = {v.upper() for v in STRINGS[other].values()} | set(STRINGS[other].values())
+        foreign -= set(STRINGS[lang].values()) | {v.upper() for v in STRINGS[lang].values()}
+        for slide in prs.slides:
+            for tx in _texts(slide)[:2]:
+                assert tx not in foreign, f"{lang} deck shows {other} heading {tx!r}"
+    vi_text = " ".join(_all_text(decks["vi"][0]))
+    leaked = [c for c in _static_chunks("en") if c in vi_text]
+    assert not leaked, f"English fixed text in the VI deck: {leaked[:3]}"
+    assert "\ufffd" not in vi_text and "?" * 3 not in vi_text  # diacritics survive in the pptx XML
+
+
+def _deck_lang(res, out, brief, lang):
+    from pptx import Presentation
+
+    from vlkit import report
+    d = out / f"lang_{lang}"
+    d.mkdir(exist_ok=True)
+    path = report.build_deck(res, d, {}, None, brief, lang)
+    return Presentation(path), path
+
+
+@pytest.mark.parametrize("ds", list(PRACTICE))
+def test_numbers_identical_across_languages(practice, ds):
+    """SC-302: slide by slide, the numbers in deck.pptx and deck.vi.pptx parse to the same values."""
+    from test_i18n import numbers
+
+    from vlkit import report
+    res, out = practice[ds]
+    brief = report.load_brief(out, res["meta"]["target"])
+    en, _ = _deck_lang(res, out, brief, "en")
+    vi, _ = _deck_lang(res, out, brief, "vi")
+    assert len(en.slides) == len(vi.slides)
+    for k, (a, b) in enumerate(zip(_frames(en), _frames(vi)), start=1):
+        assert len(a) == len(b), f"{ds} slide {k}: different layout"
+        for x, y in zip(a, b):
+            if "…" in x or "…" in y:  # clipped to fit the box; the full text is in results.json and the speaker notes
+                continue
+            assert numbers(x, "en") == numbers(y, "vi"), f"{ds} slide {k}: {x[:60]!r} vs {y[:60]!r}"
+
+
+def _frames(prs) -> list[list[str]]:
+    """Per slide: each text frame and table cell, in shape order."""
+    return [[sh.text_frame.text for sh in s.shapes if sh.has_text_frame]
+            + [c.text for sh in s.shapes if getattr(sh, "has_table", False) and sh.has_table for r in sh.table.rows for c in r.cells]
+            for s in prs.slides]
+
+
+@pytest.mark.parametrize("ds", ["wdi_fiscal", "bds_practice"])  # EN brief, VI brief
+def test_pitch_languages_carry_same_numbers(practice, ds):
+    from test_i18n import numbers
+
+    from vlkit import report
+    res, out = practice[ds]
+    brief = report.load_brief(out, res["meta"]["target"])
+    vi, en = report.pitch_md(res, None, brief, "vi"), report.pitch_md(res, None, brief, "en")
+    strip = re.compile(r"<!--.*?-->|^title: .*$", re.S | re.M)  # timing notes / Marp title are language-neutral metadata
+    assert numbers(strip.sub("", en), "en") == numbers(strip.sub("", vi), "vi")
+    assert "Câu hỏi quyết định" not in en and "Decision question" not in vi
+    marked = {"en": "(original language)" in en, "vi": "(nguyên văn)" in vi}  # brief quoted unchanged, marked when foreign
+    assert marked == {"en": brief["language"] != "en", "vi": brief["language"] != "vi"}
+
+
+FUNCTIONS_WITHOUT_LITERAL_TEXT = ("build_deck", "pitch_md", "_pitch_question", "_pitch_pipeline", "_decision_frame",
+                                  "_generic_question", "_quoted_question", "_brief_prefix", "_evidence_line",
+                                  "_causal_caveat", "_insight_caveat", "_coverage_caveats", "_limitations")
+
+
+def test_report_has_no_inline_prose():
+    """FR-301 lint: deck/pitch functions take every fixed sentence from vlkit.i18n (docstrings excluded)."""
+    import ast
+
+    from vlkit import report
+    tree = ast.parse(Path(report.__file__).read_text(encoding="utf-8"))
+    prose = re.compile(r"[^\W\d_]{3,} [^\W\d_]{3,}")
+    found = []
+    for fn in (n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name in FUNCTIONS_WITHOUT_LITERAL_TEXT):
+        docs = {id(f.body[0].value) for f in ast.walk(fn) if isinstance(f, ast.FunctionDef)
+                and isinstance(f.body[0], ast.Expr) and isinstance(f.body[0].value, ast.Constant)}
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docs and prose.search(node.value):
+                found.append(f"{fn.name}: {node.value[:50]!r}")
+    assert not found, found

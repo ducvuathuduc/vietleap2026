@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,10 @@ MAX_BYTES = 200 * 1024 * 1024
 EXPORTS = {"deck": ("deck.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
            "dashboard": ("dashboard.html", "text/html"), "summary_pdf": ("executive_summary.pdf", "application/pdf"),
            "summary_md": ("executive_summary.md", "text/markdown"), "results": ("results.json", "application/json"),
-           "clean_csv": ("clean_sample.csv", "text/csv")}
+           "clean_csv": ("clean_sample.csv", "text/csv"),
+           # feature 003 — names fixed per language (vlkit.report DECK_FILES / PITCH_FILES)
+           "deck_vi": ("deck.vi.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+           "pitch_md": ("pitch.md", "text/markdown"), "pitch_en": ("pitch.en.md", "text/markdown")}
 
 
 def ds_or_404(store: Store, ds_id: str):
@@ -39,7 +43,8 @@ def list_datasets(store: Store = Depends(get_store)):
 
 @router.post("/datasets", response_model=Job, status_code=202)
 async def upload(file: UploadFile = File(...), target: str | None = Form(None), time: str | None = Form(None),
-                 geo: str | None = Form(None), domain: str = Form("auto"), name: str | None = Form(None)):
+                 geo: str | None = Form(None), domain: str = Form("auto"), name: str | None = Form(None),
+                 lang: Literal["vi", "en", "both"] = Form("both", description="deck/pitch language(s)")):
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED:
         raise HTTPException(415, f"unsupported file type '{ext}'; allowed: {sorted(ALLOWED)}")
@@ -63,7 +68,7 @@ async def upload(file: UploadFile = File(...), target: str | None = Form(None), 
         tmp.unlink(missing_ok=True)
         raise HTTPException(422, "empty file")
     tmp.replace(dest)
-    return jobs.submit(dest, ds_name, target=target or None, time_col=time or None, geo_col=geo or None, domain=domain)
+    return jobs.submit(dest, ds_name, target=target or None, time_col=time or None, geo_col=geo or None, domain=domain, lang=lang)
 
 
 @router.get("/jobs/{job_id}", response_model=Job)

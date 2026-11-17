@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 from . import fmt
+from .i18n import BRAND_KICKER, DEFAULT_REPORT_LANG, FOOTER, LANGS, caveats_for, langs_for, t, text_field
 from .stats import r
 
 PALETTE = ["#18181b", "#3b82f6", "#a1a1aa", "#d4d4d8", "#f97316"]
@@ -191,32 +192,18 @@ def _when(v) -> str:
         return f"{m.group(1)} {h:02d}:{m.group(3)}"
 
 
-def _thousands(x) -> str:
-    try:
-        return f"{int(x):,}"
-    except (TypeError, ValueError):
-        return "—"
-
-
-# ----------------------------------------------------------------------------- story frame (feature 002)
+# ----------------------------------------------------------------------------- story frame (feature 002) + language (003)
 # Brief text is untrusted, user-supplied data: it is only quoted (prefixed "Brief:"/"Đề bài:"), capped, and never
 # treated as a computed number or sent to an LLM as instructions. Every computed number still comes from results.json.
+# Every fixed string comes from vlkit.i18n (EN/VI); engine text uses its `*_en` / `*_vi` fields.
 
 BRIEF_FIELD_MAX = 2000
 BLANK = "____"
-GENERIC_TAG = "(no brief — generic question)"
-NO_DECISION_LINK = "No direct decision link — context only"
-WEAK_KICKER = "Weak evidence"
-CAUSAL_CAVEAT = "Observational data: relationships reported are associations, not causal effects."
 DECISION_KEYS = ("who", "what", "where", "kpi", "caveat")
-QA_HINTS = {  # docs/CONTEST_ANALYSIS.md §4.7 — the judge question each slide must pre-empt (FR-208)
-    "question": "Q&A — 'Ai cần quyết định gì, dữ liệu từ đâu?' → nêu người quyết định + KPI; chỉ slide Data provenance "
-                "(nguồn, ngày tải, % missing trước/sau).",
-    "insight": "Q&A — 'Is this causal?' → No: an association from observational data, not a causal effect; we report n and "
-               "effect size, not only p; a pilot / difference-in-differences would test causality.",
-    "limits": "Q&A — '63→34 tỉnh xử lý thế nào?' → bảng ánh xạ tỉnh cũ → mới (conformed dimension), cộng gộp chỉ số cộng được, "
-              "tính lại tỉ lệ từ tử/mẫu. 'Hạn chế lớn nhất?' → nói thẳng 1–2 hạn chế thật + cách khắc phục.",
-}
+DECK_FILES = {"en": "deck.pptx", "vi": "deck.vi.pptx"}      # FR-303: names fixed per language
+PITCH_FILES = {"vi": "pitch.md", "en": "pitch.en.md"}
+DECK_KEYS = {"en": "deck", "vi": "deck_vi"}                 # keys in results.json.files = API export kinds
+PITCH_KEYS = {"vi": "pitch_md", "en": "pitch_en"}
 
 
 def _cap_strings(v):
@@ -252,13 +239,13 @@ def load_brief(out: Path, target: str | None = None) -> dict | None:
     return b
 
 
-def _generic_question(meta: dict) -> str:
-    by = meta.get("geo_col") or (meta["category_cols"][0] if meta.get("category_cols") else "segment")
-    return (f"How does {meta['target']} vary across {by}{' and over time' if meta.get('time_col') else ''}, "
-            "and which levers are associated with it?")
+def _generic_question(meta: dict, lang: str) -> str:
+    by = meta.get("geo_col") or (meta["category_cols"][0] if meta.get("category_cols") else t(lang, "generic_by"))
+    over_time = t(lang, "generic_over_time") if meta.get("time_col") else ""
+    return t(lang, "generic_question", target=meta["target"], by=by, over_time=over_time)
 
 
-def _decision_frame(res: dict, brief: dict | None) -> dict:
+def _decision_frame(res: dict, brief: dict | None, lang: str = "en") -> dict:
     """Who decides what, where, measured by which KPI — from the brief; blanks stay '____' (never invented)."""
     meta = res["meta"]
     question = next((q.strip() for q in (brief or {}).get("questions") or [] if q.strip()), "") or ((brief or {}).get("title") or "").strip()
@@ -267,14 +254,20 @@ def _decision_frame(res: dict, brief: dict | None) -> dict:
     if brief and question:
         return {**frame, "question": question, "source": "brief", "language": brief.get("language") or "vi",
                 "stale": bool(brief.get("stale")), "target_column": ((brief.get("target") or {}).get("column"))}
-    return {**frame, "kpi": f"median {meta['target']} by segment", "question": _generic_question(meta), "source": "generic",
-            "language": "en", "stale": False, "target_column": None}
+    return {**frame, "kpi": t(lang, "generic_kpi", target=meta["target"]), "question": _generic_question(meta, lang),
+            "source": "generic", "language": lang, "stale": False, "target_column": None}
 
 
-def _quoted_question(frame: dict) -> str:
+def _brief_prefix(frame: dict, lang: str) -> str:
+    """'Brief' / 'Đề bài', marked '(original language)' when the brief is in the other language (quoted unchanged)."""
+    prefix = t(lang, "brief_prefix")
+    return prefix if frame["language"] == lang else f"{prefix} ({t(lang, 'original_language')})"
+
+
+def _quoted_question(frame: dict, lang: str) -> str:
     if frame["source"] != "brief":
         return frame["question"]
-    return f"{'Đề bài' if frame['language'] == 'vi' else 'Brief'}: “{frame['question']}”"
+    return f"{_brief_prefix(frame, lang)}: “{frame['question']}”"
 
 
 def _is_weak(ins: dict | None) -> bool:
@@ -305,42 +298,58 @@ def _story_insights(res: dict, k: int = 3) -> list[dict]:
     return _linked_first([i for i in res["insights"] if i.get("chart")], res["recommendations"])[:k]
 
 
-def _evidence_line(ins: dict) -> str:
+def _evidence_line(ins: dict, lang: str = "en") -> str:
     parts = [ins["test"]]
     if ins.get("p_value") is not None:
-        parts.append(fmt.p(ins["p_value"]))
+        parts.append(fmt.p(ins["p_value"], lang))
     if ins.get("effect") is not None:
-        parts.append(f"effect {ins['effect']}")
+        parts.append(t(lang, "effect", value=fmt.dec(ins["effect"], lang)))
     n_obs = (ins.get("evidence") or {}).get("n")
     if isinstance(n_obs, (int, float)):
-        parts.append(f"n = {int(n_obs):,}")
+        parts.append(t(lang, "n_obs", n=fmt.count(n_obs, lang)))
     return " · ".join(parts)
 
 
-def _causal_caveat(caveats: list[str]) -> str:
-    return next((c for c in caveats if "causal" in c.lower()), CAUSAL_CAVEAT)
+def _causal_caveat(res: dict, lang: str = "en") -> str:
+    """The engine's causal caveat in `lang` (caveats_vi is parallel to the English list)."""
+    idx = next((k for k, c in enumerate(res["caveats"]) if "causal" in c.lower()), None)
+    return caveats_for(res, lang)[idx] if idx is not None else t(lang, "cav_causal")
 
 
-def _coverage_caveats(de: dict | None, qp: dict | None) -> list[str]:
+def _insight_caveat(ins: dict, res: dict, lang: str = "en") -> str:
+    """The insight's own caveat (`caveat` EN / `caveat_vi`), else the engine's causal caveat."""
+    if not ins.get("caveat"):
+        return _causal_caveat(res, lang)
+    return text_field({"caveat_en": ins["caveat"], "caveat_vi": ins.get("caveat_vi")}, "caveat", lang)
+
+
+def _coverage_caveats(de: dict | None, qp: dict | None, lang: str = "en") -> list[str]:
     """Data-coverage limits with their real counts from the DE outputs (quality.json, pipeline.json conformed joins)."""
     out = []
     missing = ((qp or {}).get("after") or {}).get("missing_cells")
     if missing:
-        out.append(f"{int(missing):,} cells still missing after cleaning (not imputed unless --impute)")
+        out.append(t(lang, "cov_missing", n=fmt.count(missing, lang)))
     for j in (((de or {}).get("conformed") or {}).get("joins") or []):
         if j.get("unmatched_rows"):
-            out.append(f"{int(j['unmatched_rows']):,} rows did not match {j.get('source', '?')} on "
-                       f"{', '.join(j.get('keys') or j.get('join_on') or [])} ({j.get('match_pct', '—')}% matched)")
+            out.append(t(lang, "cov_unmatched", n=fmt.count(j["unmatched_rows"], lang), source=j.get("source", "?"),
+                         keys=", ".join(j.get("keys") or j.get("join_on") or []), pct=fmt.dec(j.get("match_pct"), lang)))
     if de and len(de.get("provenance") or []) <= 1:
-        out.append("Single source: no external data joined yet to explain the gaps")
+        out.append(t(lang, "cov_single"))
     return out
 
 
-def _limitations(res: dict, de: dict | None, qp: dict | None, k: int = 6) -> list[str]:
+def _limitations(res: dict, de: dict | None, qp: dict | None, k: int = 6, lang: str = "en") -> list[str]:
     """US4: the causal-association caveat first, then coverage limits with real counts, then the other caveats."""
-    causal = _causal_caveat(res["caveats"])
-    rest = [c for c in res["caveats"] if c != causal]
-    return ([causal] + _coverage_caveats(de, qp) + rest)[:k]
+    causal = _causal_caveat(res, lang)
+    rest = [c for c in caveats_for(res, lang) if c != causal]
+    return ([causal] + _coverage_caveats(de, qp, lang) + rest)[:k]
+
+
+def _clip(s: str, limit: int) -> str:
+    """At most `limit` characters, cut at a word boundary and marked '…' (never in the middle of a number)."""
+    if len(s) <= limit:
+        return s
+    return s[:limit].rsplit(" ", 1)[0].rstrip(" ,;:(") + "…"
 
 
 def _notes(slide, lines: list[str]) -> None:
@@ -349,7 +358,10 @@ def _notes(slide, lines: list[str]) -> None:
 
 # ----------------------------------------------------------------------------- deck
 
-def build_deck(res: dict, out: Path, chart_pngs: dict, de: dict | None = None, brief: dict | None = None) -> str:
+def build_deck(res: dict, out: Path, chart_pngs: dict, de: dict | None = None, brief: dict | None = None,
+               lang: str = "en") -> str:
+    """The pitch deck in one language (`deck.pptx` EN, `deck.vi.pptx` VI): fixed text from vlkit.i18n, engine text from
+    the `*_<lang>` fields, numbers formatted for the language by vlkit.fmt — the values themselves never change."""
     from pptx import Presentation
     from pptx.dml.color import RGBColor
     from pptx.enum.shapes import MSO_SHAPE
@@ -362,6 +374,15 @@ def build_deck(res: dict, out: Path, chart_pngs: dict, de: dict | None = None, b
     blank = prs.slide_layouts[6]
     meta = res["meta"]
     tgt = meta["target"]
+
+    def tr(key: str, **values) -> str:
+        return t(lang, key, **values)
+
+    def count(x) -> str:
+        return fmt.count(x, lang)
+
+    def dec(x) -> str:
+        return fmt.dec(x, lang)
 
     def text(slide, x, y, w, h, s, size=18, bold=False, color=INK, align=None, italic=False):
         tb = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
@@ -385,7 +406,7 @@ def build_deck(res: dict, out: Path, chart_pngs: dict, de: dict | None = None, b
         ln = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(1.75), Inches(11.9), Emu(12000))
         ln.fill.solid(); ln.fill.fore_color.rgb = LINE; ln.line.fill.background()
         text(slide, 11.6, 7.0, 1.3, 0.3, f"{n}", 10, False, MUTED, PP_ALIGN.RIGHT)
-        text(slide, 0.7, 7.0, 8, 0.3, "VietLeap 2026 · From Data to Decision", 10, False, MUTED)
+        text(slide, 0.7, 7.0, 8, 0.3, FOOTER, 10, False, MUTED)
 
     def card(slide, x, y, w, h, title, body, size=15):
         sh = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
@@ -414,152 +435,153 @@ def build_deck(res: dict, out: Path, chart_pngs: dict, de: dict | None = None, b
         return shape
 
     ins = res["insights"]
-    frame = _decision_frame(res, brief)
+    caveats = caveats_for(res, lang)
+    frame = _decision_frame(res, brief, lang)
     recs_by_insight = {rc.get("from_insight"): rc for rc in res["recommendations"]}
     n = 1
     # 1 title
     s = prs.slides.add_slide(blank)
-    text(s, 0.9, 1.0, 11, 0.5, "VIETLEAP HACKATHON 2026 · FROM DATA TO DECISION", 14, True, ACCENT)
-    text(s, 0.9, 1.8, 11.5, 2.2, f"What drives {tgt}? Evidence and decisions from {meta['rows']:,} records", 40, True)
-    text(s, 0.9, 4.4, 11, 0.6, f"Domain: {meta['domain'].replace('_', ' ')} · Source: {meta['source_file']}", 18, False, MUTED)
-    text(s, 0.9, 5.6, 11, 0.5, "Team ____ · UEH, 21/11/2026", 18, False, MUTED)
+    text(s, 0.9, 1.0, 11, 0.5, BRAND_KICKER, 14, True, ACCENT)
+    text(s, 0.9, 1.8, 11.5, 2.2, tr("title_main", target=tgt, rows=count(meta["rows"])), 40, True)
+    text(s, 0.9, 4.4, 11, 0.6, tr("title_domain", domain=meta["domain"].replace("_", " "), source=meta["source_file"]), 18, False, MUTED)
+    text(s, 0.9, 5.6, 11, 0.5, tr("title_team"), 18, False, MUTED)
     # 2 decision question — who decides what, from the brief (FR-202); brief text is quoted, never computed
-    n += 1; s = prs.slides.add_slide(blank); header(s, "Problem & question", "Decision question", n)
-    text(s, 0.7, 2.1, 7.4, 2.7, _quoted_question(frame), 22, False, INK, None, frame["source"] == "brief")
-    text(s, 0.7, 4.95, 7.4, 1.35, [f"Decision: {frame['what']}", f"Where: {frame['where']}"], 15)
+    n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_question"), tr("title_question"), n)
+    text(s, 0.7, 2.1, 7.4, 2.7, _quoted_question(frame, lang), 22, False, INK, None, frame["source"] == "brief")
+    text(s, 0.7, 4.95, 7.4, 1.35, [tr("line_decision", what=frame["what"]), tr("where", where=frame["where"])], 15)
     if frame["source"] == "generic":
-        text(s, 0.7, 6.35, 7.4, 0.5, GENERIC_TAG, 12, False, MUTED)
+        text(s, 0.7, 6.35, 7.4, 0.5, tr("generic_tag"), 12, False, MUTED)
     elif frame["stale"]:
-        text(s, 0.7, 6.35, 7.4, 0.5, f"Brief target '{frame['target_column']}' does not match the analysed target '{tgt}' — re-parse the brief for this dataset.", 11, False, MUTED)
-    card(s, 8.5, 2.1, 4.1, 1.45, "WHO DECIDES", frame["who"], 14)
-    card(s, 8.5, 3.7, 4.1, 1.45, "SUCCESS KPI", frame["kpi"], 14)
-    card(s, 8.5, 5.3, 4.1, 1.4, "SCOPE", [f"{meta['rows']:,} rows · {meta['columns']} columns", f"Target: {tgt}"], 12)
-    _notes(s, [frame["question"], QA_HINTS["question"]])
+        text(s, 0.7, 6.35, 7.4, 0.5, tr("stale_brief", brief_target=frame["target_column"], target=tgt), 11, False, MUTED)
+    card(s, 8.5, 2.1, 4.1, 1.45, tr("card_who"), frame["who"], 14)
+    card(s, 8.5, 3.7, 4.1, 1.45, tr("card_kpi"), frame["kpi"], 14)
+    card(s, 8.5, 5.3, 4.1, 1.4, tr("card_scope"), [tr("scope_rows", rows=count(meta["rows"]), columns=meta["columns"]),
+                                                    tr("target_line", target=tgt)], 12)
+    _notes(s, [frame["question"], tr("qa_hint_question")])
     # 3 data & method
-    n += 1; s = prs.slides.add_slide(blank); header(s, "Data & method", "Clean → profile → test → model → decide", n)
+    n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_method"), tr("title_method"), n)
     key_log = [l for l in res["cleaning_log"] if any(w in l for w in ["→", "duplicate", "flagged", "derived", "transposed", "stacked", "normalised"])][:5]
-    card(s, 0.7, 2.1, 6.0, 4.6, "DATA PREPARATION", [("• " + l)[:120] for l in key_log], 13)
-    card(s, 6.9, 2.1, 5.7, 2.4, "METHODS", ["Kruskal–Wallis / Mann–Whitney + effect sizes", "Spearman with Bonferroni & partial correlation", "Ridge + gradient boosting, 5-fold CV, permutation importance", "k-means segmentation · ETS/linear forecast"], 13)
-    card(s, 6.9, 4.7, 5.7, 2.0, "CAVEATS", ["• " + c[:110] for c in res["caveats"][:3]], 12)
+    card(s, 0.7, 2.1, 6.0, 4.6, tr("card_prep"), [_clip("• " + l, 120) for l in key_log], 13)
+    card(s, 6.9, 2.1, 5.7, 2.4, tr("card_methods"), [tr(k) for k in ("method_tests", "method_corr", "method_models", "method_segments")], 13)
+    card(s, 6.9, 4.7, 5.7, 2.0, tr("card_caveats"), ["• " + _clip(c, 110) for c in caveats[:3]], 12)
     q_full = (de or {}).get("quality_full") or {}
     prim = (de or {}).get("primary")
     qp = q_full.get(prim) or (next(iter(q_full.values())) if q_full else None)
     if de:
         # Data pipeline — the 4 stages of the 16/11 workshop
-        n += 1; s = prs.slides.add_slide(blank); header(s, "Data pipeline", "Ingestion → Storage → Transform → Serving", n)
+        n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_pipeline"), tr("title_pipeline"), n)
         prov = de.get("provenance") or []
         kinds = sorted({p_.get("kind", "?") for p_ in prov})
-        rows_in = sum(t.get("rows", 0) for p_ in prov for t in (p_.get("tables") or {}).values())
+        rows_in = sum(t_.get("rows", 0) for p_ in prov for t_ in (p_.get("tables") or {}).values())
         tim = de.get("timings") or {}
         qs = de.get("quality") or {}
-        q_line = [f"{k.split('.', 1)[-1].split('__')[-1][:20]}: {v['score_before']} → {v['score_after']}" for k, v in list(qs.items())[:2]]
+        rec = de.get("recommended") or {}
+        q_line = [f"{k.split('.', 1)[-1].split('__')[-1][:20]}: {dec(v['score_before'])} → {dec(v['score_after'])}" for k, v in list(qs.items())[:2]]
         stages = [
-            ("1 · INGESTION", [f"{len(prov)} source(s): {', '.join(kinds)}", f"{_thousands(rows_in)} rows read", "provenance per source (time, licence, fingerprint)", f"{tim.get('ingest', '—')} s"]),
-            ("2 · STORAGE", ["DuckDB warehouse + Parquet lake", f"bronze {len(de.get('bronze') or [])} · silver {len(de.get('silver') or [])} · gold {len(de.get('gold') or [])} tables", "raw kept with _src, _ingested_at, _row_hash"]),
-            ("3 · TRANSFORM", ["missing · duplicate · outlier (flagged)", "quality score before → after:"] + q_line + [f"{len(de.get('models') or {})} data models · {tim.get('clean', '—')} + {tim.get('model', '—')} s"]),
-            ("4 · SERVING", [f"gold OBT → dashboard, SQL, AI analyst", f"recommended: {(de.get('recommended') or {}).get('serving', '—')} for serving, {(de.get('recommended') or {}).get('semantic', '—')} for the semantic layer", "insights + deck + summary from gold"]),
+            (tr("stage_ingestion"), [tr("ing_sources", n=len(prov), kinds=", ".join(kinds)), tr("ing_rows", rows=count(rows_in)),
+                                     tr("ing_provenance"), tr("seconds", s=dec(tim.get("ingest")))]),
+            (tr("stage_storage"), [tr("sto_warehouse"), tr("sto_layers", bronze=len(de.get("bronze") or []), silver=len(de.get("silver") or []),
+                                                          gold=len(de.get("gold") or [])), tr("sto_raw")]),
+            (tr("stage_transform"), [tr("tr_checks"), tr("tr_score")] + q_line
+             + [tr("tr_models", n=len(de.get("models") or {}), clean=dec(tim.get("clean")), model=dec(tim.get("model")))]),
+            (tr("stage_serving"), [tr("srv_obt"), tr("srv_recommended", serving=rec.get("serving", "—"), semantic=rec.get("semantic", "—")),
+                                   tr("srv_outputs")]),
         ]
-        for k, (t, body) in enumerate(stages):
-            card(s, 0.7 + k * 3.03, 2.05, 2.85, 4.35, t, body, 13)
-        text(s, 0.7, 6.5, 11.9, 0.4, "Every number in this deck traces back to a gold table + SQL (lineage: source → bronze → silver → gold → serving).", 12, False, MUTED)
+        for k, (title, body) in enumerate(stages):
+            card(s, 0.7 + k * 3.03, 2.05, 2.85, 4.35, title, body, 13)
+        text(s, 0.7, 6.5, 11.9, 0.4, tr("pipeline_footnote"), 12, False, MUTED)
 
         # Data model — OBT vs Star vs Snowflake vs Data Vault & why
-        n += 1; s = prs.slides.add_slide(blank); header(s, "Data model", "OBT vs Star vs Snowflake vs Data Vault — and why", n)
+        n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_model"), tr("title_model"), n)
         mods = de.get("models") or {}
-        rec = de.get("recommended") or {}
-        why = {
-            "obt": ("One Big Table", "Fastest for dashboards & ML; easy for non-SQL teammates. Cost: duplicated values."),
-            "star": ("Star schema", "Kimball fact + dimensions (time, geography, categories): the model we present to decision makers."),
-            "snowflake": ("Snowflake", "Normalised hierarchies (province → 2025 province → region; day → month → year). Fewer duplicates, more joins."),
-            "data_vault": ("Data Vault 2.0", "Hubs/links/satellites with hash keys, load_dts, record_source: audit trail across sources. Heavy for 28 h."),
-        }
         for k, key in enumerate(["obt", "star", "snowflake", "data_vault"]):
-            title, reason = why[key]
-            tag = ["✓ Chosen for serving (dashboard, AI)"] if rec.get("serving") == key else (["✓ Chosen for presentation"] if rec.get("semantic") == key else [])
+            tag = [tr("tag_serving")] if rec.get("serving") == key else ([tr("tag_semantic")] if rec.get("semantic") == key else [])
             ntab = len((mods.get(key) or {}).get("tables") or [])
-            card(s, 0.7 + k * 3.03, 2.05, 2.85, 3.6, title.upper(), tag + [reason, f"{ntab} table(s) built" if ntab else "not built"], 13)
-        text(s, 0.7, 5.8, 11.9, 1.1, [f"Choice: {rec.get('serving', 'obt')} serves the dashboard & AI analyst (no joins); {rec.get('semantic', 'star')} is how we explain the data.",
-                                      "Snowflake & Data Vault are built to show hierarchy and auditability — not worth their join/ETL cost in 28 hours."], 13)
+            card(s, 0.7 + k * 3.03, 2.05, 2.85, 3.6, tr(f"model_{key}").upper(),
+                 tag + [tr(f"why_{key}"), tr("tables_built", n=ntab) if ntab else tr("not_built")], 13)
+        text(s, 0.7, 5.8, 11.9, 1.1, [tr("model_choice", serving=rec.get("serving", "obt"), semantic=rec.get("semantic", "star")),
+                                      tr("model_tradeoff")], 13)
 
         # Data quality before / after
         if qp:
-            n += 1; s = prs.slides.add_slide(blank); header(s, "Data quality", "Before → after cleaning (bronze → silver)", n)
+            n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_quality"), tr("title_quality"), n)
             b, a = qp.get("before") or {}, qp.get("after") or {}
-            rows = [["Metric", "Before", "After"],
-                    ["Rows", _thousands(b.get("rows")), _thousands(a.get("rows"))],
-                    ["Missing cells", _thousands(b.get("missing_cells")), _thousands(a.get("missing_cells"))],
-                    ["Invalid / text-as-number cells", _thousands(b.get("invalid_cells")), _thousands(a.get("invalid_cells"))],
-                    ["Duplicate rows", _thousands(b.get("duplicate_rows")), _thousands(a.get("duplicate_rows"))],
-                    ["Quality score (0–100)", str(qp.get("score_before", "—")), str(qp.get("score_after", "—"))]]
+            rows = [[tr("q_metric"), tr("q_before"), tr("q_after")],
+                    [tr("q_rows"), count(b.get("rows")), count(a.get("rows"))],
+                    [tr("q_missing"), count(b.get("missing_cells")), count(a.get("missing_cells"))],
+                    [tr("q_invalid"), count(b.get("invalid_cells")), count(a.get("invalid_cells"))],
+                    [tr("q_duplicates"), count(b.get("duplicate_rows")), count(a.get("duplicate_rows"))],
+                    [tr("q_score"), dec(qp.get("score_before")), dec(qp.get("score_after"))]]
             table(s, 0.7, 2.1, 5.6, rows, [3.0, 1.3, 1.3], 13)
             log = [("• " + str(l)) for l in (qp.get("cleaning_log") or [])][:7]
-            card(s, 6.6, 2.05, 6.0, 4.6, "CLEANING LOG (EXCERPT)", log or ["(no cleaning steps needed)"], 12)
-            text(s, 0.7, 4.5, 5.6, 2.1, ["Outliers are flagged (3×IQR), not deleted; robust statistics (medians, rank tests) are used downstream.",
-                                         "Raw data stays in bronze, so every cleaning step can be audited and re-run."], 12, False, MUTED)
-    # 4-6 insights: EVIDENCE → FOR THE DECISION → LIMITATION (FR-203), linked insights first, weak ones labelled (FR-207)
+            card(s, 6.6, 2.05, 6.0, 4.6, tr("card_cleaning_log"), log or [tr("no_cleaning")], 12)
+            text(s, 0.7, 4.5, 5.6, 2.1, [tr("outliers_note"), tr("raw_note")], 12, False, MUTED)
+    # insights: EVIDENCE → FOR THE DECISION → LIMITATION (FR-203), linked insights first, weak ones labelled (FR-207)
     for k, i in enumerate(_story_insights(res)):
-        kicker = f"Insight {k + 1}" + (f" · {WEAK_KICKER}" if _is_weak(i) else "")
-        n += 1; s = prs.slides.add_slide(blank); header(s, kicker, i["title_en"], n)
+        kicker = tr("kicker_insight", k=k + 1) + (f" · {tr('weak_evidence')}" if _is_weak(i) else "")
+        sentence = text_field(i, "sentence", lang)
+        n += 1; s = prs.slides.add_slide(blank); header(s, kicker, text_field(i, "title", lang), n)
         png = chart_pngs.get(i["id"])
         if png:
             s.shapes.add_picture(png, Inches(0.7), Inches(2.0), width=Inches(5.6))
         rc = recs_by_insight.get(i["id"])
-        card(s, 6.5, 2.0, 6.1, 3.1, "EVIDENCE", [i["sentence_en"], _evidence_line(i)], 13)
-        card(s, 0.7, 5.25, 5.85, 1.5, "FOR THE DECISION", rc["so_what_en"] if rc else NO_DECISION_LINK, 12)
-        card(s, 6.75, 5.25, 5.85, 1.5, "LIMITATION", i.get("caveat") or _causal_caveat(res["caveats"]), 12)
-        _notes(s, [i["sentence_en"], _evidence_line(i), QA_HINTS["insight"]])
-    # 7 recommendations
-    n += 1; s = prs.slides.add_slide(blank); header(s, "Recommendations", "So what → Now what", n)
+        card(s, 6.5, 2.0, 6.1, 3.1, tr("card_evidence"), [sentence, _evidence_line(i, lang)], 13)
+        card(s, 0.7, 5.25, 5.85, 1.5, tr("card_for_decision"), text_field(rc, "so_what", lang) if rc else tr("no_decision_link"), 12)
+        card(s, 6.75, 5.25, 5.85, 1.5, tr("card_limitation"), _insight_caveat(i, res, lang), 12)
+        _notes(s, [sentence, _evidence_line(i, lang), tr("qa_hint_insight")])
+    # recommendations
+    n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_recs"), tr("title_recs"), n)
     y = 2.0
     for k, rc in enumerate(res["recommendations"][:4]):
         text(s, 0.7, y, 0.6, 0.6, f"{k + 1}", 26, True, ACCENT)
-        text(s, 1.3, y, 5.2, 1.1, rc["so_what_en"][:150], 14, True)
-        text(s, 6.6, y, 6.0, 1.1, [rc["now_what_en"][:170], "Impact: " + rc["impact_en"][:120]], 12)
+        text(s, 1.3, y, 5.2, 1.1, _clip(text_field(rc, "so_what", lang), 150), 14, True)
+        text(s, 6.6, y, 6.0, 1.1, [_clip(text_field(rc, "now_what", lang), 170), tr("impact", text=_clip(text_field(rc, "impact", lang), 120))], 12)
         y += 1.22
-    # 8 what-if
-    n += 1; s = prs.slides.add_slide(blank); header(s, "Impact", "What-if scenarios from the fitted model", n)
+    # what-if
+    n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_impact"), tr("title_whatif"), n)
     wi = next((i for i in ins if i["type"] == "what_if"), None)
     if wi and chart_pngs.get(wi["id"]):
         s.shapes.add_picture(chart_pngs[wi["id"]], Inches(0.7), Inches(2.0), width=Inches(7.4))
-        card(s, 8.4, 2.0, 4.2, 4.6, "SCENARIO", [wi["sentence_en"][:260], "", "Association from observational data — validate with a pilot before scaling."], 14)
+        card(s, 8.4, 2.0, 4.2, 4.6, tr("card_scenario"), [_clip(text_field(wi, "sentence", lang), 260), "", tr("whatif_caveat")], 14)
     else:
-        text(s, 0.7, 2.2, 11, 2, "No stable numeric lever was found; the decision layer relies on segment and trend evidence instead.", 20, False, MUTED)
-    # Policy recommendation — one decision, owner, KPI, evidence
+        text(s, 0.7, 2.2, 11, 2, tr("no_lever"), 20, False, MUTED)
+    # policy recommendation — one decision, owner, KPI, evidence
     recs_ = res["recommendations"]
     if recs_:
-        n += 1; s = prs.slides.add_slide(blank); header(s, "Policy recommendation", "From data to decision", n)
+        n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_policy"), tr("title_policy"), n)
         r0, src_i = _headline_rec(res)
         r0 = r0 or recs_[0]
-        conf = {"high": "High", "medium": "Medium"}.get(r0.get("confidence"), str(r0.get("confidence") or "—"))
-        text(s, 0.7, 2.05, 7.6, 1.5, r0["now_what_en"], 22, True)
-        card(s, 0.7, 3.75, 3.7, 2.9, "WHY (SO WHAT)", r0["so_what_en"], 13)
-        card(s, 4.6, 3.75, 3.7, 2.9, "EXPECTED IMPACT", [r0["impact_en"], f"Confidence: {conf}"], 13)
-        ev = _evidence_line(src_i) if src_i else f"{WEAK_KICKER} only (p ≥ 0.05) — exploratory, pilot before acting"
-        card(s, 8.5, 2.05, 4.1, 1.55, "EVIDENCE", ev, 12)
-        card(s, 8.5, 3.75, 4.1, 2.9, "WHO · WHAT · WHERE · KPI", [f"Who: {frame['who']}", f"What: {frame['what']}", f"Where: {frame['where']}",
-                                                                   f"KPI: {frame['kpi']}"], 12)
-    # 9 limitations
-    n += 1; s = prs.slides.add_slide(blank); header(s, "Limitations & next steps", "What this analysis cannot tell you", n)
-    lim = _limitations(res, de, qp)
+        level = r0.get("confidence")
+        conf = tr(f"conf_{level}") if level in ("high", "medium") else str(level or "—")
+        text(s, 0.7, 2.05, 7.6, 1.5, text_field(r0, "now_what", lang), 22, True)
+        card(s, 0.7, 3.75, 3.7, 2.9, tr("card_why"), text_field(r0, "so_what", lang), 13)
+        card(s, 4.6, 3.75, 3.7, 2.9, tr("card_expected"), [text_field(r0, "impact", lang), tr("confidence", level=conf)], 13)
+        card(s, 8.5, 2.05, 4.1, 1.55, tr("card_evidence"), _evidence_line(src_i, lang) if src_i else tr("weak_only"), 12)
+        card(s, 8.5, 3.75, 4.1, 2.9, tr("card_wwwk"), [tr("who", who=frame["who"]), tr("what", what=frame["what"]),
+                                                       tr("where", where=frame["where"]), tr("kpi", kpi=frame["kpi"])], 12)
+    # limitations
+    n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_limits"), tr("title_limits"), n)
+    lim = _limitations(res, de, qp, lang=lang)
     text(s, 0.7, 2.1, 6.2, 4.6, ["• " + c for c in lim], 14)
-    _notes(s, lim + [QA_HINTS["limits"]])
-    card(s, 7.3, 2.1, 5.3, 4.4, "NEXT STEPS", ["• Join external data (income, infrastructure, population) to explain gaps", "• Validate the top lever with a pilot or natural experiment", "• Re-run the pipeline monthly; monitor the KPI set", "• Re-aggregate to the 34-province map (post 1/7/2025)"], 14)
-    # Provenance — source, time, licence, fingerprint (organisers asked for this in the entry test)
+    _notes(s, lim + [tr("qa_hint_limits")])
+    card(s, 7.3, 2.1, 5.3, 4.4, tr("card_next"), ["• " + tr(k) for k in ("next_join", "next_pilot", "next_rerun", "next_provinces")], 14)
+    # provenance — source, time, licence, fingerprint (organisers asked for this in the entry test)
     if de and de.get("provenance"):
-        n += 1; s = prs.slides.add_slide(blank); header(s, "Data provenance", "Where every number comes from", n)
-        rows = [["Source", "Kind", "Location", "Fetched", "Rows × cols", "Fingerprint", "Licence"]]
+        n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_provenance"), tr("title_provenance"), n)
+        rows = [[tr(k) for k in ("prov_source", "prov_kind", "prov_location", "prov_fetched", "prov_shape", "prov_fingerprint", "prov_licence")]]
         for p_ in de["provenance"][:8]:
-            for tname, t in list((p_.get("tables") or {}).items())[:2]:
+            for tname, tb in list((p_.get("tables") or {}).items())[:2]:
                 rows.append([str(p_.get("source", tname))[:24], p_.get("kind", "—"), _short_uri(p_.get("uri", "")), _when(p_.get("fetched_at")),
-                             f"{_thousands(t.get('rows'))} × {t.get('cols', '—')}", str(t.get("fingerprint", "—"))[:16], (p_.get("license_note") or "see source")[:30]])
+                             f"{count(tb.get('rows'))} × {tb.get('cols', '—')}", str(tb.get("fingerprint", "—"))[:16],
+                             (p_.get("license_note") or tr("see_source"))[:30]])
         rows = rows[:10]
         table(s, 0.7, 2.05, 11.9, rows, [1.7, 0.8, 2.7, 2.0, 1.4, 1.6, 1.7], 11)
-        text(s, 0.7, 6.3, 11.9, 0.5, "Full provenance (settings, read log, bytes) in provenance.json; lineage graph in lineage.json / the dashboard Pipeline page.", 12, False, MUTED)
-    # 10 Q&A
-    n += 1; s = prs.slides.add_slide(blank); header(s, "Team & Q&A", "Thank you — questions?", n)
-    text(s, 0.7, 2.1, 6, 4, ["Team members: ____", "Roles: data · analysis · dashboard · story", "Dashboard: live web app + static HTML", "Code & method: reproducible pipeline (run.py)"], 18)
-    card(s, 7.3, 2.1, 5.3, 4.4, "LIKELY JUDGE QUESTIONS", ["Is this causal? → No: associations; pilot proposed", "How did you treat outliers? → flagged, robust stats", "How representative is the data? → see caveats", "What would you do with 1 more week? → join external data"], 13)
-    path = out / "deck.pptx"
+        text(s, 0.7, 6.3, 11.9, 0.5, tr("prov_footnote"), 12, False, MUTED)
+    # team & Q&A
+    n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_qa"), tr("title_qa"), n)
+    text(s, 0.7, 2.1, 6, 4, [tr(k) for k in ("qa_team", "qa_roles", "qa_dashboard", "qa_code")], 18)
+    card(s, 7.3, 2.1, 5.3, 4.4, tr("card_judge"), [tr(k) for k in ("judge_causal", "judge_outliers", "judge_sample", "judge_week")], 13)
+    path = out / DECK_FILES[lang]
     prs.save(path)
     return str(path)
 
@@ -591,67 +613,81 @@ def _md_text(s: str) -> str:
     return s if s == BLANK else _MD_SPECIAL.sub(r"\\\1", html.escape(str(s), quote=False))
 
 
-def _pitch_question(frame: dict) -> list[str]:
+def _note(slot: str, text_: str) -> str:
+    """Speaker note with its time slot (Marp renders HTML comments as presenter notes)."""
+    return f"<!-- {PITCH_TIMING[slot]} · {text_} -->"
+
+
+def _pitch_question(frame: dict, lang: str) -> list[str]:
     if frame["source"] == "brief":
-        prefix = "Đề bài" if frame["language"] == "vi" else "Brief"
-        quote = f"> *{prefix}:* “{_md_text(frame['question'])}”"
+        quote = f"> *{_brief_prefix(frame, lang)}:* “{_md_text(frame['question'])}”"
     else:
-        quote = f"> *{GENERIC_TAG}* {_md_text(frame['question'])}"
-    return ["## 0 · Câu hỏi quyết định", "", quote, "",
-            f"- **Ai quyết định:** {_md_text(frame['who'])}", f"- **Quyết định gì:** {_md_text(frame['what'])}",
-            f"- **Ở đâu:** {_md_text(frame['where'])}", f"- **KPI thành công:** {_md_text(frame['kpi'])}", "",
-            f"<!-- {PITCH_TIMING['question']} · Ai cần quyết định gì + KPI thành công. Đề bài được trích nguyên văn. -->", "", "---", ""]
+        quote = f"> *{t(lang, 'generic_tag')}* {_md_text(frame['question'])}"
+    return [f"## {t(lang, 'pitch_q_heading')}", "", quote, "",
+            f"- **{t(lang, 'pitch_who')}:** {_md_text(frame['who'])}", f"- **{t(lang, 'pitch_what')}:** {_md_text(frame['what'])}",
+            f"- **{t(lang, 'pitch_where')}:** {_md_text(frame['where'])}", f"- **{t(lang, 'pitch_kpi')}:** {_md_text(frame['kpi'])}", "",
+            _note("question", t(lang, "pitch_note_question")), "", "---", ""]
 
 
-def pitch_md(res: dict, de: dict | None = None, brief: dict | None = None) -> str:
-    """Marp deck for the 7-minute pitch, filled with this dataset's engine numbers (template: slides/pitch.md).
+def _pitch_pipeline(res: dict, de: dict | None, lang: str) -> list[str]:
+    m = res["meta"]
+    prov = (de or {}).get("provenance") or []
+    out = [f"## {t(lang, 'pitch_data_heading')}", ""]
+    if prov:
+        q = None
+        if de.get("quality"):
+            q = de["quality"].get(de.get("primary")) or next(iter(de["quality"].values()))
+        out.append("- " + t(lang, "pitch_ingestion", n=len(prov), kinds=", ".join(sorted({p_.get("kind", "?") for p_ in prov}))))
+        out.append("- " + t(lang, "pitch_storage"))
+        if q:
+            out.append("- " + t(lang, "pitch_quality", before=fmt.dec(q["score_before"], lang), after=fmt.dec(q["score_after"], lang)))
+        out.append("- " + t(lang, "pitch_serving", serving=(de.get("recommended") or {}).get("serving", "obt")))
+    else:
+        out.append("- " + t(lang, "pitch_rows", rows=fmt.count(m["rows"], lang), columns=m["columns"], source=m["source_file"]))
+    return out + ["", _note("pipeline", t(lang, "pitch_note_pipeline")), "", "---", ""]
+
+
+def pitch_md(res: dict, de: dict | None = None, brief: dict | None = None, lang: str = "vi") -> str:
+    """Marp deck for the 7-minute pitch in one language (`pitch.md` VI, `pitch.en.md` EN), filled with this dataset's
+    engine numbers (template: slides/pitch.md).
     Arc: decision question (brief) → pipeline → 3 insights → demo → decision → impact → limitations → close."""
     m = res["meta"]
     tgt = m["target"]
-    frame = _decision_frame(res, brief)
+    frame = _decision_frame(res, brief, lang)
     recs = res["recommendations"]
     ins = _linked_first(res["insights"], recs)[:3]
     wi = next((i for i in res["insights"] if i["type"] == "what_if"), None)
-    q = None
-    if de and de.get("quality"):
-        q = de["quality"].get(de.get("primary")) or next(iter(de["quality"].values()))
-    prov = (de or {}).get("provenance") or []
     out = ["---", "marp: true", "paginate: true", f"title: VietLeap 2026 — {tgt}", "---", "",
-           "<!-- _class: lead -->", f"# Điều gì quyết định {tgt}?", f"### Từ {m['rows']:,} bản ghi đến một quyết định".replace(",", "."), "", "Đội ____ · VietLeap 2026 · From Data to Decision", "",
-           f"<!-- {PITCH_TIMING['hook']} · Hook: một con số từ dữ liệu + vì sao quan trọng bây giờ. -->", "", "---", ""]
-    out += _pitch_question(frame)
-    out += ["## 1 · Dữ liệu & pipeline", ""]
-    if prov:
-        out.append(f"- **Ingestion:** {len(prov)} nguồn ({', '.join(sorted({p_.get('kind', '?') for p_ in prov}))}), có provenance")
-        out.append(f"- **Storage:** DuckDB bronze/silver/gold · **Transform:** làm sạch + OBT/Star/Snowflake/Data Vault")
-        if q:
-            out.append(f"- **Chất lượng:** điểm {q['score_before']} → {q['score_after']} (missing, duplicate, outlier gắn cờ)")
-        out.append(f"- **Serving:** dashboard + AI Analyst trên bảng gold ({(de.get('recommended') or {}).get('serving', 'obt')})")
-    else:
-        out.append(f"- {m['rows']:,} dòng".replace(",", ".") + f" × {m['columns']} cột · nguồn: {m['source_file']}")
-    out += ["", f"<!-- {PITCH_TIMING['pipeline']} · Một slide duy nhất: 4 giai đoạn workshop; vì sao OBT phục vụ dashboard, Star để trình bày. -->", "", "---", ""]
+           "<!-- _class: lead -->", f"# {t(lang, 'pitch_h1', target=tgt)}", f"### {t(lang, 'pitch_h3', rows=fmt.count(m['rows'], lang))}", "",
+           t(lang, "pitch_team"), "", _note("hook", t(lang, "pitch_note_hook")), "", "---", ""]
+    out += _pitch_question(frame, lang)
+    out += _pitch_pipeline(res, de, lang)
     for k, i in enumerate(ins, 1):
-        weak = " · *bằng chứng yếu*" if _is_weak(i) else ""
-        out += [f"## 2.{k} · {i['title_vi']}", "", i["sentence_vi"], "", f"*Kiểm định: {i['test']} · {fmt.p(i['p_value'])}*{weak}", ""]
+        weak = t(lang, "pitch_weak") if _is_weak(i) else ""
+        out += [f"## 2.{k} · {text_field(i, 'title', lang)}", "", text_field(i, "sentence", lang), "",
+                t(lang, "pitch_test", test=i["test"], p=fmt.p(i["p_value"], lang)) + weak, ""]
         if i.get("chart_png"):
             out += [f"![w:900]({i['chart_png']})", ""]
-        out += [f"<!-- {PITCH_TIMING['insights']} · Mỗi insight ~40 giây: con số → ý nghĩa cho quyết định → lưu ý. -->", "", "---", ""]
-    out += ["<!-- _class: lead -->", "## Demo: Câu chuyện insight + Hỏi AI", "", "Dashboard → nút **Câu chuyện** → bấm **Hỏi AI** vào một biểu đồ", "",
-            f"<!-- {PITCH_TIMING['demo']} · Nếu mạng lỗi: chế độ offline vẫn chạy; có video dự phòng. -->", "", "---", ""]
+        out += [_note("insights", t(lang, "pitch_note_insight")), "", "---", ""]
+    out += ["<!-- _class: lead -->", f"## {t(lang, 'pitch_demo_heading')}", "", t(lang, "pitch_demo_line"), "",
+            _note("demo", t(lang, "pitch_note_demo")), "", "---", ""]
     head, _ = _headline_rec(res)
     r0 = head or (recs[0] if recs else None)
     if r0:
-        weak = "" if head else " *(bằng chứng yếu — thí điểm trước khi mở rộng)*"
-        out += ["## 3 · Quyết định đề xuất", "", f"**{r0['now_what_vi']}**{weak}", "", f"- Vì sao: {r0['so_what_vi']}", f"- Tác động ước tính: {r0['impact_vi']}",
-                f"- Ai thực hiện: {_md_text(frame['who'])} · Ở đâu: {_md_text(frame['where'])} · KPI theo dõi: {_md_text(frame['kpi'])}", "",
-                f"<!-- {PITCH_TIMING['decision']} · Ai làm gì, ở đâu, đo bằng KPI nào. -->", "", "---", ""]
-    out += ["## 4 · Tác động", ""]
-    out += [wi["sentence_vi"] if wi else "Chưa có đòn bẩy số ổn định — tác động dựa trên khoảng cách giữa các phân khúc.", "",
-            f"<!-- {PITCH_TIMING['decision']} · What-if lượng hoá khuyến nghị; dùng trang Drivers & What-if. -->", "", "---", "",
-            "## 5 · Hạn chế", ""] + [f"- {c}" for c in _limitations(res, de, None, 4)] + [
-            "", f"<!-- {PITCH_TIMING['limits']} · Chủ động nói trước khi giám khảo hỏi (liên đới ≠ nhân quả, 63→34 tỉnh). -->", "", "---", "",
-            "<!-- _class: lead -->", "## Kết", "", f"**{r0['now_what_vi']}**" if r0 else "Cảm ơn — xin mời câu hỏi.", "",
-            f"<!-- {PITCH_TIMING['close']} · Nhắc lại một câu khuyến nghị + cảm ơn. -->", ""]
+        weak = "" if head else t(lang, "pitch_weak_rec")
+        out += [f"## {t(lang, 'pitch_decision_heading')}", "", f"**{text_field(r0, 'now_what', lang)}**{weak}", "",
+                "- " + t(lang, "pitch_why", text=text_field(r0, "so_what", lang)),
+                "- " + t(lang, "pitch_impact", text=text_field(r0, "impact", lang)),
+                "- " + t(lang, "pitch_owner", who=_md_text(frame["who"]), where=_md_text(frame["where"]), kpi=_md_text(frame["kpi"])), "",
+                _note("decision", t(lang, "pitch_note_decision")), "", "---", ""]
+    out += [f"## {t(lang, 'pitch_impact_heading')}", "",
+            text_field(wi, "sentence", lang) if wi else t(lang, "pitch_no_lever"), "",
+            _note("decision", t(lang, "pitch_note_whatif")), "", "---", "",
+            f"## {t(lang, 'pitch_limits_heading')}", ""] + [f"- {c}" for c in _limitations(res, de, None, 4, lang)] + [
+            "", _note("limits", t(lang, "pitch_note_limits")), "", "---", "",
+            "<!-- _class: lead -->", f"## {t(lang, 'pitch_close_heading')}", "",
+            f"**{text_field(r0, 'now_what', lang)}**" if r0 else t(lang, "pitch_thanks"), "",
+            _note("close", t(lang, "pitch_note_close")), ""]
     return "\n".join(out)
 
 
@@ -719,12 +755,31 @@ def static_dashboard(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path
     return str(path)
 
 
-def build_all(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path) -> dict:
+def _write_language_outputs(res: dict, out: Path, pngs: dict, de: dict | None, brief: dict | None, lang: str) -> dict:
+    """FR-303 file matrix: one deck + one pitch per requested language; outputs of a language not requested this run
+    are removed so results.json.files, the export endpoint and the web toggle never point at a stale file."""
+    files = {}
+    langs = langs_for(lang)
+    for one in LANGS:
+        deck, pitch = out / DECK_FILES[one], out / PITCH_FILES[one]
+        if one not in langs:
+            deck.unlink(missing_ok=True)
+            pitch.unlink(missing_ok=True)
+            continue
+        files[DECK_KEYS[one]] = os.path.relpath(build_deck(res, out, pngs, de, brief, one), out)
+        pitch.write_text(pitch_md(res, de, brief, one), encoding="utf-8")
+        files[PITCH_KEYS[one]] = PITCH_FILES[one]
+    return files
+
+
+def build_all(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path, lang: str = DEFAULT_REPORT_LANG) -> dict:
+    """Charts, deck(s), pitch(es), executive summary and static dashboard; `lang` = vi | en | both (decks/pitches)."""
+    langs_for(lang)  # validate before any work
     files = {}
     pngs = {}
     todo = [(i, figure(i["chart"]), out / "charts" / f"{i['id']}_{i['type']}.png") for i in res["insights"] if i.get("chart")]
     try:  # one browser session for all charts (much faster than one per chart)
-        pio.write_images([t[1] for t in todo], [str(t[2]) for t in todo], width=1000, height=560, scale=2)
+        pio.write_images([t_[1] for t_ in todo], [str(t_[2]) for t_ in todo], width=1000, height=560, scale=2)
         ok = True
     except Exception as e:
         print(f"[warn] PNG export failed ({type(e).__name__}: {str(e)[:200]}); set BROWSER_PATH or run tools/setup_env.sh")
@@ -737,14 +792,12 @@ def build_all(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path) -> di
     de, brief = load_de(out), load_brief(out, res["meta"]["target"])
     if brief and brief["stale"]:
         print(f"[warn] brief.json target differs from the analysed target '{res['meta']['target']}' — slide 2 carries a footnote")
-    files["deck"] = os.path.relpath(build_deck(res, out, pngs, de, brief), out)
+    files.update(_write_language_outputs(res, out, pngs, de, brief, lang))
     md = summary_md(res)
     (out / "executive_summary.md").write_text(md, encoding="utf-8")
     hp = out / "executive_summary.html"
     hp.write_text(md_to_html(md, "Executive summary"), encoding="utf-8")
     files["summary_md"] = "executive_summary.md"
-    (out / "pitch.md").write_text(pitch_md(res, de, brief), encoding="utf-8")
-    files["pitch_md"] = "pitch.md"
     pdf = html_to_pdf(hp, out / "executive_summary.pdf")
     files["summary_pdf"] = "executive_summary.pdf" if pdf else None
     files["dashboard_html"] = os.path.relpath(static_dashboard(res, df, whatif, out), out)

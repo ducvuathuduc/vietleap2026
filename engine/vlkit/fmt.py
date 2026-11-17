@@ -23,7 +23,7 @@ def num(v, col: str | None = None, lang: str = "en", digits: int = 3) -> str:
     v = float(v)
     a = abs(v)
     if col and ("pct" in col.lower() or col.endswith("%")):
-        return f"{v:.1f}%"
+        return fixed(v, 1, lang) + "%"
     units_en = [(1e12, "tn"), (1e9, "bn"), (1e6, "m"), (1e3, "k")]
     units_vi = [(1e12, " nghìn tỷ"), (1e9, " tỷ"), (1e6, " triệu"), (1e3, " nghìn")]
     money = _is_money(col)
@@ -40,6 +40,12 @@ def num(v, col: str | None = None, lang: str = "en", digits: int = 3) -> str:
         s = f"{v:.{digits}g}"
     else:
         s = f"{v:.2g}"
+    return _vi_decimal(s) if lang == "vi" else s
+
+
+def fixed(v, digits: int, lang: str = "en") -> str:
+    """Fixed-point number ('2.15' EN · '2,15' VI)."""
+    s = f"{v:.{digits}f}"
     return _vi_decimal(s) if lang == "vi" else s
 
 

@@ -55,6 +55,7 @@ class IngestIn(BaseModel):
     serve: bool = True
     mode: Literal["replace", "append", "incremental"] = Field(
         "replace", description="bronze load: replace | append | incremental (insert only rows whose _row_hash is new)")
+    lang: Literal["vi", "en", "both"] = Field("both", description="deck/pitch language(s) written when serve is true")
 
     @model_validator(mode="after")
     def _consistent(self):
@@ -114,7 +115,8 @@ def ingest(body: IngestIn):
             wh = Warehouse()
             try:
                 s = run_flow(body.dataset, sources, out_root=get_settings().out_dir, wh=wh, impute=body.impute,
-                             primary=body.primary, serve=body.serve, mode=body.mode)
+                             primary=body.primary, serve=body.serve, mode=body.mode,
+                             serve_kwargs={"lang": body.lang})
                 job["summary"] = {k: s[k] for k in ("dataset", "run_id", "timings", "steps", "gold", "quality", "load")}
                 job["status"] = "done"
             except Exception as e:

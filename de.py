@@ -3,6 +3,7 @@
 
   python de.py file  <path> [--name DS] [--impute median] [--serve] [--mode replace|append|incremental]  one file (csv/xlsx/json/parquet/zip)
   python de.py run   <sources.yaml> [--impute median] [--serve]          many sources (file/api/sql/scrape/social/cv)
+                     (file|run) --lang vi|en|both                        deck/pitch language(s) with --serve (default both)
   python de.py tables                                                    list warehouse tables
   python de.py sql   "SELECT ..."                                        read-only query on the warehouse
 """
@@ -15,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent / "engine"))
 from vlkit.de.flow import run_file, run_flow  # noqa: E402
 from vlkit.de.sources import load_sources  # noqa: E402
 from vlkit.de.warehouse import Warehouse  # noqa: E402
+from vlkit.i18n import DEFAULT_REPORT_LANG, REPORT_LANGS  # noqa: E402
 
 
 def _print(s):
@@ -71,13 +73,14 @@ def main(argv=None):
         p.add_argument("--target"); p.add_argument("--out")
         p.add_argument("--mode", choices=["replace", "append", "incremental"], default="replace",
                        help="bronze load: replace (default) | append | incremental (skip rows whose _row_hash exists)")
+        p.add_argument("--lang", choices=REPORT_LANGS, default=DEFAULT_REPORT_LANG, help="deck/pitch language(s) with --serve")
     sub.add_parser("tables")
     q = sub.add_parser("sql"); q.add_argument("query"); q.add_argument("--limit", type=int, default=50)
     b = sub.add_parser("brief", help="đề bài (.md/.txt) → brief.json"); b.add_argument("path")
     b.add_argument("--data", help="dataset file to resolve the target column against"); b.add_argument("--out", help="write brief.json here")
     a = ap.parse_args(argv)
     if a.cmd in ("file", "run"):
-        sk = {"target": a.target} if a.target else {}
+        sk = {"lang": a.lang, **({"target": a.target} if a.target else {})}
         if a.cmd == "file":
             s = run_file(a.path, dataset=a.name, impute=a.impute, serve=a.serve, serve_kwargs=sk, out_root=a.out,
                          mode=a.mode)

@@ -143,3 +143,9 @@ def test_pipeline_writes_caveats_vi(tmp_path):
     assert len(res["caveats_vi"]) == len(res["caveats"])
     for en, vi in zip(res["caveats"], res["caveats_vi"]):
         assert numbers(en, "en") == numbers(vi, "vi")
+
+
+def test_unknown_report_language_rejected_before_work(tmp_path):
+    from vlkit import pipeline
+    with pytest.raises(ValueError):
+        pipeline.run(tmp_path / "does_not_exist.csv", out_root=tmp_path, lang="fr")

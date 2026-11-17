@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from . import domains, fmt, insights as ins_mod, stats
+from .i18n import DEFAULT_REPORT_LANG, langs_for
 from .decision import recommend
 from .loader import load_and_clean
 from .profile import caveats as mk_caveats, profile as mk_profile
@@ -118,7 +119,9 @@ def build_kpis(df, target, time_col, ts, prof, insights, domain_info):
 
 def run(path: str | Path, out_root: str | Path = "out", target: str | None = None, time_col: str | None = None,
         geo_col: str | None = None, domain: str = "auto", sheet: str | None = None, transpose: bool | None = None,
-        name: str | None = None, reports: bool = True, max_insights: int = 12) -> dict:
+        name: str | None = None, reports: bool = True, max_insights: int = 12, lang: str = DEFAULT_REPORT_LANG) -> dict:
+    """`lang` (vi | en | both) selects the deck/pitch languages written when `reports` is on (feature 003)."""
+    langs_for(lang)  # reject an unknown language before the expensive steps
     t0 = time.time()
     timings = {}
     path = Path(path)
@@ -187,7 +190,7 @@ def run(path: str | Path, out_root: str | Path = "out", target: str | None = Non
     if reports:
         t3 = time.time()
         from . import report
-        files = report.build_all(results, df, whatif, out)
+        files = report.build_all(results, df, whatif, out, lang=lang)
         results["files"] = files
         timings["reports_s"] = round(time.time() - t3, 2)
     timings["total_s"] = round(time.time() - t0, 2)

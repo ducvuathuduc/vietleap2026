@@ -23,8 +23,8 @@ def recommend(insights: list[dict], domain: str, target: str, drivers: dict | No
             rec = {
                 "so_what_en": f"{target} is {ev['top_vs_bottom']['median_ratio']}× higher in {top['group']} than in {bot['group']} — {by} is a primary lens for {aud_en}.",
                 "now_what_en": f"Prioritise/price by {by}: benchmark each {by} against the overall median and target the lowest-ranked groups (e.g. {bot['group']}) with a focused programme; validate with the {by}-level table.",
-                "so_what_vi": f"{target} ở {top['group']} cao gấp {ev['top_vs_bottom']['median_ratio']} lần {bot['group']} — {by} là lăng kính chính cho {aud_vi}.",
-                "now_what_vi": f"Phân bổ ưu tiên theo {by}: so sánh từng nhóm với trung vị chung, tập trung chương trình hỗ trợ/định giá cho nhóm thấp nhất (vd. {bot['group']}).",
+                "so_what_vi": f"{target} ở {top['group']} cao gấp {fmt.dec(ev['top_vs_bottom']['median_ratio'], 'vi')} lần {bot['group']} — {by} là lăng kính chính cho {aud_vi}.",
+                "now_what_vi": f"Phân bổ ưu tiên theo {by}: so sánh từng nhóm với trung vị chung, tập trung chương trình hỗ trợ/định giá cho nhóm thấp nhất (vd. {bot['group']}); kiểm chứng bằng bảng theo {by}.",
                 "impact_en": f"Closing the gap of the lowest group to the overall median ≈ {fmt.pct(gap)} for that group." if gap is not None else "Impact depends on group size.",
                 "impact_vi": f"Kéo nhóm thấp nhất về trung vị chung ≈ {fmt.pct(gap, 'vi')} cho nhóm đó." if gap is not None else "Tác động phụ thuộc quy mô nhóm.",
             }
@@ -33,7 +33,7 @@ def recommend(insights: list[dict], domain: str, target: str, drivers: dict | No
             rec = {
                 "so_what_en": f"{target} follows a measurable trajectory ({ins['sentence_en'].split(';')[0]}).",
                 "now_what_en": "Plan budgets/prices on the forecast range rather than the last value; set an early-warning threshold at the 80% band and review quarterly.",
-                "so_what_vi": f"{target} có quỹ đạo rõ ràng theo thời gian.",
+                "so_what_vi": f"{target} có quỹ đạo rõ ràng theo thời gian ({ins['sentence_vi'].split(';')[0]}).",
                 "now_what_vi": "Lập kế hoạch theo khoảng dự báo thay vì giá trị kỳ gần nhất; đặt ngưỡng cảnh báo sớm tại biên 80% và rà soát hàng quý.",
                 "impact_en": (f"Next-period range {fmt.num(fc['lower80'][0], target)}–{fmt.num(fc['upper80'][0], target)}." if fc else "Reduces planning error vs naive extrapolation."),
                 "impact_vi": (f"Khoảng kỳ tới {fmt.num(fc['lower80'][0], target, 'vi')}–{fmt.num(fc['upper80'][0], target, 'vi')}." if fc else "Giảm sai số kế hoạch."),
@@ -45,13 +45,13 @@ def recommend(insights: list[dict], domain: str, target: str, drivers: dict | No
                 "so_what_vi": f"{ev['feature']} là đòn bẩy ổn định nhất gắn với {target}.",
                 "now_what_vi": f"Xem {ev['feature']} là đòn bẩy/chuẩn so sánh: ước lượng kịch bản bằng công cụ what-if trước khi phân bổ nguồn lực, rồi kiểm chứng bằng trường hợp tương tự hoặc thí điểm.",
                 "impact_en": f"+10% {ev['feature']} ↔ {fmt.pct(ev['target_change_pct'])} {target} (90% CI {fmt.pct(ev['ci90_pct'][0])} to {fmt.pct(ev['ci90_pct'][1])}); association, test with a pilot.",
-                "impact_vi": f"+10% {ev['feature']} ↔ {fmt.pct(ev['target_change_pct'], 'vi')} {target} (KTC 90% {fmt.pct(ev['ci90_pct'][0], 'vi')} đến {fmt.pct(ev['ci90_pct'][1], 'vi')}).",
+                "impact_vi": f"+10% {ev['feature']} ↔ {fmt.pct(ev['target_change_pct'], 'vi')} {target} (KTC 90% {fmt.pct(ev['ci90_pct'][0], 'vi')} đến {fmt.pct(ev['ci90_pct'][1], 'vi')}); là liên đới, cần kiểm chứng bằng thí điểm.",
             }
         elif t == "concentration":
             rec = {
                 "so_what_en": f"Activity is concentrated: top 20% hold {ev['top20_share'] * 100:.0f}% (Gini {ev['gini']:.2f}).",
                 "now_what_en": "Treat the top units as a separate tier (dedicated monitoring/resources) and design a different, lighter-touch approach for the long tail.",
-                "so_what_vi": f"Mức tập trung cao: 20% đứng đầu chiếm {ev['top20_share'] * 100:.0f}%.",
+                "so_what_vi": f"Mức tập trung cao: 20% đứng đầu chiếm {ev['top20_share'] * 100:.0f}% (Gini {fmt.fixed(ev['gini'], 2, 'vi')}).",
                 "now_what_vi": "Tách nhóm dẫn đầu thành tầng riêng (giám sát/nguồn lực riêng), thiết kế cách tiếp cận gọn nhẹ cho phần đuôi dài.",
                 "impact_en": "Focusing on the top quintile covers the majority of the total with a fraction of the effort.",
                 "impact_vi": "Tập trung vào nhóm 20% đầu bao phủ phần lớn tổng giá trị với ít nguồn lực.",
@@ -61,7 +61,7 @@ def recommend(insights: list[dict], domain: str, target: str, drivers: dict | No
             rec = {
                 "so_what_en": f"{', '.join(top)} carry most of the predictive signal for {target} (CV R² {ins['value']:.2f}).",
                 "now_what_en": f"Use these variables as the KPI set to monitor {target}; collect better data on them first.",
-                "so_what_vi": f"{', '.join(top)} mang phần lớn tín hiệu dự báo {target}.",
+                "so_what_vi": f"{', '.join(top)} mang phần lớn tín hiệu dự báo {target} (R² CV {fmt.fixed(ins['value'], 2, 'vi')}).",
                 "now_what_vi": f"Dùng các biến này làm bộ KPI theo dõi {target}; ưu tiên cải thiện chất lượng dữ liệu của chúng.",
                 "impact_en": "Better targeting of monitoring; not a causal guarantee.",
                 "impact_vi": "Giám sát đúng trọng tâm; không phải bảo đảm nhân quả.",

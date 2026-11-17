@@ -81,3 +81,60 @@ def test_openapi_in_sync_with_app():
     assert set(committed["paths"]) == set(live["paths"]), "run: python tools/export_openapi.py"
     for p, ops in live["paths"].items():
         assert set(ops) == set(committed["paths"][p]), f"{p}: methods changed — run tools/export_openapi.py"
+
+
+# ----------------------------------------------------------------------------- feature 003: report language
+
+LANG_CONTRACT = Path(__file__).resolve().parents[1] / "specs" / "003-bilingual-deck" / "contracts" / "lang.openapi.yaml"
+
+
+@pytest.fixture()
+def lang_client(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setenv("KIT_OUT_DIR", str(tmp_path / "out"))
+    d = tmp_path / "out" / "ds"
+    d.mkdir(parents=True)
+    (d / "results.json").write_text(json.dumps({"files": {"deck_vi": "deck.vi.pptx", "pitch_en": "pitch.en.md"}}), encoding="utf-8")
+    (d / "deck.vi.pptx").write_bytes(b"PK\x03\x04 vi deck")
+    (d / "pitch.en.md").write_text("# pitch", encoding="utf-8")
+    from api.main import app
+    from api.store import Store, get_store
+    app.dependency_overrides[get_store] = lambda: Store(tmp_path / "out")  # the app-wide store is a process singleton
+    yield TestClient(app)
+    app.dependency_overrides.pop(get_store, None)
+
+
+def test_export_kinds_match_lang_contract():
+    import yaml
+
+    from api.routes.datasets import EXPORTS
+    from vlkit import report
+    doc = yaml.safe_load(LANG_CONTRACT.read_text(encoding="utf-8"))
+    assert set(doc["components"]["schemas"]["ExportKind"]["enum"]) == set(EXPORTS)
+    assert doc["components"]["schemas"]["ReportLang"]["enum"] == ["vi", "en", "both"]
+    for lang in ("en", "vi"):  # export kind → the file the report writes for that language
+        assert EXPORTS[report.DECK_KEYS[lang]][0] == report.DECK_FILES[lang]
+        assert EXPORTS[report.PITCH_KEYS[lang]][0] == report.PITCH_FILES[lang]
+
+
+def test_language_exports_served_and_guarded(lang_client):
+    c = lang_client
+    r = c.get("/api/datasets/ds/files/deck_vi")
+    assert r.status_code == 200 and "presentationml" in r.headers["content-type"]
+    r = c.get("/api/datasets/ds/files/pitch_en")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/markdown")
+    assert c.get("/api/datasets/ds/files/deck").status_code == 404        # not generated in this language
+    assert c.get("/api/datasets/ds/files/pitch_fr").status_code == 404     # allowlist only
+    assert c.get("/api/datasets/ds/files/..%2Fresults").status_code == 404
+    assert c.get("/api/datasets/..%2F..%2Fetc/files/deck_vi").status_code == 404
+
+
+def test_lang_is_validated_at_the_edge(lang_client, tmp_path, monkeypatch):
+    monkeypatch.setenv("KIT_UPLOAD_DIR", str(tmp_path / "up"))
+    c = lang_client
+    r = c.post("/api/datasets", files={"file": ("x.csv", b"a,b\n1,2\n", "text/csv")}, data={"lang": "fr"})
+    assert r.status_code == 422 and not list((tmp_path / "up").glob("*"))
+    assert any("lang" in e["loc"] for e in r.json()["detail"])
+    body = {"dataset": "d", "sources": [{"name": "s", "kind": "file", "uri": "data/practice/x.csv"}], "lang": "de"}
+    r = c.post("/api/ingest", json=body)
+    assert r.status_code == 422 and any("lang" in e["loc"] for e in r.json()["detail"])  # rejected before any job starts
