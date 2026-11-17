@@ -17,6 +17,7 @@
                 "default": {"$ref": "#/$defs/aggFn"},
                 "columns": {"type": "object", "additionalProperties": {"$ref": "#/$defs/aggFn"}}
               },
+              "required": ["default"],
               "additionalProperties": false
             }
           ]
@@ -36,8 +37,8 @@
   "properties": {
     "post_sql": {
       "type": "array",
-      "description": "CLI/YAML only (rejected by POST /api/ingest). Each item must match ^CREATE OR REPLACE VIEW gold\\.\\w+ AS (SELECT|WITH)",
-      "items": {"type": "string", "pattern": "^CREATE OR REPLACE VIEW gold\\.\\w+ AS (SELECT|WITH)"}
+      "description": "CLI/YAML only (rejected by POST /api/ingest). One warehouse-only view definition per item.",
+      "items": {"type": "string", "pattern": "^\\s*CREATE\\s+OR\\s+REPLACE\\s+VIEW\\s+gold\\.v_[a-z0-9_]+\\s+AS\\s+(SELECT|WITH)\\b"}
     }
   }
 }

@@ -25,7 +25,9 @@ Per-source YAML options (``conform:`` next to ``options:``):
     conform: {where: "iso3 = 'VNM'", agg: mean, geo_level: "2025", province: "Hồ Chí Minh"}
 
 ``where`` filters the source before it is joined (SQL predicate on its columns, read-only), ``agg``
-(mean|sum|min|max|first) aggregates a source that has several rows per join key, ``geo_level: 2025`` says
+(mean|sum|min|max|first) aggregates a source that has several rows per join key. A mapping can set
+``agg: {default: sum, columns: {rank: min}}`` and ``ratios: {share: [revenue, expenditure]}`` computes
+ratios from the sums of the two components. ``geo_level: 2025`` says
 its province names are post-merger (34) units so the join happens on province_2025, ``province`` gives the
 province of a district-level source that has no province column.
 """
@@ -383,7 +385,8 @@ FROM {S(tk)} s {' '.join(joins)}""")
         attrs = [c["name"] for c in wh.columns(facts[gr[0].table]) if not c["name"].startswith("_") and c["name"] != "fact_id"
                  and not c["name"].endswith("_key") and c["name"] not in {tk.cols.get(t) for tk in gr for t in tk.cols}
                  and not c["name"].endswith(("__province", "__province_2025", "__district"))][:MAX_JOIN_COLS]
-        agg = AGGS.get(str(conf.get("agg", "")).lower())
+        num = _numeric_cols(wh, facts[gr[0].table], attrs)
+        agg, overrides, ratios = _aggregation(conf, num)
         if n_rows > n_keys and not agg:
             joins_diag.append({**d, "status": "grain_mismatch", "rows_filtered": int(n_rows), "distinct_keys": int(n_keys),
                                "rows_per_key": round(n_rows / max(n_keys, 1), 2), "matched_rows": 0, "match_pct": 0.0,
@@ -391,17 +394,23 @@ FROM {S(tk)} s {' '.join(joins)}""")
             continue
         alias = f"j{i}"
         pre = _slug(gr[0].short)
-        num = _numeric_cols(wh, facts[gr[0].table], attrs)
+        attrs = [a for a in attrs if a not in ratios]
         if n_rows > n_keys:   # aggregate to the join grain
             attrs = [a for a in attrs if a in num]
-            inner = f"SELECT {', '.join(on_cols)}, " + ", ".join(f"{agg}({ident(a)}) AS {ident(a)}" for a in attrs) + \
-                    f" FROM ({src_sql}) z GROUP BY {', '.join(on_cols)}" if attrs else f"SELECT DISTINCT {', '.join(on_cols)} FROM ({src_sql}) z"
+            select = [f"{overrides.get(a, agg)}({ident(a)}) AS {ident(a)}" for a in attrs]
+            select += [f"sum({ident(n)}) / nullif(sum({ident(d)}), 0) AS {ident(r)}" for r, (n, d) in ratios.items()]
+            inner = f"SELECT {', '.join(on_cols + select)} FROM ({src_sql}) z GROUP BY {', '.join(on_cols)}"
         else:
-            inner = f"SELECT {', '.join(on_cols + [ident(a) for a in attrs])} FROM ({src_sql}) z WHERE {' AND '.join(f'{c} IS NOT NULL' for c in on_cols)}"
+            select = [ident(a) for a in attrs]
+            select += [f"{ident(n)} / nullif({ident(d)}, 0) AS {ident(r)}" for r, (n, d) in ratios.items()]
+            inner = f"SELECT {', '.join(on_cols + select)} FROM ({src_sql}) z WHERE {' AND '.join(f'{c} IS NOT NULL' for c in on_cols)}"
+        attrs.extend(ratios)
+        rules = [agg, *(f"{a}={func}" for a, func in overrides.items())] if n_rows > n_keys else []
+        rules += [f"{r}=Σ{n}/Σ{d}" for r, (n, d) in ratios.items()]
         join_sql.append(f"LEFT JOIN ({inner}) {alias} ON " + " AND ".join(f"b.{c} = {alias}.{c}" for c in on_cols))
         extra_sel += [f"{alias}.{ident(a)} AS {ident(pre + '__' + _slug(a))}" for a in attrs]
         extra_sel.append(f"{alias}.{on_cols[0]} IS NOT NULL AS {ident('_match_' + pre)}")
-        joins_diag.append({**d, "status": "joined", "aggregated": agg if n_rows > n_keys else None, "where": where,
+        joins_diag.append({**d, "status": "joined", "aggregated": "; ".join(rules) or None, "where": where,
                            "columns_added": len(attrs), "distinct_keys": int(n_keys), "_alias": alias, "_flag": f"_match_{pre}"})
 
     obt = T(f"obt_integrated_{ds}")
@@ -493,6 +502,27 @@ def _has_col(wh: Warehouse, fq: str, col: str) -> bool:
 def _numeric_cols(wh: Warehouse, fq: str, cols: list[str]) -> set[str]:
     num = ("TINYINT", "SMALLINT", "INTEGER", "BIGINT", "HUGEINT", "FLOAT", "DOUBLE", "DECIMAL", "REAL", "UBIGINT", "UINTEGER")
     return {c["name"] for c in wh.columns(fq) if c["name"] in cols and c["type"].split("(")[0].upper() in num}
+
+
+def _aggregation(conf: dict, numeric: set[str]) -> tuple[str | None, dict[str, str], dict[str, list[str]]]:
+    raw = conf.get("agg", "")
+    overrides = {}
+    if isinstance(raw, dict):
+        default = AGGS.get(str(raw.get("default", "")).lower())
+        if default is None:
+            raise ValueError("conform.agg.default must be a supported aggregation")
+        for column, name in raw.get("columns", {}).items():
+            func = AGGS.get(str(name).lower())
+            if column not in numeric or func is None:
+                raise ValueError(f"invalid conform.agg.columns rule: {column}={name}")
+            overrides[column] = func
+    else:
+        default = AGGS.get(str(raw).lower())
+    ratios = conf.get("ratios", {})
+    for name, parts in ratios.items():
+        if not isinstance(parts, list) or len(parts) != 2 or not all(part in numeric for part in parts):
+            raise ValueError(f"conform.ratios.{name} requires two numeric columns, got {parts!r}")
+    return default, overrides, ratios
 
 
 def _has_geo(tk: TableKeys) -> bool:

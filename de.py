@@ -85,9 +85,9 @@ def main(argv=None):
             s = run_file(a.path, dataset=a.name, impute=a.impute, serve=a.serve, serve_kwargs=sk, out_root=a.out,
                          mode=a.mode)
         else:
-            ds, sources, keys = load_sources(a.yaml)
+            ds, sources, keys, post_sql = load_sources(a.yaml, with_post_sql=True)
             s = run_flow(ds, sources, impute=a.impute, serve=a.serve, primary=a.primary, serve_kwargs=sk, out_root=a.out,
-                         keys=keys, mode=a.mode)
+                         keys=keys, mode=a.mode, post_sql=post_sql)
         _print(s)
     elif a.cmd == "brief":
         _brief(a)

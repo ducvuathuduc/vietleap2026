@@ -21,7 +21,7 @@ from .connectors import ingest
 from .lineage import lineage_graph, lineage_mermaid
 from .modeling import build_models, erd
 from .quality import quality_step
-from .sources import Source, now_iso
+from .sources import Source, now_iso, validate_post_sql
 from .warehouse import KIT, Warehouse, ident
 
 
@@ -36,13 +36,15 @@ def _dump(obj, p: Path):
 
 def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = None, wh: Warehouse | None = None,
              impute: str | None = None, primary: str | None = None, serve: bool = False,
-             serve_kwargs: dict | None = None, keys: dict | None = None, mode: str = "replace") -> dict:
+             serve_kwargs: dict | None = None, keys: dict | None = None, mode: str = "replace",
+             post_sql: list[str] | None = None) -> dict:
     """mode: replace | append | incremental — how bronze tables are loaded (see Warehouse.write_bronze).
     Silver and gold are always rebuilt from the full bronze table: de-duplication, outlier fences and models need
     every row, and a re-run that inserted nothing still yields identical silver/gold."""
     from .warehouse import LOAD_MODES
     if mode not in LOAD_MODES:
         raise ValueError(f"mode must be one of {LOAD_MODES}")
+    views = validate_post_sql(post_sql if post_sql is not None else [])
     ds = slugify(dataset)
     out = Path(out_root or KIT / "out") / ds
     out.mkdir(parents=True, exist_ok=True)
@@ -142,6 +144,16 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
                 steps.append({"step": "conform", "status": "ok", "shared_keys": c["shared_keys"]})
         timings["conform"] = round(time.time() - t0, 2)
 
+        if views:
+            wh.con.begin()
+            try:
+                for _, statement in views:
+                    wh.con.execute(statement)
+                wh.con.commit()
+            except Exception:
+                wh.con.rollback()
+                raise
+
         summary = {
             "dataset": ds, "run_id": run_id, "finished_at": now_iso(), "timings": timings, "steps": steps,
             "bronze": bronze, "silver": silver, "primary": main,
@@ -155,6 +167,8 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             "load": {"mode": mode, "inserted": sum(v["inserted"] for v in load.values()),
                      "skipped": sum(v["skipped"] for v in load.values()), "tables": load, "silver": load_silver},
         }
+        if views:
+            summary["views"] = [name for name, _ in views]
         # written before serving so the deck/report built by the insight engine can show pipeline, model,
         # quality and provenance slides; rewritten below with serving timings + final lineage
         out.mkdir(parents=True, exist_ok=True)

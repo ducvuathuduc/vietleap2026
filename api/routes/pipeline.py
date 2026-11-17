@@ -57,6 +57,13 @@ class IngestIn(BaseModel):
         "replace", description="bronze load: replace | append | incremental (insert only rows whose _row_hash is new)")
     lang: Literal["vi", "en", "both"] = Field("both", description="deck/pitch language(s) written when serve is true")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _no_post_sql(cls, data):
+        if isinstance(data, dict) and "post_sql" in data:
+            raise ValueError("post_sql is only available in trusted CLI recipes")
+        return data
+
     @model_validator(mode="after")
     def _consistent(self):
         if not self.dataset.strip():

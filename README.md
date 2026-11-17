@@ -137,6 +137,10 @@ python tools/export_openapi.py
 `charts/*.png`, `deck.pptx` / `deck.vi.pptx`, `pitch.md` / `pitch.en.md`, `executive_summary.{md,html,pdf}`, `dashboard.html`.
 Dashboard: **Đề bài** → **Upload** → **Pipeline / Chất lượng / Mô hình** → **Insight / Drivers & What-if / Phân khúc** → **Hỏi AI** → **Quyết định** → **Exports** (chọn Tiếng Việt / English).
 
+Recipe nhiều nguồn có thể đặt `conform.agg` theo từng cột, ví dụ `{default: sum, columns: {rank: min}}`,
+và `conform.ratios: {tu_chu: [thu, chi]}` để tính tỷ lệ từ tổng thu và tổng chi sau khi ghép tỉnh.
+`post_sql` trong YAML tin cậy của CLI cho phép tạo view `gold.v_*` từ bảng warehouse sau bước conformed.
+
 ## Cấu trúc thư mục
 
 ```

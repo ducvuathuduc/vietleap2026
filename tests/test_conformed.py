@@ -207,3 +207,69 @@ def test_api_conformed_endpoint(wh, tmp_path, kit_root, monkeypatch):
     m = c.get(f"/api/datasets/{ds}/models").json()
     assert m["keys"]["shared"] == body["shared_keys"] and m["keys"]["dims"] == body["dims"]
     assert "conformed" in m["models"] and "conformed" in m["sql"]
+
+
+def test_agg_mapping_and_ratio_recompute(wh, tmp_path):
+    """Feature 004 (T401): Hà Giang + Tuyên Quang merge into Tuyên Quang (NQ 202/2025) — additive columns are summed,
+    the ratio is Σnum/Σden (never the mean of the old ratios), per-column override works, string agg still works."""
+    from vlkit.de.conformed import new_province_names
+    from vlkit.de.flow import run_flow
+    from vlkit.de.sources import Source
+    new34 = sorted(new_province_names())
+    units = pd.DataFrame({"tinh thanh": new34, "dien tich": [100.0 + i for i in range(len(new34))]})
+    budget = pd.DataFrame({"tinh": ["Hà Giang", "Tuyên Quang", "Hà Nội"], "thu": [10.0, 30.0, 100.0],
+                           "chi": [40.0, 60.0, 50.0], "ty le tu chu": [0.25, 0.5, 2.0], "xep hang": [60.0, 40.0, 1.0]})
+    srcs = [Source("units34", "file", _csv(tmp_path, "units34", units)),
+            Source("budget", "file", _csv(tmp_path, "budget", budget),
+                   conform={"agg": {"default": "sum", "columns": {"xep hang": "min"}},
+                            "ratios": {"tu_chu": ["thu", "chi"]}})]
+    s = run_flow("pf", srcs, out_root=tmp_path / "out", wh=wh, primary="units34")
+    j = s["conformed"]["joins"][0]
+    assert j["status"] == "joined" and j["join_on"] == ["province_2025_key"]
+    assert j["aggregated"] == "sum; xep hang=min; tu_chu=Σthu/Σchi"
+    row = wh.sql("SELECT * FROM gold.obt_integrated_pf WHERE _geo_province = 'Tuyên Quang'").iloc[0]
+    assert row["budget__thu"] == 40.0 and row["budget__chi"] == 100.0 and row["budget__xep_hang"] == 40.0
+    assert row["budget__tu_chu"] == pytest.approx(0.4)            # Σ40/Σ100, not mean(0.25, 0.5) = 0.375
+    assert wh.sql("SELECT budget__tu_chu FROM gold.obt_integrated_pf WHERE _geo_province = 'Hà Nội'").iloc[0, 0] == 2.0
+    # a ratio naming a column the source does not have is an error, not a silent NULL
+    srcs[1].conform = {"agg": "sum", "ratios": {"x": ["thu", "khong co"]}}
+    s = run_flow("pf2", srcs, out_root=tmp_path / "out", wh=wh, primary="units34")
+    assert any(x["step"] == "conform" and "khong co" in x["error"] for x in s["steps"])
+    # the string form is unchanged
+    srcs[1].conform = {"agg": "max"}
+    s = run_flow("pf3", srcs, out_root=tmp_path / "out", wh=wh, primary="units34")
+    assert s["conformed"]["joins"][0]["aggregated"] == "max"
+    assert wh.sql("SELECT budget__thu FROM gold.obt_integrated_pf3 WHERE _geo_province = 'Tuyên Quang'").iloc[0, 0] == 30.0
+
+
+def test_post_sql_views_only(wh, tmp_path, kit_root):
+    """Feature 004 (T403): sources.yaml post_sql creates gold.v_* views only; anything else is rejected; the API
+    ingest model has no post_sql field."""
+    from vlkit.de.flow import run_flow
+    from vlkit.de.sources import load_sources, validate_post_sql
+    years = pd.DataFrame({"nam": [2022, 2023], "gdp": [10.0, 12.0]})
+    other = pd.DataFrame({"year": [2022, 2023], "cpi": [3.1, 3.4]})
+    y = tmp_path / "s.yaml"
+    y.write_text(f"""dataset: ps
+sources:
+  - {{name: macro, kind: file, uri: {_csv(tmp_path, "macro", years)}}}
+  - {{name: cpi, kind: file, uri: {_csv(tmp_path, "cpi", other)}}}
+post_sql:
+  - CREATE OR REPLACE VIEW gold.v_ps_growth AS WITH values_by_year AS (SELECT year_key, gdp FROM gold.obt_integrated_ps) SELECT * FROM values_by_year
+""", encoding="utf-8")
+    ds, srcs, keys, post = load_sources(y, with_post_sql=True)
+    s = run_flow(ds, srcs, out_root=tmp_path / "out", wh=wh, primary="macro", keys=keys, post_sql=post)
+    assert s["views"] == ["gold.v_ps_growth"]
+    assert len(wh.sql("SELECT * FROM gold.v_ps_growth")) == 2
+    for bad in ("DROP TABLE gold.obt_ps", "CREATE OR REPLACE VIEW silver.x AS SELECT 1",
+                "CREATE OR REPLACE VIEW gold.v AS SELECT 1",
+                "CREATE OR REPLACE VIEW gold.v_bad AS SELECT 1; DROP TABLE gold.obt_ps",
+                "CREATE OR REPLACE VIEW gold.v_bad AS SELECT * FROM read_csv('/etc/passwd')",
+                "CREATE OR REPLACE TABLE gold.v AS SELECT 1"):
+        with pytest.raises(PermissionError):
+            validate_post_sql([bad])
+    from api.routes.pipeline import IngestIn
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="post_sql"):
+        IngestIn(dataset="ps", sources=[{"name": "macro", "kind": "file", "uri": "macro.csv"}], post_sql=post)

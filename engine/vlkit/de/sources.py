@@ -26,6 +26,7 @@ A sources.yaml looks like:
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +37,10 @@ import yaml
 
 TZ = ZoneInfo("Asia/Saigon")
 KINDS = ("file", "api", "sql", "scrape", "social", "cv")
+_VIEW = re.compile(
+    r"^CREATE\s+OR\s+REPLACE\s+VIEW\s+(gold\.v_[a-z0-9_]+)\s+AS\s+((?:SELECT|WITH)\b.+)$",
+    re.I | re.S | re.ASCII,
+)
 
 
 @dataclass
@@ -82,8 +87,27 @@ def make_provenance(src: Source, frames: dict[str, pd.DataFrame], **extra) -> di
     }
 
 
-def load_sources(path: str | Path) -> tuple[str, list[Source], dict]:
-    """Returns (dataset_name, sources, keys)."""
+def validate_post_sql(statements: list[str]) -> list[tuple[str, str]]:
+    """Return validated (view name, statement) pairs for a trusted CLI recipe."""
+    from .warehouse import _FILE_ACCESS, _FORBIDDEN
+
+    if not isinstance(statements, list):
+        raise PermissionError("post_sql must be a list of view definitions")
+    views = []
+    for statement in statements:
+        sql = statement.strip().removesuffix(";").rstrip() if isinstance(statement, str) else ""
+        match = _VIEW.fullmatch(sql)
+        if not match or any(token in sql for token in (";", "--", "/*")):
+            raise PermissionError("post_sql only permits CREATE OR REPLACE VIEW gold.v_* AS SELECT or WITH")
+        name, query = match.groups()
+        if _FORBIDDEN.search(query) or _FILE_ACCESS.search(query):
+            raise PermissionError("post_sql views must query warehouse data only")
+        views.append((name.lower(), sql))
+    return views
+
+
+def load_sources(path: str | Path, *, with_post_sql: bool = False) -> tuple:
+    """Return (dataset_name, sources, keys), plus validated SQL when requested."""
     path = Path(path)
     spec = yaml.safe_load(path.read_text(encoding="utf-8"))
     base = path.parent
@@ -94,4 +118,8 @@ def load_sources(path: str | Path) -> tuple[str, list[Source], dict]:
             uri = str((base / uri).resolve())   # paths in sources.yaml are relative to the yaml file
         out.append(Source(name=s["name"], kind=s["kind"], uri=uri, options=s.get("options", {}) or {},
                           license_note=s.get("license", ""), conform=s.get("conform", {}) or {}))
-    return spec.get("dataset", path.stem), out, spec.get("keys", {}) or {}
+    recipe = (spec.get("dataset", path.stem), out, spec.get("keys", {}) or {})
+    if not with_post_sql:
+        return recipe
+    post_sql = validate_post_sql(spec.get("post_sql", []))
+    return (*recipe, [statement for _, statement in post_sql])

@@ -1,4 +1,7 @@
 """Security controls (docs/security/threat-model.md): read-only SQL that cannot touch the filesystem, timeouts, …"""
+import os
+import uuid
+
 import pandas as pd
 import pytest
 
@@ -143,13 +146,21 @@ def test_local_paths_confined(kit_root, tmp_path):
                 "data/../../../etc/hosts"):
         with pytest.raises(SourceRejected):
             guard_source(_src("file", bad))
-    link = kit_root / "data" / "_tmp_link_test"
+    link = kit_root / "data" / f"_tmp_link_{uuid.uuid4().hex}"
+    target = tmp_path / "outside.csv"
+    target.write_text("value\n1\n")
+    if os.name == "nt":
+        from _winapi import CreateJunction
+
+        CreateJunction(str(tmp_path), str(link))
+    else:
+        link.symlink_to(tmp_path, target_is_directory=True)
     try:
-        link.symlink_to("/etc")
+        assert (link / target.name).resolve() == target.resolve()
         with pytest.raises(SourceRejected):
-            guard_source(_src("file", str(link / "hostname")))
+            guard_source(_src("file", str(link / target.name)))
     finally:
-        link.unlink(missing_ok=True)
+        link.rmdir() if os.name == "nt" else link.unlink()
     with pytest.raises(SourceRejected):
         guard_source(_src("sql", "sqlite:////etc/some.db"))
     with pytest.raises(SourceRejected):
