@@ -54,3 +54,8 @@ As the **ST**, I want a PDF snapshot of Tổng quan, Pipeline, Insight, Quyết 
 ## Open questions
 - [NEEDS CLARIFICATION: submission format (file upload vs link, size limit) — organisers unpublished; bundle covers both.]
 - [NEEDS CLARIFICATION: whether `@marp-team/marp-cli` (MIT) should be added as a dev dependency or used via `npx` only on the contest laptop.]
+
+## Clarifications
+
+- Use a self-contained ZIP with a manifest while final submission rules are pending. The normal report includes both languages. The dialog can select either language.
+- Include Markdown pitch files. Marp PDF is optional and deferred. The command palette entry follows feature 005. Repeat the verified local export on a second machine during rehearsal.

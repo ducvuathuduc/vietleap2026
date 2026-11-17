@@ -17,7 +17,7 @@ Hours are single-developer estimates for the 2-CPU laptop, written 2026-11-16 (n
 | [003](003-bilingual-deck/) | Bilingual deck/pitch `--lang vi\|en\|both` | **P1** (risk R6) | ✅ done & pushed (i18n + caveats `74de518`, deck/pitch matrix + CLI/API `5aa4194`, web toggle `4e098e5`) | DE + ST | 4 | 002 (layout; strings can start in parallel) | T301–T312 |
 | [004](004-scenario-packs/) | Scenario packs: provincial public finance, listed firms, WDI VN vs ASEAN, energy/EV; dry-run checklist | **P1** (themes ~80% of likely briefs) | Recipes and four runs (`2cf9d34`, `ed2bd08`). Full provincial autonomy and WDI live data pending. | DE + RQ + AN | 7 | 001 | T401–T413 |
 | [012](012-contest-workflow/) | Offline contest command, dictionary/EDA, snapshots, S3 mirror and decision framing | **P1** | `d45b374`, offline WDI command verified | DE | — | 004 | T1201–T1206 |
-| [009](009-one-click-export/) | One-click "Xuất báo cáo" (deck + pitch + dashboard PDF + bundle) | **P1** (submission 21/11 13:00) | 🟡 | DE + ST | 5 | 002, 003 (007/008 optional) | T901–T911 |
+| [009](009-one-click-export/) | One-click "Xuất báo cáo" (deck + pitch + dashboard PDF + bundle) | **P1** (submission 21/11 13:00) | `3c02c26`, local browser pass. Second-machine check pending. | DE + ST | 5 | 002, 003 (007/008 optional) | T901–T911 |
 | [011](011-real-key-validation/) | Real-key LLM test (+ optional YOLO real run) | **P1** LLM / P3 YOLO | 🟡 | LEAD/DE + AN | 3 (+2) | 001 (006 for q4) | T1101–T1110 |
 | [007](007-whatif-sliders/) | What-if sliders page (multi-driver, joint CI90) | P2 | 🟡 | DE + AN | 4 | 001 | T701–T711 |
 | [008](008-province-choropleth/) | 34-province choropleth → Hỏi AI | P2 | 🟡 | DE + RQ | 5 | 001 (boundary licence gate T801) | T801–T811 |

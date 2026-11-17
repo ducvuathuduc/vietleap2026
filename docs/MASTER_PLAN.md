@@ -48,6 +48,8 @@ P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K 
 
 **Recipe và dry run 004** (`ed2bd08`): 4 pack chạy thật. Pytest 246 pass, 1 skip, 2 xfail. 33 test web, lint, build và OpenAPI đạt. WDI live quá thời gian chờ, panel offline chạy được cho GDP/người. Bảng ngân sách thật đối chiếu được bổ sung có mục tiêu, còn thiếu thu–chi để kiểm chứng KPI tự chủ. Xem [checklist](../specs/004-scenario-packs/checklists/dry-run.md). Tiếp theo: workflow một lệnh và các file xuất dữ liệu.
 
+**Xuất báo cáo 009** (`3c02c26`, 18/11): `/report` thay mục More và tạo ZIP với deck/pitch VI+EN, PDF, dashboard HTML, các tệp tài liệu dữ liệu và README SHA-256. Browser dry run WDI 39,01 giây. KPI 250 dòng khớp trong deck và PDF. Còn kiểm tra mở gói trên máy thứ hai.
+
 Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) và deck tiếng Việt (`deck.vi.pptx`) mới kiểm bằng `deck_overflow()` + parity số, chưa xem ảnh render PNG/LibreOffice; nhật ký làm sạch/provenance trong deck VI giữ nguyên văn tiếng Anh của engine (ghi trong spec 003 §Clarifications).
 
 ### Gaps theo checklist mentor

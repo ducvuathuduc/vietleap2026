@@ -164,6 +164,8 @@ Nếu dùng PowerShell hoặc cần chỉ định lại cột mục tiêu, chạ
 
 **Mirror tuỳ chọn.** Đặt `KIT_S3_ENDPOINT`, `KIT_S3_BUCKET`, `KIT_S3_ACCESS_KEY_ID` và `KIT_S3_SECRET_ACCESS_KEY` qua môi trường, sau đó chạy `python de.py sync --to s3`. Lệnh dùng DuckDB `httpfs` và ghi Parquet gold vào `gold/` trong bucket. DuckDB + Parquet local là kho chính. Cloudflare R2 Standard có mức miễn phí lưu trữ 10 GB-tháng và không tính phí egress. [Giá Cloudflare R2](https://developers.cloudflare.com/r2/pricing/) · [DuckDB httpfs](https://duckdb.org/docs/current/core_extensions/httpfs/s3api)
 
+**Gói ZIP để nộp.** Mở **Exports → Xuất báo cáo**, chọn ngôn ngữ và **Tạo gói ZIP**. Gói kèm deck, pitch, báo cáo, dashboard và README có checksum. Chromium in dashboard từ web tại `WEB_URL` (mặc định `http://127.0.0.1:3000`) và dùng HTML tĩnh khi web chưa chạy.
+
 ## Cấu trúc thư mục
 
 ```
