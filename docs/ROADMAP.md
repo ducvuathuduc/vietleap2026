@@ -8,18 +8,19 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - Remaining spec work ≈ 43.5 h (+2 h optional YOLO). Developer time before the 19/11 check-in (window 09:00–11:30 / 13:30–14:45) ≈ 29 h (16/11 ≈ 6 h, 17/11 ≈ 10 h, 18/11 ≈ 10 h, 19/11 morning ≈ 3 h).
 - **Cut line**: all P1 (002, 003, 004, 009, 011-LLM ≈ 24 h) + 010 (3 h) must land; 007 is the first stretch goal; 005, 006, 008 only if P1 finishes early. Anything not merged by **18/11 22:00 (feature freeze)** is dropped for the contest.
 
-## Progress (17/11 evening)
+## Progress (18/11)
 - ✅ 002 done & pushed (`bdcb571`, `76c9e37`; CI + Security green) — Tue 17/11 08:00–12:00 slot is freed.
 - ✅ 003 done & pushed (`74de518` string table + caveats, `5aa4194` `--lang vi|en|both`, `4e098e5` web toggle; CI + Security green for `74de518`, `5aa4194`, `a19048a`) — includes the web toggle originally planned for Wed 18/11 (T310–T312).
 - ✅ Open-source README + community files; contest schedule synced with vietleap2026.com (17/11); mentor 6-step mapping + gaps in `WORKFLOW.md` §0 / `MASTER_PLAN.md` §0.
 - 004 T401–T405 (`2cf9d34`): per-column aggregation, recomputed ratios and guarded recipe views. Local pytest 238 pass, 1 skip, 2 xfail; web 33 pass, lint/build green.
 - 004 recipes and four dry runs (`ed2bd08`). Official provincial transfer snapshot reconciled. WDI ran offline after a live timeout. Provincial autonomy still needs complete inputs. Measured results are in the [dry-run checklist](../specs/004-scenario-packs/checklists/dry-run.md).
-- 012 (`d45b374`): offline `make contest` verified for WDI. Added dictionary/EDA, source snapshots, daily WDI collection, opt-in S3 and pack decision questions. Next: 009 export ZIP and UI.
+- 012 (`d45b374`): offline `make contest` verified for WDI. Added dictionary/EDA, source snapshots, daily WDI collection, opt-in S3 and pack decision questions.
 - 009 (`3c02c26`): verified bilingual ZIP and live dashboard PDF in 39.01 s. Second-machine rehearsal remains open.
 - 011 (`0b9d869`): web and Python offline modes verified on `wdi_asean`. Provider checks skipped with no model credentials.
 - 010 (`0b9d869`): 14 route captures, three dark-theme views and an 89.88 s recording in `out/demo/demo.webm`. Team review and upload remain open.
 - `c4fe091`: removed the standalone shadcn CLI dependency and retained the original MIT stylesheet. `ee175c8`: export freshness and explicit decision questions covered by regression tests.
 - 005 (`80bd00d`): Ctrl+K, shared NAV, VI/EN matching, actions and query prefills verified in Chromium. Gzip delta remains unmeasured.
+- Handoff requested by the user. All task changes are on `main`. Resume from [HANDOFF_PROMPT.md](HANDOFF_PROMPT.md) after checking current GitHub CI/Security.
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |

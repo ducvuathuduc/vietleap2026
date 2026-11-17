@@ -4,11 +4,15 @@
 
 ---
 
-## 0. TRẠNG THÁI (cập nhật 17/11/2026) — đọc mục này trước
+## 0. TRẠNG THÁI (cập nhật 18/11/2026) — đọc mục này trước
+
+Phiên tiếp theo dùng [master prompt bàn giao](HANDOFF_PROMPT.md). Các thay đổi trong phiên đã tích hợp trực tiếp vào `main`.
 
 **Lịch BTC đã xác nhận (giờ Việt Nam; agenda trên https://vietleap2026.com/, đọc 17/11 — site đổi lịch 17/11 ~18:55):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 14:45–15:30** Chi-Yu Lee (Konstanz) *From observation to data — Object tracking* · **19/11 15:30–16:15** Viet Nguyen-Tien (LSE) *Data to Decision / Combining Data for Socioeconomic Development* · 19/11 16:15–16:45 họp online với mentors · **20/11 09:00–09:30** khai mạc + Challenge Briefing + ghép đội · **20/11 09:30–10:15** Sacha Dray (World Bank VN) workshop Dashboard · **20/11 16:00–16:30** mentor check-in #1 · **21/11 10:30–11:00** check-in #2 · **21/11 13:00–13:15** hạn nộp · **21/11 13:15–15:15** pitch + Q&A · 21/11 15:45–16:45 trao giải. Chi tiết: [`CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) §1.3.
 
-**Kiểm tra local lần cuối (18/11, `0b9d869`)**: `pytest -q tests` 259 pass + 2 skip + 2 xfail · `npm test` 34 pass · `npm run lint` sạch · `npm run build` pass · audit production 0 lỗi. S3 live skip do thiếu env. Chạy tuần tự trên máy 2 CPU.
+**Kiểm tra local lần cuối (18/11, mã tới `80bd00d`)**: `pytest -q tests` 259 pass + 2 skip + 2 xfail · `npm test` 36 pass · `npm run lint` sạch · `npm run build` pass · audit production 0 lỗi. S3 live skip do thiếu env. Chạy tuần tự trên máy 2 CPU.
+
+**CI/Security đã xác nhận cho `46b522f`** — [CI](https://github.com/ducvuathuduc/vietleap2026/actions/runs/44153843011) và [Security](https://github.com/ducvuathuduc/vietleap2026/actions/runs/44153843163) cùng success. Bản bàn giao tài liệu sau commit này giữ nguyên mã đã kiểm tra.
 CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `74de518`, `5aa4194`, `a19048a` — feature 003, CI của `4e098e5` bị huỷ do push kế tiếp cùng nhóm concurrency, `a19048a` chứa cùng code và xanh; `3e39ad4` và `c0bd0e4` — feature 002, `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16–17/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
 
 ### Đã xong & đã push

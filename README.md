@@ -176,6 +176,8 @@ Dùng **Ctrl+K** (macOS ⌘K) để tìm trang không dấu, chuyển dataset, m
 
 Chạy `make screenshots` và `make demo-video` sau khi mở API và web. Dùng `DATASET=<id>` để chọn bộ dữ liệu. [Kịch bản VI/EN](docs/DEMO_SCRIPT.md)
 
+Master prompt cho phiên làm việc tiếp theo nằm trong [tài liệu bàn giao](docs/HANDOFF_PROMPT.md).
+
 ## Cấu trúc thư mục
 
 ```
