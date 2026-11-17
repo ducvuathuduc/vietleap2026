@@ -74,6 +74,8 @@ export interface Insight {
 
 /** Allowlisted downloads of GET /api/datasets/{id}/files/{kind} (api/routes/datasets.py EXPORTS). */
 export type ExportKind =
+  | "bundle"
+  | "dashboard_pdf"
   | "dictionary_csv"
   | "dictionary_md"
   | "eda_md"
@@ -86,6 +88,21 @@ export type ExportKind =
   | "summary_md"
   | "results"
   | "clean_csv"
+
+export type ReportLang = "vi" | "en" | "both"
+
+export interface ExportJob {
+  id: string
+  dataset: string
+  status: "queued" | "running" | "done" | "done_with_warnings" | "error"
+  progress: number
+  step: string | null
+  warnings: string[]
+  error: string | null
+  files: Partial<Record<ExportKind, string>>
+  started_at: string
+  finished_at: string | null
+}
 
 export interface Recommendation {
   so_what_en: string

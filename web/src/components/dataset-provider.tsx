@@ -24,6 +24,7 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
   const [detail, setDetail] = React.useState<DatasetDetail | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [revision, setRevision] = React.useState(0)
 
   // setState only runs in promise callbacks, never synchronously inside an effect
   const refresh = React.useCallback(
@@ -31,11 +32,13 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
       api.datasets().then(
         (list) => {
           setDatasets(list)
+          setRevision((value) => value + 1)
           setError(null)
           setDatasetId((cur) => {
-            const fromUrl = new URLSearchParams(window.location.search).get("ds")
+            const params = new URLSearchParams(window.location.search)
+            const fromUrl = params.get("dataset")
             const saved = window.localStorage.getItem(KEY)
-            const wanted = [cur, fromUrl, saved].find((x) => x && list.some((d) => d.id === x))
+            const wanted = [fromUrl, cur, params.get("ds"), saved].find((x) => x && list.some((d) => d.id === x))
             return wanted ?? list[0]?.id ?? null
           })
           setLoading(false)
@@ -63,7 +66,7 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
     return () => {
       alive = false
     }
-  }, [datasetId])
+  }, [datasetId, revision])
 
   const value = React.useMemo(
     () => ({ datasets, datasetId, detail, error, loading, select: setDatasetId, refresh }),

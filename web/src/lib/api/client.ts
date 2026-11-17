@@ -15,11 +15,13 @@ import type {
   DatasetDetail,
   DatasetSummary,
   ExportKind,
+  ExportJob,
   DriversResponse,
   Insight,
   Job,
   ProfileResponse,
   Recommendation,
+  ReportLang,
   RowsResponse,
   SegmentsResponse,
   TimeSeriesResponse,
@@ -108,4 +110,10 @@ export const api = {
   conformed: (id: string) => request<ConformedResponse>(`${ds(id)}/conformed`),
   provenance: (id: string) => request<Provenance[]>(`${ds(id)}/provenance`),
   fileUrl: (id: string, kind: ExportKind) => `${BASE}${ds(id)}/files/${kind}`,
+  startExport: (id: string, lang: ReportLang, dashboardPdf: boolean) =>
+    request<{ job_id: string }>(`${ds(id)}/export`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lang, dashboard_pdf: dashboardPdf }),
+    }),
+  exportJob: (id: string) => request<ExportJob>(`/api/export/${encodeURIComponent(id)}`),
 }

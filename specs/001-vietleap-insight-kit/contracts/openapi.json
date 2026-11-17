@@ -380,6 +380,100 @@
     }
    }
   },
+  "/api/datasets/{ds_id}/export": {
+   "post": {
+    "tags": [
+     "datasets"
+    ],
+    "summary": "Start Export",
+    "operationId": "start_export_api_datasets__ds_id__export_post",
+    "parameters": [
+     {
+      "name": "ds_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ds Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ExportRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ExportStart"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/export/{job_id}": {
+   "get": {
+    "tags": [
+     "datasets"
+    ],
+    "summary": "Export Status",
+    "operationId": "export_status_api_export__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ExportJob"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/datasets/{ds_id}/charts/{name}": {
    "get": {
     "tags": [
@@ -1629,6 +1723,135 @@
      "source_file"
     ],
     "title": "DatasetSummary"
+   },
+   "ExportJob": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "dataset": {
+      "type": "string",
+      "title": "Dataset"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "queued",
+       "running",
+       "done",
+       "done_with_warnings",
+       "error"
+      ],
+      "title": "Status"
+     },
+     "progress": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Progress"
+     },
+     "step": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Step"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     },
+     "files": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Files"
+     },
+     "started_at": {
+      "type": "string",
+      "title": "Started At"
+     },
+     "finished_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Finished At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "dataset",
+     "status",
+     "progress",
+     "step",
+     "warnings",
+     "error",
+     "files",
+     "started_at",
+     "finished_at"
+    ],
+    "title": "ExportJob"
+   },
+   "ExportRequest": {
+    "properties": {
+     "lang": {
+      "type": "string",
+      "enum": [
+       "vi",
+       "en",
+       "both"
+      ],
+      "title": "Lang",
+      "default": "both"
+     },
+     "dashboard_pdf": {
+      "type": "boolean",
+      "title": "Dashboard Pdf",
+      "default": true
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "title": "ExportRequest"
+   },
+   "ExportStart": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "job_id"
+    ],
+    "title": "ExportStart"
    },
    "HTTPValidationError": {
     "properties": {

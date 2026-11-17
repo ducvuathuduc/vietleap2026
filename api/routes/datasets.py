@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 from vlkit.de.exports import DICTIONARY_CSV, DICTIONARY_MD, EDA_MD
 from vlkit.vn import slug
@@ -22,7 +23,8 @@ router = APIRouter(prefix="/api", tags=["datasets"])
 ALLOWED = {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".xlsm", ".json", ".parquet"}
 MAX_BYTES = 200 * 1024 * 1024
 DATA_EXPORTS = {"dictionary_csv": (DICTIONARY_CSV, "text/csv"), "dictionary_md": (DICTIONARY_MD, "text/markdown"),
-                "eda_md": (EDA_MD, "text/markdown")}
+                "eda_md": (EDA_MD, "text/markdown"), "bundle": ("export/bundle.zip", "application/zip"),
+                "dashboard_pdf": ("export/dashboard.pdf", "application/pdf")}
 EXPORTS = {"deck": ("deck.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
            "dashboard": ("dashboard.html", "text/html"), "summary_pdf": ("executive_summary.pdf", "application/pdf"),
            "summary_md": ("executive_summary.md", "text/markdown"), "results": ("results.json", "application/json"),
@@ -30,6 +32,29 @@ EXPORTS = {"deck": ("deck.pptx", "application/vnd.openxmlformats-officedocument.
            # feature 003 — names fixed per language (vlkit.report DECK_FILES / PITCH_FILES)
            "deck_vi": ("deck.vi.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
            "pitch_md": ("pitch.md", "text/markdown"), "pitch_en": ("pitch.en.md", "text/markdown"), **DATA_EXPORTS}
+
+
+class ExportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    lang: Literal["vi", "en", "both"] = "both"
+    dashboard_pdf: bool = True
+
+
+class ExportStart(BaseModel):
+    job_id: str
+
+
+class ExportJob(BaseModel):
+    id: str
+    dataset: str
+    status: Literal["queued", "running", "done", "done_with_warnings", "error"]
+    progress: float = Field(ge=0, le=1)
+    step: str | None
+    warnings: list[str]
+    error: str | None
+    files: dict[str, str]
+    started_at: str
+    finished_at: str | None
 
 
 def ds_or_404(store: Store, ds_id: str):
@@ -152,7 +177,26 @@ def export(ds_id: str, kind: str, store: Store = Depends(get_store)):
     p = d / fname
     if not p.is_file() or not p.resolve().is_relative_to(store.out_dir.resolve()):
         raise HTTPException(404, f"{fname} was not generated for this dataset (run with reports enabled)")
-    return FileResponse(p, media_type=mime, filename=f"{ds_id}_{fname}")
+    return FileResponse(p, media_type=mime, filename=f"{ds_id}_{p.name}")
+
+
+@router.post("/datasets/{ds_id}/export", status_code=202, response_model=ExportStart)
+def start_export(ds_id: str, body: ExportRequest, store: Store = Depends(get_store)):
+    try:
+        path = store.dir(ds_id)
+    except NotFound:
+        raise HTTPException(404, "Không tìm thấy dataset")
+    if not path.resolve().is_relative_to(store.out_dir.resolve()):
+        raise HTTPException(404, "Không tìm thấy dataset")
+    return {"job_id": jobs.submit_export(path, body.lang, body.dashboard_pdf, get_settings().web_url)}
+
+
+@router.get("/export/{job_id}", response_model=ExportJob)
+def export_status(job_id: str):
+    job = jobs.get_export(job_id)
+    if job is None:
+        raise HTTPException(404, "Không tìm thấy lượt xuất báo cáo")
+    return job
 
 
 @router.get("/datasets/{ds_id}/charts/{name}")

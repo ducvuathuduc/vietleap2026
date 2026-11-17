@@ -31,7 +31,7 @@ DOCS_CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.j
 # expensive or state-changing routes (method, regex)
 LIMITED = [("POST", re.compile(r"^/api/sql$")), ("POST", re.compile(r"^/api/ingest$")),
            ("POST", re.compile(r"^/api/datasets$")), ("POST", re.compile(r"^/api/datasets/[^/]+/agent$")),
-           ("POST", re.compile(r"^/api/brief$")), ("POST", re.compile(r"^/api/datasets/[^/]+/whatif$"))]
+           ("POST", re.compile(r"^/api/brief$")), ("POST", re.compile(r"^/api/datasets/[^/]+/(?:whatif|export)$"))]
 
 
 def _int_env(name: str, default: int) -> int:

@@ -1,6 +1,11 @@
 # OpenAPI 3.1 fragment — feature 009 (merged into specs/001-vietleap-insight-kit/contracts/openapi.json after T906)
 components:
   schemas:
+    ExportStart:
+      type: object
+      required: [job_id]
+      properties:
+        job_id: {type: string}
     ExportRequest:
       type: object
       properties:
@@ -26,7 +31,7 @@ paths:
     post:
       requestBody: {content: {application/json: {schema: {$ref: "#/components/schemas/ExportRequest"}}}}
       responses:
-        "202": {description: job started or already running, content: {application/json: {schema: {$ref: "#/components/schemas/ExportJob"}}}}
+        "202": {description: job started or already running, content: {application/json: {schema: {$ref: "#/components/schemas/ExportStart"}}}}
         "404": {description: dataset not found}
         "429": {description: rate limited}
   /api/export/{job_id}:
@@ -40,4 +45,4 @@ paths:
         - name: kind
           in: path
           required: true
-          schema: {type: string, enum: [deck, deck_vi, pitch_md, pitch_en, dashboard, dashboard_pdf, summary_pdf, summary_md, results, clean_csv, bundle]}
+          schema: {type: string, enum: [deck, deck_vi, pitch_md, pitch_en, dashboard, dashboard_pdf, summary_pdf, summary_md, results, clean_csv, dictionary_csv, dictionary_md, eda_md, bundle]}

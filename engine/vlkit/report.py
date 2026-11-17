@@ -777,7 +777,8 @@ def _write_language_outputs(res: dict, out: Path, pngs: dict, de: dict | None, b
     return files
 
 
-def build_all(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path, lang: str = DEFAULT_REPORT_LANG) -> dict:
+def build_all(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path, lang: str = DEFAULT_REPORT_LANG,
+              include_pdf: bool = True) -> dict:
     """Charts, deck(s), pitch(es), executive summary and static dashboard; `lang` = vi | en | both (decks/pitches)."""
     langs_for(lang)  # validate before any work
     files = {}
@@ -803,7 +804,28 @@ def build_all(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path, lang:
     hp = out / "executive_summary.html"
     hp.write_text(md_to_html(md, "Executive summary"), encoding="utf-8")
     files["summary_md"] = "executive_summary.md"
-    pdf = html_to_pdf(hp, out / "executive_summary.pdf")
+    pdf = html_to_pdf(hp, out / "executive_summary.pdf") if include_pdf else None
     files["summary_pdf"] = "executive_summary.pdf" if pdf else None
     files["dashboard_html"] = os.path.relpath(static_dashboard(res, df, whatif, out), out)
     return files
+
+
+def rebuild_reports(out: Path, lang: str = DEFAULT_REPORT_LANG, include_pdf: bool = True,
+                    *, destination: Path | None = None) -> dict:
+    """Re-render stored results without rerunning analysis."""
+    from shutil import copyfile
+
+    out = Path(out)
+    destination = destination or out
+    (destination / "charts").mkdir(parents=True, exist_ok=True)
+    if destination != out:
+        for name in ("pipeline.json", "quality.json", "brief.json", "provenance.json", "scenarios.json"):
+            path = out / name
+            if path.is_file():
+                copyfile(path, destination / name)
+    results = json.loads((out / "results.json").read_text(encoding="utf-8"))
+    clean = out / "clean.parquet"
+    frame = pd.read_parquet(clean) if clean.is_file() else pd.read_csv(out / "clean_sample.csv")
+    path = out / "whatif.json"
+    whatif = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+    return build_all(results, frame, whatif, destination, lang=lang, include_pdf=include_pdf)

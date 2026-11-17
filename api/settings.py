@@ -20,6 +20,7 @@ class Settings:
     llm_timeout_s: float = float(os.getenv("LLM_TIMEOUT_S", "60"))
     agent_max_steps: int = int(os.getenv("AGENT_MAX_STEPS", "8"))
     reports_on_upload: bool = os.getenv("REPORTS_ON_UPLOAD", "1") == "1"
+    web_url: str = field(default_factory=lambda: os.getenv("WEB_URL", "http://127.0.0.1:3000"))
 
 
 def get_settings() -> Settings:
