@@ -14,7 +14,7 @@ Hours are single-developer estimates for the 2-CPU laptop, written 2026-11-16 (n
 |---|---|---|---|---|---|---|---|
 | [001](001-vietleap-insight-kit/) | VietLeap Insight Kit core (DE pipeline, insight engine, web, AI, deck, security, CI) | — | ✅ core done (last: T043–T045 `7ecc309`) | DE | — | — | T001–T077 |
 | [002](002-policy-question-story/) | Policy-question-first story & deck (decision → evidence → limitation) | **P1** (rubric A + D) | ✅ done & pushed (deck + pitch `bdcb571`, API + web story `76c9e37`) | DE + PO | 5 | 001 | T201–T212 |
-| [003](003-bilingual-deck/) | Bilingual deck/pitch `--lang vi\|en\|both` | **P1** (risk R6) | 🟡 next (paused 16/11 16:40, not started) | DE + ST | 4 | 002 (layout; strings can start in parallel) | T301–T312 |
+| [003](003-bilingual-deck/) | Bilingual deck/pitch `--lang vi\|en\|both` | **P1** (risk R6) | ✅ done & pushed (i18n + caveats `74de518`, deck/pitch matrix + CLI/API `5aa4194`, web toggle `4e098e5`) | DE + ST | 4 | 002 (layout; strings can start in parallel) | T301–T312 |
 | [004](004-scenario-packs/) | Scenario packs: provincial public finance, listed firms, WDI VN vs ASEAN, energy/EV; dry-run checklist | **P1** (themes ~80% of likely briefs) | 🟡 | DE + RQ + AN | 7 | 001 | T401–T413 |
 | [009](009-one-click-export/) | One-click "Xuất báo cáo" (deck + pitch + dashboard PDF + bundle) | **P1** (submission 21/11 13:00) | 🟡 | DE + ST | 5 | 002, 003 (007/008 optional) | T901–T911 |
 | [011](011-real-key-validation/) | Real-key LLM test (+ optional YOLO real run) | **P1** LLM / P3 YOLO | 🟡 | LEAD/DE + AN | 3 (+2) | 001 (006 for q4) | T1101–T1110 |
@@ -24,7 +24,7 @@ Hours are single-developer estimates for the 2-CPU laptop, written 2026-11-16 (n
 | [006](006-nl-to-sql/) | NL→SQL in AI Analyst (read-only guard, inline chart, cited query, offline templates) | P2 | 🟡 | DE + AN | 5 | 001 (T061 done) | T601–T612 |
 | [010](010-screenshots-demo-video/) | Screenshots + 90 s demo video script | P2 | 🟡 | ST + DE | 3 | best after 005/007/008/009 | T1001–T1008 |
 
-Total remaining ≈ 43.5 h (+2 h optional YOLO) — more than the ≈ 30 developer-hours available before 19/11 12:00, so
+Total remaining (written 16/11, before 002/003 landed) ≈ 43.5 h (+2 h optional YOLO) — more than the ≈ 30 developer-hours available before 19/11 12:00, so
 [`docs/ROADMAP.md`](../docs/ROADMAP.md) draws a cut line: P1 rows first; P2 rows in table order until the 18/11 freeze.
 
 ## Dependency graph
@@ -37,7 +37,7 @@ flowchart LR
   F001 --> F007[007 what-if sliders]
   F001 --> F008[008 province map]
   F001 --> F011[011 real-key LLM / YOLO]
-  F002 --> F003[003 bilingual]
+  F002 --> F003[003 bilingual ✅]
   F002 --> F009[009 one-click export]
   F003 --> F009
   F007 -. scenarios in deck .-> F009

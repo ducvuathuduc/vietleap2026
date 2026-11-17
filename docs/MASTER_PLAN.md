@@ -4,12 +4,12 @@
 
 ---
 
-## 0. TRẠNG THÁI (cập nhật 16/11/2026) — đọc mục này trước
+## 0. TRẠNG THÁI (cập nhật 17/11/2026) — đọc mục này trước
 
 **Lịch BTC đã xác nhận (giờ Việt Nam):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 15:30** Chi-Yu Lee (Konstanz) *From observation to data* (object tracking CV) · **20/11 09:00** công bố đề + chia đội ngẫu nhiên · **20/11 10:00** Viet Nguyen-Tien (LSE) *Unlocking the Data Economy* · **20/11 11:00** Sacha Dray (World Bank VN) workshop Dashboard · **21/11 13:00** hạn nộp · **21/11 13:15** pitch.
 
-**Kiểm tra lần cuối (16/11, commit `76c9e37`, feature 002)**: `pytest -q tests` 208 pass + 1 skip + 2 xfail · `npm test` 29 pass · `npm run lint` sạch · `npm run build` pass (chạy tuần tự trên máy 2 CPU).
-CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `3e39ad4` và `c0bd0e4` — feature 002, `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
+**Kiểm tra lần cuối (17/11, commit `4e098e5`, feature 003)**: `pytest -q tests` 236 pass + 1 skip + 2 xfail · `npm test` 33 pass · `npm run lint` sạch · `npm run build` pass (chạy tuần tự trên máy 2 CPU).
+CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift, web `npm ci/test/lint/build`) và Security (`security.yml`: gitleaks toàn lịch sử, pip-audit, `npm audit --audit-level=high`, CodeQL) đã cấu hình ở `a0a920e` và **chạy xanh trên GitHub** (CI + Security success cho `74de518`, `5aa4194` — feature 003; `3e39ad4` và `c0bd0e4` — feature 002, `7ecc309`, `005f6cb`, `fefb26a`, `585a3fd`, `8eb44a3`; kiểm tra qua GitHub Actions API 16–17/11). Docker (`Dockerfile.api`, `web/Dockerfile`, `docker-compose.yml`, cổng chỉ 127.0.0.1) đã viết nhưng **chưa chạy thử** (máy dev không có docker).
 
 ### Đã xong & đã push
 
@@ -32,6 +32,7 @@ CI GitHub Actions (`.github/workflows/ci.yml`: pytest + kiểm tra OpenAPI drift
 | Join coverage UI | `GET /api/datasets/{ds}/conformed`, `keys` trong `/models`, thẻ "Độ phủ ghép nối" (trang Pipeline), tab Conformed (trang Mô hình), Hỏi AI offline cho kind `join` | 7ecc309 |
 | 002 Phase A — câu hỏi chính sách mở đầu deck/pitch | `report.load_brief()` đọc `out/<ds>/brief.json`; slide 2 "Decision question" (câu hỏi trích nguyên văn, WHO DECIDES, SUCCESS KPI; không có đề → "(no brief — generic question)"); slide insight EVIDENCE → FOR THE DECISION → LIMITATION, insight có khuyến nghị đứng trước, p ≥ 0,05 ghi "Weak evidence" và không làm bằng chứng cho khuyến nghị #1; slide Limitations: nhân quả trước, rồi số thật (ô thiếu, dòng không ghép); `pitch.md` mở bằng "## 0 · Câu hỏi quyết định" (timing §4.6, 7 phút mặc định) | bdcb571 |
 | 002 Phase B — brief endpoint + web story | `GET /api/datasets/{ds}/brief` (404 khi chưa có, id không cho bắt đầu bằng dấu chấm), `has_brief` trong summary; `Story.question` (trích đề, không gửi LLM) + `Story.limits` (≤ 3 caveat); thẻ "Câu hỏi quyết định" trên Tổng quan; "Câu chuyện": bước đầu = câu hỏi, bước cuối = Hạn chế; kiểm tra Chromium headless có/không brief | 76c9e37 |
+| 003 deck/pitch song ngữ | `engine/vlkit/i18n.py` (bảng chuỗi EN/VI đã duyệt, không dịch máy); caveats + insight caveat + câu VI của engine mang **cùng con số** với EN (định dạng VI `1.234,5`, `p<0,001`); `run.py`/`de.py file\|run --lang vi\|en\|both`, API `lang` (form upload + `IngestIn`, 422 trước khi chạy job); file cố định theo ngôn ngữ `deck.pptx` (EN) · `deck.vi.pptx` · `pitch.md` (VI) · `pitch.en.md`, export `deck_vi`/`pitch_md`/`pitch_en`; web: ToggleGroup Tiếng Việt/English ở Exports (ngôn ngữ chưa xuất bị khoá + tooltip); test SC-301/SC-302 trên 3 dataset practice | 74de518, 5aa4194, 4e098e5 |
 
 Đã chạy thật: `scenarios/demo/sources.yaml` (5 loại nguồn: CSV, SQLite, World Bank API, Wikipedia, RSS VnExpress); Hà Nội 81.681 tin (điểm chất lượng 84,9 → 92,4); 3 dataset practice (`data/practice/`).
 
@@ -40,9 +41,9 @@ Môi trường: máy có HTTP_PROXY → luôn `NO_PROXY=localhost,127.0.0.1`. M�
 
 ### Còn lại — mỗi việc là một feature Spec Kit
 Danh sách đầy đủ, ước lượng giờ, vai phụ trách và đồ thị phụ thuộc: [`specs/README.md`](../specs/README.md). Lịch theo ngày 16/11–21/11 (workshop 16/11 19:00, đóng băng tính năng 18/11 22:00, nộp 21/11 13:00, pitch 13:15): [`docs/ROADMAP.md`](ROADMAP.md).
-P1: ~~002 câu hỏi chính sách mở đầu deck/story~~ (xong `bdcb571`, `76c9e37`) · 003 deck/pitch song ngữ (**tạm dừng 16/11 16:40 theo yêu cầu, chưa viết code — làm tiếp từ T301**) · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
+P1: ~~002 câu hỏi chính sách mở đầu deck/story~~ (xong `bdcb571`, `76c9e37`) · ~~003 deck/pitch song ngữ~~ (xong `74de518`, `5aa4194`, `4e098e5`) · 004 scenario packs + dry run · 009 Xuất báo cáo một chạm · 011 chạy thật với khoá LLM.
 P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K · 006 NL→SQL · 010 ảnh chụp + video demo.
-Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) mới kiểm bằng `deck_overflow()`, chưa xem ảnh render PNG/LibreOffice.
+Hạn chế đã biết: LLM chưa chạy với khoá thật; YOLO chưa chạy với video thật; Docker chưa chạy thử; link sidebar "More" → `/report` chưa có trang (Next prefetch 404 trong console — để feature 009 làm trang Xuất báo cáo); bố cục slide insight mới (biểu đồ 5,6 in + 3 thẻ) và deck tiếng Việt (`deck.vi.pptx`) mới kiểm bằng `deck_overflow()` + parity số, chưa xem ảnh render PNG/LibreOffice; nhật ký làm sạch/provenance trong deck VI giữ nguyên văn tiếng Anh của engine (ghi trong spec 003 §Clarifications).
 
 ---
 

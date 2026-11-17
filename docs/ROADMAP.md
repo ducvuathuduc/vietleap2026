@@ -8,9 +8,10 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - Remaining spec work ≈ 43.5 h (+2 h optional YOLO). Developer time before the 19/11 12:00 check-in ≈ 29 h (16/11 ≈ 6 h, 17/11 ≈ 10 h, 18/11 ≈ 10 h, 19/11 morning ≈ 3 h).
 - **Cut line**: all P1 (002, 003, 004, 009, 011-LLM ≈ 24 h) + 010 (3 h) must land; 007 is the first stretch goal; 005, 006, 008 only if P1 finishes early. Anything not merged by **18/11 22:00 (feature freeze)** is dropped for the contest.
 
-## Progress (16/11 16:40)
+## Progress (17/11 evening)
 - ✅ 002 done & pushed (`bdcb571`, `76c9e37`; CI + Security green) — Tue 17/11 08:00–12:00 slot is freed.
-- ⏸ Paused on request before 003 started (no 003 code written). Next on resume: 003 T301.
+- ✅ 003 done & pushed (`74de518` string table + caveats, `5aa4194` `--lang vi|en|both`, `4e098e5` web toggle; CI + Security green for `74de518`, `5aa4194`) — includes the web toggle originally planned for Wed 18/11 (T310–T312).
+- Next: 004 T401 (engine support for scenario packs).
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |

@@ -57,7 +57,7 @@ Build window ≈ 27.5 h (20/11 09:30 → 21/11 13:00). ⇒ policy-question-first
 
 ## Phase 6 — Contest-fit features (HIGH priority, from contest analysis)
 - [ ] T080 → [specs/002](../002-policy-question-story/) [P] Policy-question-first storytelling: deck + story open with the policy question (from brief.json), then evidence → decision → KPI
-- [ ] T081 → [specs/003](../003-bilingual-deck/) [P] Bilingual deck/pitch: `--lang vi|en` (deck currently English text from `*_en` fields; pitch.md VI) + web toggle on Export
+- [x] T081 (`74de518`, `5aa4194`, `4e098e5`) → [specs/003](../003-bilingual-deck/) [P] Bilingual deck/pitch: `--lang vi|en` (deck currently English text from `*_en` fields; pitch.md VI) + web toggle on Export
 - [ ] T082 → [specs/004](../004-scenario-packs/) [P] Verify/extend packs `public_finance_province` and `listed_firms_market` with real-data dry runs (`data/practice/wdi_fiscal`, `firms_2021`); add `energy_ev_data_economy` pack + sample brief
 - [ ] T083 → [specs/004](../004-scenario-packs/) WDI Vietnam vs ASEAN comparison recipe (World Bank API sources.yaml with ASEAN ISO3 list, conformed on country+year)
 
