@@ -95,6 +95,11 @@ def test_split_sentences_handles_markdown_lists():
     assert "Ý hai?" in s and "Tiêu đề" in s
 
 
+def test_brief_surfaces_the_decision_question_before_deliverables(kit_root):
+    brief = parse_brief(_read(kit_root, "chi_so_phat_trien.md"), columns=WDI)
+    assert brief["questions"][0] == "Where is the largest gap, and how has it changed since 2010?"
+
+
 def test_brief_api(tmp_path, monkeypatch, kit_root):
     import json
     from fastapi.testclient import TestClient

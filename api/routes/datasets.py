@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import numpy as np
@@ -64,6 +64,17 @@ def ds_or_404(store: Store, ds_id: str):
         raise HTTPException(404, f"dataset '{ds_id}' not found")
 
 
+def _available_export(dataset: Path, filename: str) -> bool:
+    path = dataset / filename
+    try:
+        if not path.is_file() or not path.resolve().is_relative_to(dataset.resolve()):
+            return False
+        return (PurePosixPath(filename).parts[0] != "export"
+                or path.stat().st_mtime_ns >= (dataset / "results.json").stat().st_mtime_ns)
+    except FileNotFoundError:
+        return False
+
+
 @router.get("/datasets", response_model=list[DatasetSummary])
 def list_datasets(store: Store = Depends(get_store)):
     return store.list()
@@ -111,7 +122,7 @@ def job_status(job_id: str):
 def summary(ds_id: str, store: Store = Depends(get_store)):
     ds = ds_or_404(store, ds_id)
     r = ds.results
-    files = {**r.get("files", {}), **{key: filename for key, (filename, _) in DATA_EXPORTS.items() if (ds.path / filename).is_file()}}
+    files = {**r.get("files", {}), **{key: filename for key, (filename, _) in DATA_EXPORTS.items() if _available_export(ds.path, filename)}}
     return {"meta": r["meta"], "kpis": r["kpis"], "caveats": r["caveats"], "timings": r.get("timings"), "files": files,
             "recommendations": r["recommendations"], "has_brief": (ds.path / "brief.json").is_file()}
 
@@ -175,7 +186,7 @@ def export(ds_id: str, kind: str, store: Store = Depends(get_store)):
         raise HTTPException(404, f"dataset '{ds_id}' not found")
     fname, mime = EXPORTS[kind]
     p = d / fname
-    if not p.is_file() or not p.resolve().is_relative_to(store.out_dir.resolve()):
+    if not p.resolve().is_relative_to(store.out_dir.resolve()) or not _available_export(d, fname):
         raise HTTPException(404, f"{fname} was not generated for this dataset (run with reports enabled)")
     return FileResponse(p, media_type=mime, filename=f"{ds_id}_{p.name}")
 

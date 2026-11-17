@@ -827,5 +827,7 @@ def rebuild_reports(out: Path, lang: str = DEFAULT_REPORT_LANG, include_pdf: boo
     clean = out / "clean.parquet"
     frame = pd.read_parquet(clean) if clean.is_file() else pd.read_csv(out / "clean_sample.csv")
     path = out / "whatif.json"
-    whatif = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+    whatif = json.loads(path.read_text(encoding="utf-8")) if results.get("drivers") and path.is_file() else None
+    if whatif and whatif.get("target") != results["meta"]["target"]:
+        whatif = None
     return build_all(results, frame, whatif, destination, lang=lang, include_pdf=include_pdf)

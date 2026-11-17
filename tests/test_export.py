@@ -114,3 +114,47 @@ def test_export_job_is_idempotent_and_downloadable(export_dataset, monkeypatch):
     finally:
         release.set()
         del app.dependency_overrides[get_store]
+
+
+def test_reanalysis_hides_previous_bundle_and_dashboard_pdf(export_dataset):
+    import os
+    from fastapi.testclient import TestClient
+    from api.main import app
+    from api.store import Store, get_store
+
+    directory = export_dataset / "export"
+    directory.mkdir()
+    for name in ("bundle.zip", "dashboard.pdf"):
+        (directory / name).write_bytes(b"old artifact")
+    app.dependency_overrides[get_store] = lambda: Store(export_dataset.parent)
+    try:
+        with TestClient(app) as client:
+            assert client.get("/api/datasets/demo/files/bundle").status_code == 200
+            results = export_dataset / "results.json"
+            later = max((directory / name).stat().st_mtime_ns for name in ("bundle.zip", "dashboard.pdf")) + 10**9
+            os.utime(results, ns=(later, later))
+            summary = client.get("/api/datasets/demo").json()
+            assert "bundle" not in summary["files"] and "dashboard_pdf" not in summary["files"]
+            for kind in ("bundle", "dashboard_pdf"):
+                assert client.get(f"/api/datasets/demo/files/{kind}").status_code == 404
+    finally:
+        del app.dependency_overrides[get_store]
+
+
+def test_rebuild_ignores_whatif_from_a_previous_analysis(export_dataset, monkeypatch):
+    from vlkit import report
+
+    current = export_dataset / "results.json"
+    results = json.loads(current.read_text(encoding="utf-8"))
+    results["drivers"] = None
+    current.write_text(json.dumps(results), encoding="utf-8")
+    stale = export_dataset / "whatif.json"
+    stale.write_text(json.dumps({"target": "removed_metric"}), encoding="utf-8")
+
+    def check_whatif(results, frame, whatif, *args, **kwargs):
+        assert results["drivers"] is None
+        assert whatif is None
+        return {}
+
+    monkeypatch.setattr(report, "build_all", check_whatif)
+    report.rebuild_reports(export_dataset)

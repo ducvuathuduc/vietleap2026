@@ -187,6 +187,8 @@ def run(path: str | Path, out_root: str | Path = "out", target: str | None = Non
                "correlations": extras.get("correlations")}
     if whatif:
         dump(whatif, out / "whatif.json")
+    else:
+        (out / "whatif.json").unlink(missing_ok=True)
     from .de.exports import write_eda
 
     results["files"] = {"eda_md": write_eda(results, out)}

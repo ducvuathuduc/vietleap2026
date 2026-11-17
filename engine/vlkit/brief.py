@@ -198,6 +198,7 @@ def parse_brief(text: str, columns: list[str] | None = None, packs: list[dict] |
     sents = split_sentences(text)
     questions = [s for s in sents if s.endswith("?") or any(ascii_key(s).startswith(q) or f" {q}" in f" {ascii_key(s)}"
                                                              for q in QUESTION_CUES)]
+    questions.sort(key=lambda text: not text.endswith("?"))
     q_keys = [ascii_key(q) for q in questions]
 
     ranked = _score_concepts(text_key, q_keys)
