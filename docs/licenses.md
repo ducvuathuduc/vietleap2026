@@ -39,4 +39,6 @@ recharts (MIT) · mermaid (MIT) · driver.js (MIT) · ai, @ai-sdk/* (Apache-2.0)
 | Province 63 → 34 mapping, regions | `engine/vlkit/resources/province_63_to_34.csv`, `province_region.csv` | compiled from Nghị quyết 202/2025/QH15 and GSO region list (public legal/official information) |
 
 ## Assets
+`web/src/app/vendor/shadcn-tailwind.css` is the unchanged stylesheet from the official `shadcn@4.23.0` npm package. The adjacent MIT notice is from the same package. The CLI is available separately when adding components.
+
 None besides shadcn/ui components (MIT) and lucide icons (ISC). Map GeoJSON (T053) must be recorded here when added.
