@@ -343,7 +343,7 @@ def normalize_district(name, default_kind: str = "Quận") -> tuple[str, str] | 
 def is_district_column(name: str, values: pd.Series | None = None) -> str | None:
     """'district' | 'ward' | None — by column name, else by value prefixes (≥60 % 'Quận …'/'Huyện …'/'Q.1')."""
     key = ascii_key(name)
-    toks = set(key.split())
+    toks = set(re.sub(r"\bquan ly\b", "", key).split())
     if key in DISTRICT_COL_HINTS or toks & {"quan", "huyen", "district"}:
         return "district"
     if key in WARD_COL_HINTS or toks & {"phuong", "ward", "commune"}:

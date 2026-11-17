@@ -214,7 +214,7 @@ def driver_insights(df, target, nums, cats, ctx):
     chart = {"kind": "hbar", "x": [i["feature"] for i in imp], "series": [{"name": "permutation importance", "data": [i["importance"] for i in imp]}],
              "x_label": "feature", "y_label": "importance (drop in R²)"}
     out = [_mk("drivers", f"Drivers of {target}", f"Yếu tố gắn với {target}", en, vi, best, "Ridge + HistGradientBoosting, 5-fold CV, permutation importance",
-               max(0, min(1, best)), None if best <= 0 else 0.0005, 1.0, chart, {k: m[k] for k in ("cv_r2", "importance", "leakage_excluded")}, [target] + [i["feature"] for i in imp],
+               max(0, min(1, best)), None, 1.0, chart, {k: m[k] for k in ("n", "cv_r2", "importance", "leakage_excluded")}, [target] + [i["feature"] for i in imp],
                (m["note"], CAVEATS_VI["drivers"]))]
     # strongest stable numeric what-if
     numeric_feats = [f for f in m["whatif"]["features"] if f["numeric"]]
@@ -232,7 +232,7 @@ def driver_insights(df, target, nums, cats, ctx):
                  {"name": "low 90%", "data": [x["ci90_pct"][0] for x in ws]}, {"name": "high 90%", "data": [x["ci90_pct"][1] for x in ws]}],
                  "x_label": f"change in {f}", "y_label": f"change in {target} (%)"}
         out.append(_mk("what_if", f"What if {f} changes", f"Kịch bản thay đổi {f}", en, vi, w["target_change_pct"], "bootstrapped ridge (200 resamples)",
-                       min(1, abs(w["target_change_pct"] or 0) / 10) * 0.8, 0.01, 0.95, chart, w, [f, target], (w["interpretation"], CAVEATS_VI["what_if"])))
+                       min(1, abs(w["target_change_pct"] or 0) / 10) * 0.8, None, 0.95, chart, {**w, "n": m["n"]}, [f, target], (w["interpretation"], CAVEATS_VI["what_if"])))
     return out, m
 
 
@@ -268,7 +268,11 @@ def generate(df, roles, target, time_col, geo_col, domain_info, max_insights=12)
     t_ins, ts = trend_insights(df, target, time_col, ctx); cand += t_ins; extras["timeseries"] = ts
     cand += concentration_insights(df, target, geo_col, ctx)
     c_ins, corr = correlation_insights(df, target, [c for c in nums if c not in ctx['exclude_from_drivers']], ctx); cand += c_ins; extras["correlations"] = corr
-    d_ins, model = driver_insights(df, target, nums, [c for c in cats if df[c].nunique() <= 40][:3], ctx); cand += d_ins; extras["drivers"] = model
+    driver_rows = domain_info.get("roe_driver_sample") if target == "roe_pct" else None
+    driver_data = df.loc[driver_rows] if driver_rows is not None else df
+    d_ins, model = driver_insights(driver_data, target, nums, [c for c in cats if driver_data[c].nunique() <= 40][:3], ctx)
+    cand += d_ins
+    extras["drivers"] = model
     s_ins, seg = segmentation_insights(df, nums, target, ctx); cand += s_ins; extras["segments"] = seg
     # outlier share as a data-quality insight
     if "_outlier_any" in df:

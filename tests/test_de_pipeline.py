@@ -60,6 +60,28 @@ def test_sql_connector_refuses_writes(tmp_path):
         ingest(Source("x", "sql", f"sqlite:///{tmp_path / 'a.db'}", {"query": "DELETE FROM t"}))
 
 
+def test_recipe_csv_filter_matches_numeric_yaml_value(tmp_path):
+    from vlkit.de.connectors import ingest
+    from vlkit.de.sources import Source
+
+    path = tmp_path / "energy.csv"
+    path.write_text("Year,Value\n1999,10\n2024,20\n", encoding="utf-8")
+    source = Source("energy", "file", str(path), {"filters": {"Year": [2024]}, "rename": {"Year": "year"}})
+    result = ingest(source)
+    assert result.frames["energy"]["year"].astype(int).tolist() == [2024]
+    assert result.provenance["tables"]["energy"]["rows"] == 1
+
+
+def test_firm_reporting_period_and_management_expenses_are_not_geo():
+    from vlkit.de.quality import to_silver
+
+    frame = pd.DataFrame({"Kỳ báo cáo": ["Q1/2021", "Q2/2021"], "Chi phí quản lý DN": [10, 20]})
+    silver, roles, _ = to_silver(frame)
+    assert roles["Kỳ báo cáo"] == "time"
+    assert pd.api.types.is_numeric_dtype(silver["Chi phí quản lý DN"])
+    assert not any("__district" in column for column in silver)
+
+
 def test_api_connector_paging_and_retry(monkeypatch, tmp_path):
     import httpx
     from vlkit.de import connectors

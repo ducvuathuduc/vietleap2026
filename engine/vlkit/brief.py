@@ -187,7 +187,7 @@ def _direct_column_mentions(text_key: str, columns: list[str]) -> list[str]:
         k = ascii_key(c)
         if len(k) >= 3 and _has(text_key, k):
             hits.append(c)
-    return hits
+    return sorted(hits, key=lambda column: -len(ascii_key(column)))
 
 
 def parse_brief(text: str, columns: list[str] | None = None, packs: list[dict] | None = None) -> dict:

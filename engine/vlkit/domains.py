@@ -1,6 +1,9 @@
 """Domain packs: detect the dataset's domain from column names and add derived metrics when columns match."""
 from __future__ import annotations
 
+from functools import lru_cache
+import re
+
 import numpy as np
 import pandas as pd
 
@@ -131,14 +134,23 @@ def apply_public_finance(df: pd.DataFrame, roles: dict, log: list[str]) -> dict:
     return out
 
 
+@lru_cache(maxsize=1)
+def _firm_pack() -> dict:
+    from .brief import load_packs
+
+    return next(pack for pack in load_packs() if pack["id"] == "listed_firms_market")
+
+
 def apply_firm(df: pd.DataFrame, roles: dict, log: list[str]) -> dict:
     cols = [c for c, r in roles.items() if r == "numeric"]
+    pack = _firm_pack()
+    aliases = pack["column_aliases"]
     rev = _find(cols, "doanh thu thuan", "net revenue", "net_revenue", "doanh thu", "revenue", "sales")
     cogs = _find(cols, "gia von", "cogs", "cost of goods")
     gp = _find(cols, "loi nhuan gop", "gross profit", "gross_profit")
-    npat = _find(cols, "loi nhuan sau thue", "npat", "net income", "net profit", "net_profit", "profit after")
+    npat = _find(cols, *(ascii_key(alias) for alias in aliases["npat"]))
     ta = _find(cols, "tong cong tai san", "tong tai san", "total assets", "total_assets")
-    eq = _find(cols, "von chu so huu", "equity", exclude=("no ",))
+    eq = _find(cols, *(ascii_key(alias) for alias in aliases["equity"]), exclude=("no ",))
     liab = _find(cols, "no phai tra", "liabilities", "total debt")
     out = {"metrics": [], "primary_metric": None}
 
@@ -158,6 +170,12 @@ def apply_firm(df: pd.DataFrame, roles: dict, log: list[str]) -> dict:
         add("roa_pct", _safe_div(df[npat], df[ta].where(df[ta] > 0)) * 100, f"'{npat}' / '{ta}' (period, not annualised)", (npat, ta))
     if npat and eq:
         add("roe_pct", _safe_div(df[npat], df[eq].where(df[eq] > 0)) * 100, f"'{npat}' / '{eq}' (period, not annualised)", (npat, eq))
+        sector = _find(df.columns, *(ascii_key(alias) for alias in aliases["sector"]))
+        if sector:
+            excluded = "|".join(re.escape(ascii_key(name)) for name in pack["sector_exclude_for_roe"])
+            in_scope = ~df[sector].map(ascii_key).str.contains(rf"\b(?:{excluded})\b", regex=True)
+            out["roe_driver_sample"] = in_scope
+            log.append(f"[firm] ROE drivers: {int((~in_scope).sum())} financial-sector rows excluded using '{sector}'")
     if liab and eq:
         add("debt_to_equity", _safe_div(df[liab], df[eq].where(df[eq] > 0)), f"'{liab}' / '{eq}'", (liab, eq))
     if liab and ta:

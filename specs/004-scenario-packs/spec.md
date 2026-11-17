@@ -67,3 +67,10 @@ As the **LEAD**, I want one checklist per pack that a non-coder can follow (comm
 - **SC-401**: 3 packs (public finance, listed firms, WDI ASEAN) have a completed dry-run row with go = ✅ by 18/11 evening.
 - **SC-402**: New brief selects `energy_ev_data_economy` (test).
 - **SC-403**: VN-vs-ASEAN gap view returns one row per indicator × year with no hand-typed numbers.
+
+## Clarifications
+
+- WDI uses the ASEAN peer cohort available through 2024. Timor-Leste joined on 26 October 2025. Missing Viet Nam tax observations in the practice panel remain null. Use GDP per capita to practise benchmarking with observed Viet Nam values. [ASEAN admission notice](https://asean.org/forging-a-new-era-timor-leste-admitted-into-asean/)
+- Use the listed-firms practice workbook and common VI/EN header aliases. Verify the actual FiinGroup export and its redistribution terms when available.
+- Use the 2026-09-10 OWID release and Ember for the energy recipe. Run the supplemental WDI indicators separately. Defer IEA EV inputs until the source and applicable licence are confirmed.
+- Use an additive measure from one boundary vintage and one accounting stage per year for public finance. Record the file provenance and leave missing KPI inputs blank.

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from ..loader import clean
-from ..vn import ascii_key, canonical_districts, is_district_column, parse_numeric_series
+from ..vn import ascii_key, canonical_districts, is_district_column, normalize_province, parse_numeric_series, to_new_province
 
 NONNEG_HINTS = ["gia", "price", "dien tich", "area", "so luong", "count", "dan so", "population", "doanh thu",
                 "revenue", "chi", "thu", "budget", "ngan sach", "luong", "salary", "tuoi", "age"]
@@ -105,7 +105,9 @@ def to_silver(df_bronze: pd.DataFrame, impute: str | None = None) -> tuple[pd.Da
     # districts / wards: normalised from the RAW spelling (clean() strips "Quận"/"Huyện" prefixes, which would turn
     # "Quận 1" into "1"), aligned to the surviving rows, kept next to the original column
     for c, lvl in dist_cols.items():
-        if c not in df.columns or kept is None or roles.get(c) in ("numeric", "time") and lvl != "district":
+        if c not in df.columns or kept is None or pd.api.types.is_datetime64_any_dtype(df[c]):
+            continue
+        if roles.get(c) in ("numeric", "time") and lvl != "district":
             continue
         if any(str(x).endswith("__province") for x in df.columns if str(x).startswith(f"{c}__")):
             continue   # values were actually provinces
@@ -135,9 +137,38 @@ def to_silver(df_bronze: pd.DataFrame, impute: str | None = None) -> tuple[pd.Da
     return df, roles, log
 
 
-def quality_step(bronze: pd.DataFrame, impute: str | None = None) -> dict:
+def _rollup_provinces(silver: pd.DataFrame, config: dict, log: list[str]) -> tuple[pd.DataFrame, dict]:
+    keys = ["province", "year"]
+    measures = [c for c in config["sum"] if c in silver]
+    if set(keys) - set(silver) or not measures:
+        raise ValueError("province_rollup requires province, year and at least one additive measure")
+    frame = silver[keys + measures].copy()
+    province = frame["province"].map(lambda name: to_new_province(normalize_province(name)))
+    invalid = province.isna() | frame["year"].isna()
+    if invalid.any():
+        samples = frame.loc[invalid, "province"].dropna().unique()[:5].tolist()
+        log.append(f"province_rollup: {int(invalid.sum())} rows without a valid province/year excluded; examples: {samples!r}")
+    frame["province"] = province
+    grouped = frame.loc[~invalid].groupby(keys)[measures]
+    rolled = grouped.sum(min_count=1).where(grouped.count().eq(grouped.size(), axis=0)).reset_index()
+    log.append(f"province_rollup: {len(silver)} → {len(rolled)} rows at the 34-province × year grain; boundary break in 2025")
+    roles = {"province": "geo", "year": "time", **dict.fromkeys(measures, "numeric")}
+    for metric, (numerator, denominator) in config.get("ratios", {}).items():
+        if numerator not in rolled or denominator not in rolled:
+            log.append(f"{metric}: missing source columns {', '.join(c for c in (numerator, denominator) if c not in rolled)}")
+            continue
+        denom = rolled[denominator].where(rolled[denominator].ne(0))
+        rolled[metric] = rolled[numerator] / denom
+        roles[metric] = "numeric"
+        log.append(f"{metric} = Σ{numerator} / Σ{denominator}")
+    return rolled, roles
+
+
+def quality_step(bronze: pd.DataFrame, impute: str | None = None, province_rollup: dict | None = None) -> dict:
     before = profile_quality(bronze)
     silver, roles, log = to_silver(bronze, impute=impute)
+    if province_rollup:
+        silver, roles = _rollup_provinces(silver, province_rollup, log)
     after = profile_quality(silver.drop(columns=[c for c in silver.columns if c.endswith("__imputed")]))
     return {"silver": silver, "roles": roles,
             "report": {"before": before, "after": after, "cleaning_log": log,

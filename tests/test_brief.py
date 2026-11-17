@@ -17,6 +17,10 @@ PRACTICE = [
     ("firms_roe.md", FIRMS, "roe_pct", "listed_firms_market"),
     ("wdi_tax_revenue.md", WDI, "tax_revenue_pct_gdp", "development_indicators"),
     ("wdi_no_cong.md", WDI, "central_gov_debt_pct_gdp", None),
+    ("nang_luong_xe_dien.md", ["country", "year", "renewables_electricity_share_pct"],
+     "renewables_electricity_share_pct", "energy_ev_data_economy"),
+    ("ngan_sach_bo_sung.md", ["province", "year", "earmarked_capex", "earmarked_capex_share_ratio"],
+     "earmarked_capex_share_ratio", "public_finance_province"),
 ]
 PACK_BRIEFS = {
     "ngan_sach_tinh.md": "public_finance_province",

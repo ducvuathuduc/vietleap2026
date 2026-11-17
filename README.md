@@ -141,6 +141,11 @@ Recipe nhiều nguồn có thể đặt `conform.agg` theo từng cột, ví d�
 và `conform.ratios: {tu_chu: [thu, chi]}` để tính tỷ lệ từ tổng thu và tổng chi sau khi ghép tỉnh.
 `post_sql` trong YAML tin cậy của CLI cho phép tạo view `gold.v_*` từ bảng warehouse sau bước conformed.
 
+- [Ngân sách tỉnh sau sáp nhập](scenarios/public_finance/README.md)
+- [Báo cáo tài chính nhiều kỳ](scenarios/listed_firms/README.md)
+- [Việt Nam và ASEAN qua WDI](scenarios/wdi_asean/README.md)
+- [Năng lượng và xe điện](scenarios/energy/README.md)
+
 ## Cấu trúc thư mục
 
 ```

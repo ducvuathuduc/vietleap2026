@@ -67,6 +67,16 @@ class IngestResult:
     provenance: dict
 
 
+@dataclass
+class Recipe:
+    dataset: str
+    sources: list[Source]
+    keys: dict = field(default_factory=dict)
+    post_sql: list[str] = field(default_factory=list)
+    primary: str | None = None
+    analysis_table: str | None = None
+
+
 def now_iso() -> str:
     return datetime.now(TZ).isoformat(timespec="seconds")
 
@@ -106,20 +116,37 @@ def validate_post_sql(statements: list[str]) -> list[tuple[str, str]]:
     return views
 
 
-def load_sources(path: str | Path, *, with_post_sql: bool = False) -> tuple:
-    """Return (dataset_name, sources, keys), plus validated SQL when requested."""
-    path = Path(path)
+def load_recipe(path: str | Path) -> Recipe:
+    """Read a trusted YAML recipe and its optional same-directory SQL files."""
+    path = Path(path).resolve()
     spec = yaml.safe_load(path.read_text(encoding="utf-8"))
     base = path.parent
     out = []
     for s in spec.get("sources", []):
         uri = s["uri"]
-        if s["kind"] in ("file", "cv") and not Path(uri).is_absolute() and (base / uri).exists():
+        if s["kind"] in ("file", "cv") and not Path(uri).is_absolute() and (
+            (base / uri).exists() or Path(uri).parts[0] == ".."
+        ):
             uri = str((base / uri).resolve())   # paths in sources.yaml are relative to the yaml file
         out.append(Source(name=s["name"], kind=s["kind"], uri=uri, options=s.get("options", {}) or {},
                           license_note=s.get("license", ""), conform=s.get("conform", {}) or {}))
-    recipe = (spec.get("dataset", path.stem), out, spec.get("keys", {}) or {})
-    if not with_post_sql:
-        return recipe
-    post_sql = validate_post_sql(spec.get("post_sql", []))
-    return (*recipe, [statement for _, statement in post_sql])
+    statements = spec.get("post_sql", [])
+    if not isinstance(statements, list):
+        raise PermissionError("post_sql must be a list of view definitions")
+    sql = []
+    for item in statements:
+        if isinstance(item, str) and re.fullmatch(r"[\w-]+\.sql", item, re.ASCII):
+            sql_path = (base / item).resolve()
+            if sql_path.parent != base:
+                raise PermissionError("post_sql file must be in the recipe directory")
+            item = sql_path.read_text(encoding="utf-8")
+        sql.append(item)
+    return Recipe(spec.get("dataset", path.stem), out, spec.get("keys", {}) or {},
+                  [statement for _, statement in validate_post_sql(sql)], spec.get("primary"), spec.get("analysis_table"))
+
+
+def load_sources(path: str | Path, *, with_post_sql: bool = False) -> tuple:
+    """Return (dataset_name, sources, keys), plus validated SQL when requested."""
+    recipe = load_recipe(path)
+    base = (recipe.dataset, recipe.sources, recipe.keys)
+    return (*base, recipe.post_sql) if with_post_sql else base

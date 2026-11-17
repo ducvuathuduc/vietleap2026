@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "engine"))
 
 from vlkit.de.flow import run_file, run_flow  # noqa: E402
-from vlkit.de.sources import load_sources  # noqa: E402
+from vlkit.de.sources import load_recipe  # noqa: E402
 from vlkit.de.warehouse import Warehouse  # noqa: E402
 from vlkit.i18n import DEFAULT_REPORT_LANG, REPORT_LANGS  # noqa: E402
 
@@ -85,9 +85,10 @@ def main(argv=None):
             s = run_file(a.path, dataset=a.name, impute=a.impute, serve=a.serve, serve_kwargs=sk, out_root=a.out,
                          mode=a.mode)
         else:
-            ds, sources, keys, post_sql = load_sources(a.yaml, with_post_sql=True)
-            s = run_flow(ds, sources, impute=a.impute, serve=a.serve, primary=a.primary, serve_kwargs=sk, out_root=a.out,
-                         keys=keys, mode=a.mode, post_sql=post_sql)
+            recipe = load_recipe(a.yaml)
+            s = run_flow(recipe.dataset, recipe.sources, impute=a.impute, serve=a.serve, primary=a.primary or recipe.primary,
+                         serve_kwargs=sk, out_root=a.out, keys=recipe.keys, mode=a.mode, post_sql=recipe.post_sql,
+                         analysis_table=recipe.analysis_table)
         _print(s)
     elif a.cmd == "brief":
         _brief(a)

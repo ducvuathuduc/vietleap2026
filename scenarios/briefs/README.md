@@ -13,7 +13,9 @@ python de.py brief scenarios/briefs/bds_gia_m2.md --data data/practice/synthetic
 | firms_roe.md | vn_firms_2021.xlsx | roe_pct | listed_firms_market |
 | wdi_tax_revenue.md | wdi_asia_fiscal_panel.csv | tax_revenue_pct_gdp | development_indicators |
 | wdi_no_cong.md | wdi_asia_fiscal_panel.csv | central_gov_debt_pct_gdp | development_indicators |
+| nang_luong_xe_dien.md | [OWID và Ember](../energy/) | renewables_electricity_share_pct | energy_ev_data_economy |
 | ngan_sach_tinh.md | (tự thu thập) | — | public_finance_province |
+| ngan_sach_bo_sung.md | [Phụ lục phân bổ ngân sách 2024–2025](../public_finance/) | earmarked_capex_share_ratio | public_finance_province |
 | chinh_sach_luong.md | (tự thu thập) | — | economic_policy |
 | du_lieu_mo_bds.md | (scraping + API) | — | data_economy_property |
 | chi_so_phat_trien.md | WDI API | — | development_indicators |

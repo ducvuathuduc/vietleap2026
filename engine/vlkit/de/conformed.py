@@ -357,6 +357,7 @@ FROM {S(tk)} s {' '.join(joins)}""")
         return " UNION ALL BY NAME ".join(f"SELECT * FROM {_q(facts[tk.table])}" for tk in group)
 
     joins_diag, join_sql, extra_sel = [], [], []
+    output_columns = {c["name"].casefold() for c in wh.columns(facts[pk.table])}
     base_types = set.intersection(*[_fk_types(tk, shared) for tk in base_group]) if base_group else set()
     for i, gr in enumerate(groups):
         name = "+".join(tk.short for tk in gr)
@@ -408,7 +409,12 @@ FROM {S(tk)} s {' '.join(joins)}""")
         rules = [agg, *(f"{a}={func}" for a, func in overrides.items())] if n_rows > n_keys else []
         rules += [f"{r}=Σ{n}/Σ{d}" for r, (n, d) in ratios.items()]
         join_sql.append(f"LEFT JOIN ({inner}) {alias} ON " + " AND ".join(f"b.{c} = {alias}.{c}" for c in on_cols))
-        extra_sel += [f"{alias}.{ident(a)} AS {ident(pre + '__' + _slug(a))}" for a in attrs]
+        for attr in attrs:
+            column = attr if conf.get("prefix_columns") is False else pre + "__" + _slug(attr)
+            if conf.get("prefix_columns") is False and column.casefold() in output_columns:
+                raise ValueError(f"duplicate integrated column: {column}")
+            extra_sel.append(f"{alias}.{ident(attr)} AS {ident(column)}")
+            output_columns.add(column.casefold())
         extra_sel.append(f"{alias}.{on_cols[0]} IS NOT NULL AS {ident('_match_' + pre)}")
         joins_diag.append({**d, "status": "joined", "aggregated": "; ".join(rules) or None, "where": where,
                            "columns_added": len(attrs), "distinct_keys": int(n_keys), "_alias": alias, "_flag": f"_match_{pre}"})

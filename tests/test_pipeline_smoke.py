@@ -89,3 +89,26 @@ def test_public_finance_derived_metrics(tmp_path):
     assert res["meta"]["target"] == "budget_execution_rate_pct"
     df = pd.read_parquet(tmp_path / "pf" / "clean.parquet")
     assert df["budget_execution_rate_pct"].between(85, 110).all()
+
+
+def test_firm_aliases_and_financial_sector_driver_sample():
+    from vlkit import domains
+
+    df = pd.DataFrame({"LNST (VND)": [10, 20, 12, 15], "VCSH": [100, 100, 100, 100],
+                       "ICB Industry": ["Công nghiệp", "Ngân hàng", "Non-life insurance", "Tài chính"]})
+    roles = {"LNST (VND)": "numeric", "VCSH": "numeric", "ICB Industry": "category"}
+    info = domains.apply_firm(df, roles, [])
+    assert df["roe_pct"].tolist() == [10, 20, 12, 15]
+    assert info["ingredients"]["roe_pct"] == ["LNST (VND)", "VCSH"]
+    assert df.index[info["roe_driver_sample"]].tolist() == [0]
+
+
+def test_driver_evaluation_does_not_report_a_hypothesis_p_value():
+    from vlkit.insights import driver_insights
+
+    rng = np.random.default_rng(7)
+    x = rng.uniform(10, 50, size=160)
+    frame = pd.DataFrame({"x": x, "y": x * 3 + rng.normal(scale=18, size=len(x))})
+    insights, _ = driver_insights(frame, "y", ["x", "y"], [], {})
+    assert {item["type"] for item in insights} == {"drivers", "what_if"}
+    assert all(item["p_value"] is None for item in insights)

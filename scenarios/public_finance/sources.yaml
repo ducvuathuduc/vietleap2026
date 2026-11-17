@@ -1,0 +1,21 @@
+dataset: public_finance
+primary: budget
+keys:
+  province: [province]
+  year: [year]
+sources:
+  - name: budget
+    kind: file
+    uri: ../../data/raw/provincial_budget.csv
+    license: Ministry of Finance or provincial budget disclosure; verify redistribution terms for the actual file
+    conform:
+      geo_level: "34"
+      province_rollup:
+        sum: [budget_revenue, budget_expenditure, budget_transfers, local_budget_revenue, budget_actual, budget_plan, budget_investment, population, grdp]
+        ratios:
+          budget_autonomy_ratio: [budget_revenue, budget_expenditure]
+          transfer_dependency_ratio: [budget_transfers, local_budget_revenue]
+          budget_execution_ratio: [budget_actual, budget_plan]
+          investment_share_ratio: [budget_investment, budget_expenditure]
+          budget_revenue_per_capita: [budget_revenue, population]
+          budget_revenue_to_grdp_ratio: [budget_revenue, grdp]

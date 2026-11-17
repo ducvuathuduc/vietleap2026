@@ -353,7 +353,22 @@ CONNECTORS = {"file": ingest_file, "api": ingest_api, "sql": ingest_sql, "scrape
 
 
 def ingest(src: Source) -> IngestResult:
-    return CONNECTORS[src.kind](src)
+    result = CONNECTORS[src.kind](src)
+    columns = src.options.get("columns")
+    rename = src.options.get("rename", {})
+    filters = src.options.get("filters", {})
+    if columns is None and not rename and not filters:
+        return result
+    frames = {}
+    for name, frame in result.frames.items():
+        if not frame.empty:
+            for column, allowed in filters.items():
+                frame = frame.loc[frame[column].astype("string").isin([str(value) for value in allowed])]
+            if columns is not None:
+                frame = frame.loc[:, columns]
+            frame = frame.rename(columns=rename)
+        frames[name] = frame
+    return IngestResult(src, frames, {**result.provenance, **make_provenance(src, frames)})
 
 
 def _tname(s: str) -> str:

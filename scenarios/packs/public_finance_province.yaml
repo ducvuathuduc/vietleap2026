@@ -2,7 +2,7 @@ id: public_finance_province
 title: Tài chính công & ngân sách tỉnh
 sponsor: UEH School of Public Finance (đồng tổ chức)
 domain: public_finance
-keywords: [ngan sach, thu ngan sach, chi ngan sach, tai khoa, thue, nguon thu, chi thuong xuyen, chi dau tu, bo sung can doi, tu chu ngan sach, du toan, quyet toan, budget, fiscal, tax revenue, public spending, expenditure, transfer, decentralization]
+keywords: [ngan sach, thu ngan sach, chi ngan sach, tai khoa, thue, nguon thu, chi thuong xuyen, chi dau tu, bo sung can doi, bo sung co muc tieu, tu chu ngan sach, du toan, quyet toan, budget, fiscal, tax revenue, public spending, expenditure, transfer, decentralization]
 expected_columns:
   - "Tỉnh/TP (63 cũ hoặc 34 mới theo NQ 202/2025/QH15)"
   - "Năm"
@@ -11,6 +11,15 @@ expected_columns:
   - "Bổ sung cân đối từ NSTW (transfer)"
   - "Dự toán vs thực hiện"
   - "Dân số, GRDP (để chuẩn hoá bình quân đầu người, % GRDP)"
+column_aliases:
+  province: [Tỉnh, Tỉnh/TP, Địa phương, province]
+  year: [Năm, năm ngân sách, year]
+  budget_revenue: [Thu NSNN trên địa bàn, Thu ngân sách nhà nước trên địa bàn, budget_revenue]
+  budget_expenditure: [Chi NSĐP, Chi ngân sách địa phương, budget_expenditure]
+  budget_transfers: [Bổ sung cân đối từ NSTW, budget_transfers]
+  local_budget_revenue: [Tổng thu NSĐP, Tổng thu ngân sách địa phương, local_budget_revenue]
+  budget_actual: [Thực hiện dự toán, Quyết toán, budget_actual]
+  budget_plan: [Dự toán, budget_plan]
 kpis:
   - "Tỷ lệ tự chủ ngân sách = thu trên địa bàn / chi NSĐP"
   - "Mức phụ thuộc bổ sung từ TW (%) = bổ sung cân đối / tổng thu NSĐP"

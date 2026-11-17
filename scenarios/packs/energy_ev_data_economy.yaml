@@ -1,0 +1,28 @@
+id: energy_ev_data_economy
+title: Chuyển dịch năng lượng, xe điện và cú sốc giá dầu
+sponsor: Chủ đề thực hành
+domain: generic
+keywords: [nang luong, tai tao, dien tai tao, xe dien, ha tang sac, gia dau, chuyen dich nang luong, renewable electricity, energy transition, electric vehicle, oil shock]
+expected_columns:
+  - "Quốc gia, mã ISO3, năm"
+  - "Tỷ trọng điện tái tạo, cường độ phát thải điện, nhu cầu điện/người"
+  - "Tỷ trọng dầu trong tổng cung năng lượng"
+kpis:
+  - "Tỷ trọng điện tái tạo (%)"
+  - "Cường độ phát thải điện (gCO₂e/kWh)"
+  - "Tỷ trọng dầu trong tổng cung năng lượng (%)"
+recipe:
+  - "Đối chiếu riêng các năm có quan sát cho Việt Nam và nhóm so sánh."
+  - "So sánh tỷ trọng điện tái tạo và mức phụ thuộc dầu qua năm."
+  - "Đọc quy mô thị trường xe điện từ nguồn bổ sung có điều khoản phù hợp, nếu có."
+decision_template:
+  who: "Cơ quan quy hoạch điện và giao thông"
+  question: "Nên sàng lọc thị trường nào để khảo sát thí điểm hạ tầng sạc dựa trên cơ cấu điện và mức phụ thuộc dầu?"
+  what: "Chọn thị trường để đánh giá khả thi hạ tầng sạc theo cơ cấu điện và mức phụ thuộc dầu."
+  where: "Việt Nam, đối chiếu các nước ASEAN có chỉ số cùng năm"
+  kpi: "Tỷ trọng điện tái tạo, cường độ phát thải điện, tỷ trọng năng lượng từ dầu"
+  caveat: "Chỉ số theo quốc gia và năm. Đánh giá vị trí trạm sạc cần dữ liệu nhu cầu và công suất lưới theo địa phương."
+deck_storyline:
+  - "Câu hỏi ưu tiên khảo sát thí điểm"
+  - "Bằng chứng từ cơ cấu điện và dầu theo năm"
+  - "Một bước khảo sát khả thi và giới hạn về độ phân giải"

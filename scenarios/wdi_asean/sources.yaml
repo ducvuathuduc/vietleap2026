@@ -1,0 +1,108 @@
+dataset: wdi_asean
+primary: tax_revenue
+analysis_table: gold.obt_integrated_wdi_asean
+keys:
+  country: [iso3]
+  year: [year]
+post_sql: [views.sql]
+sources:
+  - name: tax_revenue
+    conform: &wide {prefix_columns: false}
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/GC.TAX.TOTL.GD.ZS
+    license: &license World Bank, World Development Indicators (CC BY 4.0; indicator exceptions apply)
+    options:
+      <<: &wdi
+        params: {format: json, per_page: 2000, date: "2000:2024"}
+        records_path: "1"
+        paging: worldbank
+        columns: [countryiso3code, date, value]
+      rename: {countryiso3code: iso3, date: year, value: tax_revenue_pct_gdp}
+  - name: gdp_per_capita
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/NY.GDP.PCAP.CD
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: gdp_per_capita_usd}
+  - name: gdp_growth
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/NY.GDP.MKTP.KD.ZG
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: gdp_growth_pct}
+  - name: revenue
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/GC.REV.XGRT.GD.ZS
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: revenue_pct_gdp}
+  - name: expense
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/GC.XPN.TOTL.GD.ZS
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: expense_pct_gdp}
+  - name: net_lending
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/GC.NLD.TOTL.GD.ZS
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: net_lending_pct_gdp}
+  - name: central_gov_debt
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/GC.DOD.TOTL.GD.ZS
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: central_gov_debt_pct_gdp}
+  - name: population
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/SP.POP.TOTL
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: population}
+  - name: urban_pop
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/SP.URB.TOTL.IN.ZS
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: urban_pop_pct}
+  - name: inflation
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/FP.CPI.TOTL.ZG
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: inflation_pct}
+  - name: fdi_inflow
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/BX.KLT.DINV.WD.GD.ZS
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: fdi_inflow_pct_gdp}
+  - name: education_spend
+    conform: *wide
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM;BRN;KHM;IDN;LAO;MYS;MMR;PHL;SGP;THA/indicator/SE.XPD.TOTL.GD.ZS
+    license: *license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: education_spend_pct_gdp}

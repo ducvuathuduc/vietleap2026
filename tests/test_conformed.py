@@ -273,3 +273,46 @@ post_sql:
 
     with pytest.raises(ValidationError, match="post_sql"):
         IngestIn(dataset="ps", sources=[{"name": "macro", "kind": "file", "uri": "macro.csv"}], post_sql=post)
+
+
+def test_wdi_asean_gap_view_offline(wh, tmp_path, kit_root):
+    from vlkit.de.flow import run_flow
+    from vlkit.de.sources import load_recipe
+
+    recipe = load_recipe(kit_root / "scenarios/wdi_asean/sources.offline.yaml")
+    s = run_flow(recipe.dataset, recipe.sources, out_root=tmp_path / "out", wh=wh, primary=recipe.primary,
+                 keys=recipe.keys, post_sql=recipe.post_sql)
+    assert len(s["bronze"]) == 12
+    assert s["conformed"]["shared_keys"] == ["country", "year"]
+    assert s["conformed"]["integrated_rows"] == 250
+    assert all(j["match_pct"] == 100 for j in s["conformed"]["joins"])
+
+    practice = pd.read_csv(kit_root / "data/practice/wdi_asia_fiscal_panel.csv")
+    peer_codes = {"BRN", "KHM", "IDN", "LAO", "MYS", "MMR", "PHL", "SGP", "THA"}
+    values = practice.loc[practice.year == 2022].set_index("iso3")["gdp_per_capita_usd"]
+    peers = values.loc[sorted(peer_codes)].dropna()
+    result = wh.sql("SELECT * FROM gold.v_vnm_vs_asean_gap WHERE indicator = 'NY.GDP.PCAP.CD' AND year = 2022").iloc[0]
+    assert result.vnm_value == pytest.approx(values["VNM"])
+    assert result.asean_median == pytest.approx(peers.median())
+    assert result.gap == pytest.approx(values["VNM"] - peers.median())
+    assert result.n_countries == len(peers)
+    tax = wh.sql("SELECT vnm_value, gap FROM gold.v_vnm_vs_asean_gap WHERE indicator = 'GC.TAX.TOTL.GD.ZS'")
+    assert tax.isna().all().all()
+    assert wh.sql("SELECT count(*) AS n FROM gold.v_vnm_vs_asean_gap").iloc[0].n == 300
+
+
+def test_public_finance_recipe_rolls_up_silver(wh, tmp_path, kit_root):
+    from vlkit.de.flow import run_flow
+    from vlkit.de.sources import load_recipe
+
+    recipe = load_recipe(kit_root / "scenarios/public_finance/sources.yaml")
+    recipe.sources[0].uri = _csv(tmp_path, "budget", pd.DataFrame({
+        "province": ["Hà Giang", "Tuyên Quang", "Tuyên Quang"], "year": [2024, 2024, 2025],
+        "budget_revenue": [5, 35, 80], "budget_expenditure": [20, 80, 100],
+    }))
+    result = run_flow(recipe.dataset, recipe.sources, out_root=tmp_path / "out", wh=wh, primary=recipe.primary)
+    assert result["quality"]["silver.public_finance__budget"]["rows"] == 2
+    data = wh.sql("SELECT province, year, budget_autonomy_ratio FROM silver.public_finance__budget ORDER BY year")
+    assert data.province.tolist() == ["Tuyên Quang", "Tuyên Quang"]
+    assert data.budget_autonomy_ratio.tolist() == pytest.approx([.4, .8])
+    assert len(wh.read("bronze.public_finance__budget")) == 3

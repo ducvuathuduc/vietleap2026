@@ -1,0 +1,18 @@
+dataset: public_finance_practice
+primary: budget
+keys: {province: [province], year: [year]}
+sources:
+  - name: budget
+    kind: file
+    uri: ../../data/snapshots/provincial_earmarked_transfers_2024_2025.csv
+    license: Official National Assembly resolutions (Article 15, Vietnam Intellectual Property Law)
+    options:
+      origins:
+        - https://datafiles.chinhphu.vn/cpp/files/vbpq/2023/12/105-qh15.signed.pdf
+        - https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/11/160-qh15.signed.pdf
+    conform:
+      geo_level: "34"
+      province_rollup:
+        sum: [earmarked_transfers, earmarked_capex, earmarked_current, earmarked_programs]
+        ratios:
+          earmarked_capex_share_ratio: [earmarked_capex, earmarked_transfers]

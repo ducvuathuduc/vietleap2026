@@ -9,6 +9,16 @@ expected_columns:
   - "Doanh thu thuần, giá vốn, lợi nhuận gộp, LNST"
   - "Tổng tài sản, nợ phải trả, vốn chủ sở hữu, hàng tồn kho, tiền"
   - "Giá đóng cửa, khối lượng, vốn hoá (nếu có dữ liệu thị trường)"
+column_aliases:
+  ticker: [Mã CK, Mã chứng khoán, ticker, symbol, stock code]
+  exchange: [Sàn, Sàn giao dịch, exchange]
+  sector: [Ngành, ICB Industry, ICB Sector, sector, industry]
+  period: [Kỳ báo cáo, kỳ kế toán, reporting period, fiscal period]
+  revenue: [Doanh thu thuần, net revenue, net sales]
+  npat: [Lợi nhuận sau thuế, LNST, NPAT, net income, net profit, profit after]
+  assets: [Tổng cộng tài sản, Tổng tài sản, total assets]
+  equity: [Vốn chủ sở hữu, VCSH, equity]
+sector_exclude_for_roe: [Tài chính, Ngân hàng, Bảo hiểm, Chứng khoán, financials, financial services, bank, banks, banking, insurance, insurers, securities]
 kpis:
   - "ROE (%), ROA (%), biên LN gộp/ròng (%) — engine tự sinh (domain firm)"
   - "Nợ/vốn chủ, nợ/tài sản"

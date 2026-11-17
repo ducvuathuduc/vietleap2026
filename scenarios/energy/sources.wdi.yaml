@@ -1,0 +1,29 @@
+dataset: energy_wdi
+primary: electricity_access
+keys: {country: [iso3], year: [year]}
+sources:
+  - name: electricity_access
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM/indicator/EG.ELC.ACCS.ZS
+    license: &wdi_license World Bank, World Development Indicators (CC BY 4.0; indicator exceptions apply)
+    options:
+      <<: &wdi
+        params: {format: json, per_page: 2000, date: "2000:2024"}
+        paging: worldbank
+        records_path: "1"
+        columns: [countryiso3code, date, value]
+      rename: {countryiso3code: iso3, date: year, value: electricity_access_pct}
+  - name: renewable_consumption
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM/indicator/EG.FEC.RNEW.ZS
+    license: *wdi_license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: renewable_energy_consumption_pct}
+  - name: electricity_use
+    kind: api
+    uri: https://api.worldbank.org/v2/country/VNM/indicator/EG.USE.ELEC.KH.PC
+    license: *wdi_license
+    options:
+      <<: *wdi
+      rename: {countryiso3code: iso3, date: year, value: electricity_use_per_capita_kwh}

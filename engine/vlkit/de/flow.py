@@ -37,7 +37,7 @@ def _dump(obj, p: Path):
 def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = None, wh: Warehouse | None = None,
              impute: str | None = None, primary: str | None = None, serve: bool = False,
              serve_kwargs: dict | None = None, keys: dict | None = None, mode: str = "replace",
-             post_sql: list[str] | None = None) -> dict:
+             post_sql: list[str] | None = None, analysis_table: str | None = None) -> dict:
     """mode: replace | append | incremental — how bronze tables are loaded (see Warehouse.write_bronze).
     Silver and gold are always rebuilt from the full bronze table: de-duplication, outlier fences and models need
     every row, and a re-run that inserted nothing still yields identical silver/gold."""
@@ -84,8 +84,9 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         t0, silver, quality, roles_of, load_silver = time.time(), [], {}, {}, {}
         for b in bronze:
             st = now_iso()
-            q = quality_step(wh.read(b), impute=impute)
             name = b.split(".", 1)[1]
+            rollup = conform_of[f"silver.{name}"].get("province_rollup")
+            q = quality_step(wh.read(b), impute=impute, province_rollup=rollup)
             wh.write("silver", name, q["silver"])
             wh.lineage(ds, b, f"silver.{name}", "clean")
             wh.save_quality(ds, f"silver.{name}", q["report"])
@@ -185,10 +186,14 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         if serve:
             t0 = time.time()
             from ..pipeline import run as insight_run
-            obt = wh.lake / "gold" / f"obt_{ds}.parquet"
+            serving_table = analysis_table or f"gold.obt_{ds}"
+            if serving_table not in summary["gold"]:
+                raise ValueError(f"analysis_table was not produced in this run: {serving_table}")
+            obt = wh.lake / "gold" / f"{serving_table.split('.', 1)[1]}.parquet"
             served = insight_run(obt, out_root=out.parent, name=ds, **(serve_kwargs or {}))
-            wh.lineage(ds, f"gold.obt_{ds}", "serving:dashboard", "serve")
-            wh.lineage(ds, f"gold.obt_{ds}", "serving:insights+deck", "serve")
+            summary["analysis_table"] = serving_table
+            wh.lineage(ds, serving_table, "serving:dashboard", "serve")
+            wh.lineage(ds, serving_table, "serving:insights+deck", "serve")
             timings["serve"] = round(time.time() - t0, 2)
         wh.lineage(ds, f"gold.obt_{ds}", "serving:api+ai_analyst", "serve")
 
