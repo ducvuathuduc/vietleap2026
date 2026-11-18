@@ -1,3 +1,8 @@
+deployment:
+  # Served from GitHub Pages project subpath https://ducvuathuduc.github.io/vietleap2026/
+  # (Cloudflare Pages / custom domain serve from root — remove this block then.)
+  basePath: /vietleap2026
+
 appearance:
   default: system
   switcher: true
