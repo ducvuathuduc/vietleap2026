@@ -84,7 +84,11 @@ function seedInitialDatasets(s: StoreState) {
       name: "WDI Asia Fiscal Panel",
       relPath: "data/practice/wdi_asia_fiscal_panel.csv",
       domain: "public_finance",
-      target: "tax_revenue_pct_gdp",
+      // Story anchor: GDP/capita — Vietnam has 25/25 observations
+      // (VNM 2024 $4,717, rank 6/10) while tax_revenue_pct_gdp has 0/25
+      // for Vietnam, so the old target made /decision unable to speak
+      // about Vietnam at all. Matches Evidence Overview + pitch/deck/EDA.
+      target: "gdp_per_capita_usd",
       timeCol: "year",
       geoCol: "country",
     },
