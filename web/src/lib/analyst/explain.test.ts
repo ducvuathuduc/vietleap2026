@@ -71,3 +71,30 @@ test("join explanation copies coverage numbers from pipeline.conformed", () => {
   const none = explainOffline({ kind: "join", id: "gso:geo", label: "z" }, { pipeline: { conformed: null } as never })
   assert.match(none.text, /không có lớp conformed/)
 })
+
+test("segment province explanation reports rank, national gap, small sample note, and zero causal claim", () => {
+  const out = explainOffline(
+    {
+      kind: "segment",
+      id: "Đà Nẵng",
+      label: "Tỉnh Đà Nẵng",
+      data: {
+        province: "Đà Nẵng",
+        region: "Bắc Trung Bộ và Duyên hải miền Trung",
+        metric: "price_per_m2",
+        agg: "median",
+        value: 120,
+        n: 4,
+        rank: 2,
+        total_provinces: 34,
+        national_value: 80,
+      },
+    },
+    {}
+  )
+  assert.match(out.text, /xếp hạng 2\/34 tỉnh thành/)
+  assert.match(out.text, /cao hơn 50,0% so với mức toàn quốc/)
+  assert.match(out.text, /cỡ mẫu nhỏ: n=4/)
+  assert.match(out.text, /không chứng minh nhân quả/)
+})
+

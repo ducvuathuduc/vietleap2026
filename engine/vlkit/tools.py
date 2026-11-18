@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from . import stats
-from .models import fit_drivers as _fit_drivers, what_if as _what_if
+from .models import fit_drivers as _fit_drivers, what_if as _what_if, what_if_multi as _what_if_multi
 from .stats import r
 
 
@@ -64,6 +64,106 @@ def run_groupby(ctx: Context, by: str, metric: str | None = None, agg: str = "me
                     "x_label": by, "y_label": f"{agg} {metric}"}
     res["table"] = {"columns": [by, "n", "median", "mean", "sum"], "rows": [[row[by], row["n"], row["median"], row["mean"], row["sum"]] for row in res["rows"]]}
     return res
+
+
+def run_geo(ctx: Context, metric: str | None = None, agg: str = "median") -> dict:
+    import csv
+    import re
+    from .vn import RESOURCES, ascii_key, normalize_province, to_new_province
+
+    if agg not in ("median", "mean", "sum", "count"):
+        raise ToolError("agg must be median|mean|sum|count")
+    metric_col = ctx.col(metric or ctx.meta["target"], "numeric" if agg != "count" else "any")
+    if agg == "sum" and re.search(r"(pct|%|ty_le|rate|ratio|_per_|^per_|_m2$|roe|roa)", metric_col, re.I):
+        raise ToolError(f"ratio/per-unit column '{metric_col}' cannot use sum aggregation")
+
+    geo_col = "_province_2025" if "_province_2025" in ctx.df.columns else ctx.meta.get("geo_col")
+    if not geo_col or geo_col not in ctx.df.columns:
+        raise ToolError("Dataset does not contain a Vietnamese province column")
+
+    region_by_34: dict[str, str] = {}
+    if "_region" in ctx.df.columns and "_province_2025" in ctx.df.columns:
+        for p34, reg in ctx.df[["_province_2025", "_region"]].dropna().drop_duplicates().itertuples(index=False):
+            region_by_34[str(p34)] = str(reg)
+    with open(RESOURCES / "province_region.csv", encoding="utf-8") as f:
+        reg_raw = {ascii_key(row["province"]): row["region"] for row in csv.DictReader(f)}
+    with open(RESOURCES / "province_63_to_34.csv", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            if row["new_province"] not in region_by_34 and ascii_key(row["old_province"]) in reg_raw:
+                region_by_34[row["new_province"]] = reg_raw[ascii_key(row["old_province"])]
+
+    resolved_prov = []
+    unmatched_samples: list[str] = []
+    unmatched_rows = 0
+    converted = False
+    for raw in ctx.df[geo_col].tolist():
+        if raw is None or (isinstance(raw, float) and np.isnan(raw)) or str(raw).strip() == "":
+            resolved_prov.append(None)
+            continue
+        p63 = normalize_province(str(raw))
+        p34 = to_new_province(p63) if p63 else None
+        if not p34:
+            resolved_prov.append(None)
+            unmatched_rows += 1
+            s = str(raw).strip()
+            if s not in unmatched_samples and len(unmatched_samples) < 10:
+                unmatched_samples.append(s)
+        else:
+            if p63 and p34 != p63:
+                converted = True
+            resolved_prov.append(p34)
+
+    work = ctx.df.copy()
+    work["_geo34"] = resolved_prov
+    matched = work[work["_geo34"].notna()]
+    if matched.empty:
+        raise ToolError("Dataset does not contain Vietnamese provinces")
+
+    rows_out = []
+    for prov, grp in matched.groupby("_geo34", sort=False):
+        if agg == "count":
+            n = int(len(grp))
+            val = float(n)
+        else:
+            vals = pd.to_numeric(grp[metric_col], errors="coerce").dropna()
+            n = int(len(vals))
+            if n == 0:
+                continue
+            if agg == "sum":
+                val = r(float(vals.sum()))
+            elif agg == "mean":
+                val = r(float(vals.mean()))
+            else:
+                val = r(float(vals.median()))
+        rows_out.append({"province": str(prov), "region": region_by_34.get(str(prov)), "value": val, "n": n})
+
+    rows_out.sort(key=lambda x: -(x["value"] if x["value"] is not None else float("-inf")))
+    rows_out = rows_out[:34]
+
+    if agg == "count":
+        nat_val = float(len(matched))
+        nat_n = int(len(matched))
+    else:
+        all_vals = pd.to_numeric(matched[metric_col], errors="coerce").dropna()
+        nat_n = int(len(all_vals))
+        if nat_n == 0:
+            nat_val = None
+        elif agg == "sum":
+            nat_val = r(float(all_vals.sum()))
+        elif agg == "mean":
+            nat_val = r(float(all_vals.mean()))
+        else:
+            nat_val = r(float(all_vals.median()))
+
+    return {
+        "metric": metric_col,
+        "agg": agg,
+        "level": "province_2025",
+        "rows": rows_out,
+        "national": {"value": nat_val, "n": nat_n},
+        "unmatched": {"rows": unmatched_rows, "samples": unmatched_samples},
+        "converted_from_63": converted,
+    }
 
 
 def run_stat_test(ctx: Context, x: str, y: str | None = None, test: str = "auto", groups: list[str] | None = None) -> dict:
@@ -123,6 +223,17 @@ def what_if(ctx: Context, feature: str, pct_change: float, target: str | None = 
         fit_drivers(ctx, target)
     try:
         out = _what_if(ctx.models[target], feature, float(pct_change))
+    except (KeyError, ValueError) as e:
+        raise ToolError(str(e))
+    return out
+
+
+def what_if_multi(ctx: Context, changes: list[dict], target: str | None = None) -> dict:
+    target = ctx.col(target or ctx.meta["target"], "numeric")
+    if target not in ctx.models:
+        fit_drivers(ctx, target)
+    try:
+        out = _what_if_multi(ctx.models[target], changes)
     except (KeyError, ValueError) as e:
         raise ToolError(str(e))
     return out

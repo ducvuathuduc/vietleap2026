@@ -27,8 +27,10 @@ def secret_file(tmp_path):
 ATTACKS = [
     "DROP TABLE gold.t", "SELECT 1; DROP TABLE gold.t", "INSERT INTO gold.t VALUES (1,'x')",
     "SELECT * FROM read_csv('{f}')", "SELECT * FROM sniff_csv('{f}')", "SELECT * FROM '{f}'", 'SELECT * FROM "{f}"',
-    "SELECT * FROM parquet_scan('{f}')", "SELECT * FROM glob('/etc/*')", "SELECT current_setting('home_directory')",
-    "SELECT * FROM query('SELECT 1')", "ATTACH '{f}' AS x", "COPY gold.t TO '{f}'", "SET enable_external_access=true",
+    "SELECT * FROM read_parquet('{f}')", "SELECT * FROM parquet_scan('{f}')", "SELECT * FROM glob('/etc/*')",
+    "SELECT current_setting('home_directory')", "SELECT * FROM query('SELECT 1')", "ATTACH '{f}' AS x",
+    "COPY gold.t TO '{f}'", "COPY (SELECT * FROM gold.t) TO '{f}'", "PRAGMA database_list",
+    "INSTALL httpfs", "LOAD httpfs", "SET enable_external_access=true",
     "WITH x AS (SELECT 1) SELECT * FROM x JOIN '{f}' ON true", "SELECT * FROM gold.t, '{f}'",
 ]
 

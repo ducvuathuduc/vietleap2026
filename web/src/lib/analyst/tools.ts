@@ -14,7 +14,9 @@ import type {
   WarehouseTable,
   WhatIfResult,
 } from "@/lib/api/types"
-import { backend, compact, dsPath, post } from "./backend"
+import { backend, BackendError, compact, dsPath, post } from "./backend"
+import { chartFromResult } from "./sql-chart"
+import { isReadOnlySql } from "./sql-guard"
 
 export function topInsights(insights: Insight[], n: number) {
   return insights.slice(0, n).map((i) => ({
@@ -30,6 +32,8 @@ export function topInsights(insights: Insight[], n: number) {
 }
 
 export function makeTools(datasetId: string | null) {
+  let queryCount = 0
+  let sqlFailures = 0
   const needDs = () => {
     if (!datasetId) throw new Error("Chưa chọn dataset nào trên dashboard.")
     return datasetId
@@ -45,15 +49,45 @@ export function makeTools(datasetId: string | null) {
     }),
     getColumns: tool({
       description: "Tên và kiểu cột của một bảng warehouse, ví dụ 'gold.obt_ten_dataset'. Gọi trước khi viết SQL.",
-      inputSchema: z.object({ table: z.string().regex(/^(bronze|silver|gold|meta)\.[\w]+$/) }),
+      inputSchema: z.object({ table: z.string().regex(/^(bronze|silver|gold|meta)\.[\w-]+$/) }),
       execute: async ({ table }) =>
         backend<{ name: string; type: string }[]>(`/api/warehouse/tables/${encodeURIComponent(table)}/columns`),
     }),
     runSql: tool({
       description:
-        "Chạy MỘT câu SQL DuckDB chỉ đọc (SELECT/WITH) trên warehouse. Tên bảng dạng gold.\"ten_bang\". Trả về tối đa 200 dòng.",
+        "Chạy MỘT câu SQL DuckDB chỉ đọc (SELECT/WITH) trên warehouse. Tên bảng dạng gold.\"ten_bang\". Trả về tối đa 200 dòng kèm biểu đồ tự động.",
       inputSchema: z.object({ query: z.string().min(1).max(5000) }),
-      execute: async ({ query }) => compact(await backend<SqlResult>("/api/sql", post({ query, limit: 200 }))),
+      execute: async ({ query }) => {
+        const guard = isReadOnlySql(query)
+        if (!guard.ok) {
+          sqlFailures++
+          throw new Error(`Bị chặn: chỉ cho phép SELECT (${guard.reason ?? "chính sách chỉ đọc"})`)
+        }
+        if (sqlFailures >= 2) {
+          throw new Error("Đã thử lại SQL tối đa 2 lần trong lượt này; hãy dừng gọi SQL và nêu giới hạn cho người dùng.")
+        }
+        try {
+          const res = await backend<SqlResult>("/api/sql", post({ query, limit: 200 }))
+          const chart = chartFromResult(res.columns, res.rows)
+          const query_id = ++queryCount
+          return compact({
+            query_id,
+            query,
+            columns: res.columns,
+            rows: res.rows,
+            row_count: res.row_count,
+            chart,
+          })
+        } catch (e) {
+          sqlFailures++
+          if (e instanceof BackendError) {
+            if (e.status === 403) throw new Error("Bị chặn: chỉ cho phép SELECT")
+            if (e.status === 408) throw new Error("Truy vấn quá 20 giây — thu hẹp điều kiện")
+            if (e.status === 429) throw new Error("Quá giới hạn truy vấn — vui lòng đợi giây lát.")
+          }
+          throw e
+        }
+      },
     }),
     getInsights: tool({
       description: "Các insight đã xếp hạng (kiểm định, p-value, effect size, caveat) và khuyến nghị của dataset đang chọn.",

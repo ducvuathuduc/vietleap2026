@@ -4,6 +4,7 @@ import { BriefQuestionCard } from "@/components/brief-question-card"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { DataTable } from "@/components/data-table"
 import { useDataset } from "@/components/dataset-provider"
+import { ProvinceRankingCard } from "@/components/province-ranking-card"
 import { SectionCards } from "@/components/section-cards"
 import { ErrorState, LoadingState, PageShell } from "@/components/state"
 import { useAsync } from "@/hooks/use-async"
@@ -32,6 +33,11 @@ export default function OverviewPage() {
           metricLabel={meta?.target ?? "value"}
         />
       </div>
+      {datasetId && (
+        <div className="px-4 lg:px-6">
+          <ProvinceRankingCard datasetId={datasetId} silentOnMissing />
+        </div>
+      )}
       {ins.error ? (
         <ErrorState error={ins.error} />
       ) : ins.data && datasetId && prof.data ? (

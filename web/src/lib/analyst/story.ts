@@ -162,6 +162,21 @@ export function ungroundedNumbers(text: string, truth: number[]): string[] {
   })
 }
 
+/** Collect every numeric value from tool outputs and executed SQL query literals (years, LIMIT, etc.). */
+export function sqlTruthNumbers(toolOutputs: unknown[], queries: string[] = []): number[] {
+  const vals: number[] = []
+  const walk = (v: unknown, depth: number) => {
+    if (depth > 6 || v === null || v === undefined) return
+    if (typeof v === "number" && Number.isFinite(v)) vals.push(v)
+    else if (typeof v === "string") numbersIn(v).forEach((t) => vals.push(...numberCandidates(t)))
+    else if (Array.isArray(v)) v.slice(0, 250).forEach((x) => walk(x, depth + 1))
+    else if (typeof v === "object") Object.values(v as Record<string, unknown>).forEach((x) => walk(x, depth + 1))
+  }
+  walk(toolOutputs, 0)
+  for (const q of queries) walk(q, 0)
+  return vals
+}
+
 export interface LlmStoryDraft {
   headline?: string
   steps?: { id: string; narration: string }[]

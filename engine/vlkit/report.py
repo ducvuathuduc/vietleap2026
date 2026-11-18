@@ -543,9 +543,28 @@ def build_deck(res: dict, out: Path, chart_pngs: dict, de: dict | None = None, b
     # what-if
     n += 1; s = prs.slides.add_slide(blank); header(s, tr("kicker_impact"), tr("title_whatif"), n)
     wi = next((i for i in ins if i["type"] == "what_if"), None)
+    sc_path = out / "scenarios.json"
+    saved_scenarios = []
+    if sc_path.is_file():
+        try:
+            raw_sc = json.loads(sc_path.read_text(encoding="utf-8"))
+            if isinstance(raw_sc, list):
+                saved_scenarios = raw_sc[:4]
+        except Exception:
+            saved_scenarios = []
+    sc_lines: list[str] = []
+    if saved_scenarios:
+        for sc in saved_scenarios:
+            sr = sc.get("result") or {}
+            chg = sr.get("target_change_pct")
+            ci = sr.get("ci90_pct") or [None, None]
+            sc_lines.append(f"• {sc.get('name', 'Scenario')}: {chg:+.2f}% (CI90 [{ci[0]}, {ci[1]}]%)")
     if wi and chart_pngs.get(wi["id"]):
         s.shapes.add_picture(chart_pngs[wi["id"]], Inches(0.7), Inches(2.0), width=Inches(7.4))
-        card(s, 8.4, 2.0, 4.2, 4.6, tr("card_scenario"), [_clip(text_field(wi, "sentence", lang), 260), "", tr("whatif_caveat")], 14)
+        body_lines = [_clip(text_field(wi, "sentence", lang), 220)] + (["", *sc_lines] if sc_lines else []) + ["", tr("whatif_caveat")]
+        card(s, 8.4, 2.0, 4.2, 4.6, tr("card_scenario"), body_lines, 13 if sc_lines else 14)
+    elif sc_lines:
+        card(s, 0.7, 2.0, 11.9, 4.6, tr("card_scenario"), sc_lines + ["", tr("whatif_caveat")], 14)
     else:
         text(s, 0.7, 2.2, 11, 2, tr("no_lever"), 20, False, MUTED)
     # policy recommendation — one decision, owner, KPI, evidence
@@ -685,8 +704,15 @@ def pitch_md(res: dict, de: dict | None = None, brief: dict | None = None, lang:
                 "- " + t(lang, "pitch_impact", text=text_field(r0, "impact", lang)),
                 "- " + t(lang, "pitch_owner", who=_md_text(frame["who"]), where=_md_text(frame["where"]), kpi=_md_text(frame["kpi"])), "",
                 _note("decision", t(lang, "pitch_note_decision")), "", "---", ""]
+    sc_pitch_lines: list[str] = []
+    if de and isinstance(de.get("scenarios"), list):
+        for sc in de["scenarios"][:4]:
+            sr = sc.get("result") or {}
+            ci = sr.get("ci90_pct") or [None, None]
+            sc_pitch_lines.append(f"- **{_md_text(sc.get('name', 'Scenario'))}:** {sr.get('target_change_pct'):+.2f}% (CI90 [{ci[0]}, {ci[1]}]%)")
     out += [f"## {t(lang, 'pitch_impact_heading')}", "",
-            text_field(wi, "sentence", lang) if wi else t(lang, "pitch_no_lever"), "",
+            text_field(wi, "sentence", lang) if wi else t(lang, "pitch_no_lever"), ""] + sc_pitch_lines + [
+            ("" if not sc_pitch_lines else ""),
             _note("decision", t(lang, "pitch_note_whatif")), "", "---", "",
             f"## {t(lang, 'pitch_limits_heading')}", ""] + [f"- {c}" for c in _limitations(res, de, None, 4, lang)] + [
             "", _note("limits", t(lang, "pitch_note_limits")), "", "---", "",
@@ -796,6 +822,12 @@ def build_all(res: dict, df: pd.DataFrame, whatif: dict | None, out: Path, lang:
             i["chart_png"] = os.path.relpath(p, out)
     files["charts"] = len(pngs)
     de, brief = load_de(out), load_brief(out, res["meta"]["target"])
+    if (out / "scenarios.json").is_file():
+        try:
+            de = de or {}
+            de["scenarios"] = json.loads((out / "scenarios.json").read_text(encoding="utf-8"))[:4]
+        except Exception:
+            pass
     if brief and brief["stale"]:
         print(f"[warn] brief.json target differs from the analysed target '{res['meta']['target']}' — slide 2 carries a footnote")
     files.update(_write_language_outputs(res, out, pngs, de, brief, lang))

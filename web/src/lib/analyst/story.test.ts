@@ -4,7 +4,7 @@ import assert from "node:assert/strict"
 
 import {
   escapeHtml, groundTruthNumbers, limitsPopover, MAX_LIMITS, mergeDraft, numberCandidates, offlineStory, parseDraft, pickInsights,
-  questionPopover, stepSelector, storyPrompt, storyQuestion, ungroundedNumbers,
+  questionPopover, sqlTruthNumbers, stepSelector, storyPrompt, storyQuestion, ungroundedNumbers,
 } from "./story.ts"
 
 // Shapes mirror engine results.json (values copied from the bds_practice run).
@@ -164,3 +164,17 @@ test("question/limits popovers escape brief and caveat text (driver.js renders H
   assert.equal(lim.title, "Hạn chế")
   assert.ok(lim.description.includes("&lt;b&gt;x&lt;/b&gt;") && lim.description.includes("<li>y</li>"))
 })
+
+test("sqlTruthNumbers grounds SQL results and query literals while rejecting invented numbers", () => {
+  const outputs = [{
+    query_id: 1,
+    columns: ["tinh_tp", "median_price"],
+    rows: [["Hà Nội", 125.4], ["Đà Nẵng", 88.2]],
+    row_count: 2,
+  }]
+  const queries = ['SELECT "tinh_tp", median("price_per_m2") FROM gold."obt_bds" WHERE "year" = 2023 LIMIT 5']
+  const truth = sqlTruthNumbers(outputs, queries)
+  assert.deepEqual(ungroundedNumbers("Năm 2023, Hà Nội dẫn đầu với 125,4 triệu/m² (truy vấn #1).", truth), [])
+  assert.deepEqual(ungroundedNumbers("Hà Nội đạt 999 triệu/m² năm 2023.", truth), ["999"])
+})
+

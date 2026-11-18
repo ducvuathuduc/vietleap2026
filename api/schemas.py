@@ -31,6 +31,22 @@ class WhatIfRequest(BaseModel):
     target: str | None = None
 
 
+class WhatIfChange(BaseModel):
+    feature: str
+    pct_change: float = Field(ge=-30, le=30)
+
+
+class WhatIfScenarioRequest(BaseModel):
+    changes: list[WhatIfChange] = Field(min_length=1, max_length=5)
+    target: str | None = None
+
+
+class SaveScenarioBody(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    request: WhatIfScenarioRequest
+
+
+
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str

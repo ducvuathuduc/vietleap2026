@@ -230,7 +230,7 @@ export interface DriversResponse {
     coefficients: { feature: string; coef_std: number; ci90: [number, number]; direction: "+" | "-"; stable: boolean }[]
     note: string
   } | null
-  whatif_features: { name: string; mean: number; sd: number; median: number | null }[]
+  whatif_features: { name: string; mean: number; sd: number; median: number | null; min?: number; max?: number }[]
 }
 
 export interface WhatIfResult {
@@ -244,9 +244,62 @@ export interface WhatIfResult {
   interpretation: string
 }
 
+export interface WhatIfChange {
+  feature: string
+  pct_change: number
+}
+
+export interface WhatIfScenarioRequest {
+  changes: WhatIfChange[]
+  target?: string | null
+}
+
+export interface WhatIfContribution {
+  feature: string
+  pct_change: number
+  target_change_pct: number | null
+  ci90_pct: [number | null, number | null]
+}
+
+export interface WhatIfScenarioResult {
+  changes: WhatIfChange[]
+  target: string
+  target_change_pct: number | null
+  ci90_pct: [number | null, number | null]
+  target_change_abs: number | null
+  baseline_target_mean: number | null
+  range_warnings: string[]
+  collinearity_warnings?: string[]
+  contributions?: WhatIfContribution[]
+  interpretation: string
+}
+
+export interface SavedScenario {
+  name: string
+  request: WhatIfScenarioRequest
+  result: WhatIfScenarioResult
+}
+
 export interface WhatIfCurve {
   feature: string
   points: { pct: number; change: number; low: number; high: number }[]
+}
+
+export interface GeoRow {
+  province: string
+  region: string | null
+  value: number | null
+  n: number
+}
+
+export interface GeoResponse {
+  metric: string
+  agg: "median" | "mean" | "sum" | "count"
+  level: "province_2025"
+  rows: GeoRow[]
+  national: { value: number | null; n: number }
+  unmatched: { rows: number; samples: string[] }
+  converted_from_63?: boolean
 }
 
 export interface Job {
@@ -327,6 +380,10 @@ export interface SqlResult {
   columns: string[]
   rows: (string | number | boolean | null)[][]
   row_count: number
+  query?: string
+  query_id?: number
+  chart?: ChartSpec | null
+  offline_template?: boolean
 }
 
 export interface Provenance {

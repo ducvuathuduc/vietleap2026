@@ -23,10 +23,15 @@ import type {
   Recommendation,
   ReportLang,
   RowsResponse,
+  GeoResponse,
+  SavedScenario,
   SegmentsResponse,
   TimeSeriesResponse,
+  WhatIfChange,
   WhatIfCurve,
   WhatIfResult,
+  WhatIfScenarioRequest,
+  WhatIfScenarioResult,
 } from "./types"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ""
@@ -80,6 +85,7 @@ export const api = {
   rows: (id: string, p: { page?: number; page_size?: number; sort?: string; desc?: boolean; q?: string } = {}) =>
     request<RowsResponse>(`${ds(id)}/rows${q(p)}`),
   segments: (id: string, p: { by?: string; metric?: string } = {}) => request<SegmentsResponse>(`${ds(id)}/segments${q(p)}`),
+  geo: (id: string, p: { metric?: string; agg?: string } = {}) => request<GeoResponse>(`${ds(id)}/geo${q(p)}`),
   drivers: (id: string) => request<DriversResponse>(`${ds(id)}/drivers`),
   whatIf: (id: string, feature: string, pct_change: number) =>
     request<WhatIfResult>(`${ds(id)}/whatif`, {
@@ -87,6 +93,22 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ feature, pct_change }),
     }),
+  whatIfScenario: (id: string, changes: WhatIfChange[], target?: string | null, signal?: AbortSignal) =>
+    request<WhatIfScenarioResult>(`${ds(id)}/whatif/scenario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ changes, target: target ?? null }),
+      signal,
+    }),
+  listScenarios: (id: string) => request<SavedScenario[]>(`${ds(id)}/whatif/scenarios`),
+  saveScenario: (id: string, name: string, body: WhatIfScenarioRequest) =>
+    request<SavedScenario[]>(`${ds(id)}/whatif/scenarios`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, request: body }),
+    }),
+  deleteScenario: (id: string, name: string) =>
+    request<SavedScenario[]>(`${ds(id)}/whatif/scenarios${q({ name })}`, { method: "DELETE" }),
   whatIfCurve: (id: string, feature: string) => request<WhatIfCurve>(`${ds(id)}/whatif/curve${q({ feature })}`),
   upload: (form: FormData) => request<Job>("/api/datasets", { method: "POST", body: form }),
   job: (id: string) => request<Job>(`/api/jobs/${encodeURIComponent(id)}`),

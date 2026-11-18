@@ -77,10 +77,13 @@ def fit_drivers(df: pd.DataFrame, target: str, numeric: list[str], categorical: 
         coefs.append({"feature": f, "coef_std": r(ridge.coef_[j]), "ci90": [r(lo), r(hi)],
                       "direction": "+" if ridge.coef_[j] > 0 else "-", "stable": bool(lo * hi > 0)})
     coefs.sort(key=lambda c: -abs(c["coef_std"] or 0))
+    corr_matrix = X.corr().fillna(0.0)
     whatif = {
         "target": target, "log_target": log_target, "target_mean": r(float(y.mean())), "target_median": r(float(y.median())),
         "intercept": r(float(ridge.intercept_)), "alpha": r(float(ridge.alpha_)),
+        "corrs": {f1: {f2: r(float(corr_matrix.loc[f1, f2])) for f2 in X.columns} for f1 in X.columns},
         "features": [{"name": f, "mean": r(float(mu[f])), "sd": r(float(sd[f])), "median": r(float(X[f].median())),
+                      "min": r(float(X[f].min())), "max": r(float(X[f].max())),
                       "beta": float(ridge.coef_[j]), "boot": [float(b) for b in B[:, j]], "numeric": f in num_used}
                      for j, f in enumerate(X.columns)],
     }
@@ -117,3 +120,101 @@ def what_if(model: dict, feature: str, pct_change: float) -> dict:
             "target_change_abs": r(base * pct / 100) if base and pct is not None else None,
             "baseline_target_mean": r(base),
             "interpretation": "model-based association holding other features fixed; not a causal guarantee"}
+
+
+def what_if_multi(model: dict, changes: list[dict]) -> dict:
+    """Simultaneous change on 1..5 numeric features using aligned bootstrap draws for joint 90% CI."""
+    wi = model["whatif"] if "whatif" in model else model
+    if not changes or len(changes) > 5:
+        raise ValueError("changes must contain 1 to 5 features")
+    seen: set[str] = set()
+    feats_by_name = {x["name"]: x for x in wi["features"]}
+    parsed: list[tuple[dict, float, float]] = []
+    contributions: list[dict] = []
+    range_warnings: list[str] = []
+    collinearity_warnings: list[str] = []
+    moved_names: list[str] = []
+
+    for ch in changes:
+        fname = ch.get("feature")
+        pct_change = float(ch.get("pct_change", 0))
+        if fname in seen:
+            raise ValueError(f"duplicate feature '{fname}'")
+        seen.add(fname)
+        if not (-30.0 <= pct_change <= 30.0):
+            raise ValueError(f"pct_change for '{fname}' must be in [-30, 30]")
+        f = feats_by_name.get(fname)
+        if f is None:
+            raise KeyError(f"feature '{fname}' not in model; available: {list(feats_by_name)}")
+        if not f.get("numeric", True):
+            raise ValueError(f"what-if % change only applies to numeric features ('{fname}')")
+        dx = f["mean"] * pct_change / 100.0
+        dz = dx / f["sd"] if f["sd"] else 0.0
+        parsed.append((f, pct_change, dz))
+        if pct_change == 0:
+            contributions.append({"feature": fname, "pct_change": 0.0, "target_change_pct": 0.0, "ci90_pct": [0.0, 0.0]})
+        else:
+            single = what_if(wi, fname, pct_change)
+            contributions.append({
+                "feature": fname,
+                "pct_change": pct_change,
+                "target_change_pct": single["target_change_pct"],
+                "ci90_pct": single["ci90_pct"],
+            })
+            moved_names.append(fname)
+            implied = f["mean"] + dx
+            lo_b, hi_b = f.get("min"), f.get("max")
+            if lo_b is not None and hi_b is not None and (implied < lo_b or implied > hi_b):
+                range_warnings.append(
+                    f"{fname} ({implied:.2f}) vượt ngoài phạm vi dữ liệu quan sát [{lo_b:.2f}, {hi_b:.2f}] (out-of-range)."
+                )
+
+    corrs = wi.get("corrs") or {}
+    for i, a in enumerate(moved_names):
+        for b in moved_names[i + 1:]:
+            rv = (corrs.get(a) or {}).get(b, 0.0) or 0.0
+            if abs(rv) > 0.8:
+                collinearity_warnings.append(f"'{a}' và '{b}' tương quan cao (|r|={abs(rv):.2f} > 0.8).")
+
+    base = wi["target_mean"]
+    if not moved_names:
+        return {
+            "changes": [{"feature": ch["feature"], "pct_change": float(ch["pct_change"])} for ch in changes],
+            "target": wi["target"],
+            "target_change_pct": 0.0,
+            "ci90_pct": [0.0, 0.0],
+            "target_change_abs": 0.0,
+            "baseline_target_mean": r(base),
+            "range_warnings": [],
+            "collinearity_warnings": [],
+            "contributions": contributions,
+            "interpretation": "no feature changed; model-based association holding other features fixed",
+        }
+
+    n_boot = len(parsed[0][0]["boot"])
+    boot = np.zeros(n_boot, dtype=float)
+    point = 0.0
+    for f, _, dz in parsed:
+        boot += np.array(f["boot"], dtype=float) * dz
+        point += f["beta"] * dz
+
+    if wi["log_target"]:
+        pct = (np.exp(point) - 1) * 100
+        lo, hi = np.percentile((np.exp(boot) - 1) * 100, [5, 95])
+    else:
+        pct = point / abs(base) * 100 if base else None
+        lo, hi = np.percentile(boot / abs(base) * 100, [5, 95]) if base else (None, None)
+
+    return {
+        "changes": [{"feature": ch["feature"], "pct_change": float(ch["pct_change"])} for ch in changes],
+        "target": wi["target"],
+        "target_change_pct": r(pct),
+        "ci90_pct": [r(lo), r(hi)],
+        "target_change_abs": r(base * pct / 100) if base and pct is not None else None,
+        "baseline_target_mean": r(base),
+        "range_warnings": range_warnings,
+        "collinearity_warnings": collinearity_warnings,
+        "contributions": contributions,
+        "interpretation": "joint model-based association holding other features fixed; not a causal guarantee",
+    }
+

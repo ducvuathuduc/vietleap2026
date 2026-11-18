@@ -39,11 +39,11 @@ function InsightChat({ target, datasetId }: { target: InsightContext; datasetId:
     (text: string) => void sendMessage({ text }, { body: { datasetId, context: target } }),
     [sendMessage, datasetId, target]
   )
-  const started = React.useRef(false)
   React.useEffect(() => {
-    if (started.current) return
-    started.current = true
-    ask(`Giải thích “${target.label}” cho tôi: con số này nói gì, có ý nghĩa thống kê không, và hàm ý quyết định là gì?`)
+    const id = window.setTimeout(() => {
+      ask(`Giải thích “${target.label}” cho tôi: con số này nói gì, có ý nghĩa thống kê không, và hàm ý quyết định là gì?`)
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [ask, target.label])
 
   return (

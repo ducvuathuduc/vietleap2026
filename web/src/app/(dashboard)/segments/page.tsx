@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { useDataset } from "@/components/dataset-provider"
 import { InsightChart } from "@/components/insight-chart"
+import { ProvinceRankingCard } from "@/components/province-ranking-card"
 import { ErrorState, LoadingState, PageShell } from "@/components/state"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -103,6 +104,11 @@ export default function SegmentsPage() {
           )}
         </Card>
       </div>
+      {datasetId && (
+        <div className="px-4 lg:px-6">
+          <ProvinceRankingCard datasetId={datasetId} />
+        </div>
+      )}
     </PageShell>
   )
 }

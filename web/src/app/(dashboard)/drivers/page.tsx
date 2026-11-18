@@ -60,17 +60,17 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
   if (error) return <PageShell><ErrorState error={error} /></PageShell>
   if (loading || !data) return <PageShell><LoadingState /></PageShell>
   const d = data.drivers
-  if (!d) return <PageShell><ErrorState error="No driver model could be fitted for this dataset (too few rows or no numeric features)." /></PageShell>
+  if (!d) return <PageShell><ErrorState error="Chưa ước lượng được mô hình drivers cho dataset này (cần thêm dòng hoặc biến số)." /></PageShell>
   const imp = d.importance.slice(0, 10)
   const feats = data.whatif_features.map((f) => ({ label: f.name, value: f.name }))
   return (
     <PageShell>
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
         {[
-          { label: "Gradient boosting CV R²", value: d.cv_r2.gb_mean.toFixed(3), foot: `± ${d.cv_r2.gb_std.toFixed(3)} across 5 folds` },
-          { label: "Ridge CV R²", value: d.cv_r2.ridge_mean.toFixed(3), foot: `± ${d.cv_r2.ridge_std.toFixed(3)} across 5 folds` },
-          { label: "Rows used", value: d.n.toLocaleString(), foot: `${d.features.length} features${d.log_target ? " · log target" : ""}` },
-          { label: "Leakage guard", value: String(d.leakage_excluded.length), foot: d.leakage_excluded.join(", ") || "no near-duplicates of the target" },
+          { label: "CV R² (Gradient Boosting)", value: d.cv_r2.gb_mean.toFixed(3), foot: `± ${d.cv_r2.gb_std.toFixed(3)} qua 5-fold` },
+          { label: "CV R² (Ridge chuẩn hoá)", value: d.cv_r2.ridge_mean.toFixed(3), foot: `± ${d.cv_r2.ridge_std.toFixed(3)} qua 5-fold` },
+          { label: "Số dòng huấn luyện", value: d.n.toLocaleString("vi-VN"), foot: `${d.features.length} biến${d.log_target ? " · log target" : ""}` },
+          { label: "Bộ lọc rò rỉ (Leakage guard)", value: String(d.leakage_excluded.length), foot: d.leakage_excluded.join(", ") || "Không có biến trùng cận mục tiêu" },
         ].map((k) => (
           <Card key={k.label}>
             <CardHeader>
@@ -84,8 +84,8 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
       <div className="grid gap-4 px-4 lg:px-6 @5xl/main:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Drivers of {data.target}</CardTitle>
-            <CardDescription>Permutation importance on a held-out 25% (drop in R² when the feature is shuffled)</CardDescription>
+            <CardTitle>Yếu tố tác động tới {data.target}</CardTitle>
+            <CardDescription>Độ quan trọng hoán vị (permutation importance) trên 25% mẫu kiểm định (mức giảm R² khi xáo trộn biến)</CardDescription>
           </CardHeader>
           <CardContent>
             <InsightChart spec={{ kind: "hbar", x: imp.map((i) => i.feature), series: [{ name: "importance", data: imp.map((i) => i.importance) }] }} height={320} />
@@ -94,14 +94,14 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
         </Card>
         <Card {...insightTarget("whatif", feature ?? "none", `What-if: ${feature ?? ""} ${pct > 0 ? "+" : ""}${pct}%`, { feature, pct_change: pct, result })}>
           <CardHeader>
-            <CardTitle>What-if scenario</CardTitle>
-            <CardDescription>Change one driver for every record; bootstrapped ridge (200 resamples) gives the 90% interval</CardDescription>
+            <CardTitle>Kịch bản What-if đơn biến</CardTitle>
+            <CardDescription>Thay đổi một yếu tố cho toàn bộ bản ghi; Ridge bootstrap (200 lượt) cho khoảng tin cậy 90% (confidence interval)</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <div className="grid gap-2">
-              <Label>Driver</Label>
+              <Label>Yếu tố (Driver)</Label>
               <Select value={feature ?? ""} onValueChange={(v) => v && setFeature(v)} items={feats}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Choose a numeric driver" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Chọn một biến số" /></SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     {feats.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
@@ -111,7 +111,7 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
             </div>
             <div className="grid gap-3">
               <div className="flex items-center justify-between">
-                <Label>Change in {feature ?? "driver"}</Label>
+                <Label>Mức thay đổi của {feature ?? "biến"}</Label>
                 <span className="font-mono text-sm tabular-nums">{pct > 0 ? "+" : ""}{pct}%</span>
               </div>
               <Slider min={-30} max={30} step={1} value={[pct]} onValueChange={(v) => setPct(Array.isArray(v) ? v[0] : v)} />
@@ -121,15 +121,15 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
                 <div className="text-sm text-destructive">{wiErr}</div>
               ) : result ? (
                 <>
-                  <div className="text-sm text-muted-foreground">Expected change in {result.target}</div>
+                  <div className="text-sm text-muted-foreground">Thay đổi kỳ vọng của {result.target}</div>
                   <div className="text-3xl font-semibold tabular-nums">{fmtPct(result.target_change_pct)}</div>
                   <div className="text-sm text-muted-foreground">
-                    90% interval {fmtPct(result.ci90_pct[0])} to {fmtPct(result.ci90_pct[1])} · ≈ {fmtNum(result.target_change_abs)} on a mean of {fmtNum(result.baseline_target_mean)}
+                    Khoảng tin cậy 90%: {fmtPct(result.ci90_pct[0])} đến {fmtPct(result.ci90_pct[1])} · ≈ {fmtNum(result.target_change_abs)} trên trung bình nền {fmtNum(result.baseline_target_mean)}
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">{result.interpretation}</div>
                 </>
               ) : (
-                <div className="text-sm text-muted-foreground">Move the slider…</div>
+                <div className="text-sm text-muted-foreground">Kéo thanh trượt để mô phỏng…</div>
               )}
             </div>
             {curve.data && (
@@ -152,18 +152,18 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
       <div className="px-4 lg:px-6">
         <Card>
           <CardHeader>
-            <CardTitle>Standardised ridge coefficients</CardTitle>
-            <CardDescription>Per 1 SD of the feature, holding the others fixed; “stable” = bootstrap 90% interval excludes zero</CardDescription>
+            <CardTitle>Hệ số Ridge chuẩn hoá (Standardised coefficients)</CardTitle>
+            <CardDescription>Ứng với +1 độ lệch chuẩn (SD) của biến, giữ các biến khác cố định; “ổn định” nghĩa là KTC 90% không chứa 0</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Feature</TableHead>
-                  <TableHead className="text-right">Coefficient</TableHead>
-                  <TableHead className="text-right">90% interval</TableHead>
-                  <TableHead>Direction</TableHead>
-                  <TableHead>Stability</TableHead>
+                  <TableHead>Biến (Feature)</TableHead>
+                  <TableHead className="text-right">Hệ số</TableHead>
+                  <TableHead className="text-right">KTC 90%</TableHead>
+                  <TableHead>Chiều tác động</TableHead>
+                  <TableHead>Độ ổn định</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -172,8 +172,8 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
                     <TableCell className="max-w-72 truncate font-medium">{c.feature}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">{c.coef_std.toFixed(4)}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">[{c.ci90[0].toFixed(3)}, {c.ci90[1].toFixed(3)}]</TableCell>
-                    <TableCell>{c.direction === "+" ? "positive" : "negative"}</TableCell>
-                    <TableCell><Badge variant={c.stable ? "secondary" : "outline"}>{c.stable ? "stable" : "uncertain"}</Badge></TableCell>
+                    <TableCell>{c.direction === "+" ? "cùng chiều (+)" : "ngược chiều (-)"}</TableCell>
+                    <TableCell><Badge variant={c.stable ? "secondary" : "outline"}>{c.stable ? "ổn định" : "chưa chắc chắn"}</Badge></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

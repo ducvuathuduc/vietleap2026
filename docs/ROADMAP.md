@@ -22,6 +22,7 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - 005 (`80bd00d`): Ctrl+K, shared NAV, VI/EN matching, actions and query prefills verified in Chromium. Gzip delta remains unmeasured.
 - Handoff requested by the user. All task changes are on `main`. Resume from [HANDOFF_PROMPT.md](HANDOFF_PROMPT.md) after checking current GitHub CI/Security.
 - Additional handoff request covers all remaining branches. Four Actions branches, five Python branches, four web dependency branches and `wip/004-t401` are integrated in `03a27df`. Local Python 258 pass/3 skip/2 xfail, web 36 pass, lint/build and production audit green. TypeScript 7 compiler uses the official TypeScript 6 compatibility API for ESLint.
+- P2 features 007 (multi-driver what-if + saved deck scenarios), 006 (offline NL→SQL, SQL guard/chart/citations & `/sql?q=`), and 008 (sovereign-safe 34-province ranked chart/table + `/geo` + PNG export + `Hỏi AI`, keeping TopoJSON polygon gate open until verified Hoàng Sa/Trường Sa boundaries are bundled) implemented across Web/TS engine + Python parity files: Web 63 pass, `eslint` & `next build` green, Python `py_compile` ok, headless Chromium `:3000` flows passed with 0 console errors. Full `pytest`, `export_openapi.py`, PPTX rendering, and Groq live LLM runs remain pending full Python/API-key environment.
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |

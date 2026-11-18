@@ -11,6 +11,7 @@ export const NAV = [
   { title: "Hồ sơ dữ liệu", url: "/profile", keywords: ["profile", "eda"] },
   { title: "Insight", url: "/insights", keywords: ["finding", "bang chung"] },
   { title: "Drivers & What-if", url: "/drivers", keywords: ["what-if", "scenario", "kich ban"] },
+  { title: "Kịch bản what-if", url: "/whatif", keywords: ["whatif", "scenario", "kich ban nhieu bien", "multi-driver"] },
   { title: "Phân khúc", url: "/segments", keywords: ["segments", "groups"] },
   { title: "Quyết định", url: "/decision", keywords: ["decision", "recommendation"] },
   { title: "AI Analyst", url: "/analyst", keywords: ["chat", "hoi ai"] },

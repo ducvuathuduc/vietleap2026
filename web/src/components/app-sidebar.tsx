@@ -16,7 +16,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
-import { LayoutDashboardIcon, ChartBarIcon, Settings2Icon, DatabaseIcon, FileChartColumnIcon, FileIcon, FileTextIcon, GavelIcon, LightbulbIcon, NetworkIcon, ShieldCheckIcon, SlidersHorizontalIcon, SparklesIcon, PresentationIcon, ChartNoAxesCombinedIcon, TerminalSquareIcon, UploadCloudIcon, WorkflowIcon } from "lucide-react"
+import { LayoutDashboardIcon, ChartBarIcon, Settings2Icon, DatabaseIcon, FileChartColumnIcon, FileIcon, FileTextIcon, GavelIcon, LightbulbIcon, NetworkIcon, ShieldCheckIcon, SlidersHorizontalIcon, SlidersVerticalIcon, SparklesIcon, PresentationIcon, ChartNoAxesCombinedIcon, TerminalSquareIcon, UploadCloudIcon, WorkflowIcon } from "lucide-react"
 
 import { useDataset } from "@/components/dataset-provider"
 import { ExportLangToggle } from "@/components/export-lang-toggle"
@@ -26,9 +26,10 @@ import type { ExportKind } from "@/lib/api/types"
 import { availableLangs, exportKinds, pickLang } from "@/lib/export-lang"
 import { NAV } from "@/lib/nav"
 
-const API_DOCS = process.env.NEXT_PUBLIC_API_DOCS_URL ?? "http://localhost:8000/docs"
+const rawDocs = process.env.NEXT_PUBLIC_API_DOCS_URL
+const API_DOCS = rawDocs && !rawDocs.includes("localhost:8000") ? rawDocs : "/api/health"
 const PAGE_ICONS = [LayoutDashboardIcon, FileTextIcon, UploadCloudIcon, WorkflowIcon, ShieldCheckIcon, NetworkIcon,
-  TerminalSquareIcon, DatabaseIcon, LightbulbIcon, SlidersHorizontalIcon, ChartBarIcon, GavelIcon, SparklesIcon, FileChartColumnIcon]
+  TerminalSquareIcon, DatabaseIcon, LightbulbIcon, SlidersHorizontalIcon, SlidersVerticalIcon, ChartBarIcon, GavelIcon, SparklesIcon, FileChartColumnIcon]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { datasetId, detail } = useDataset()

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { PlayIcon } from "lucide-react"
 
 import { useDataset } from "@/components/dataset-provider"
@@ -36,11 +37,11 @@ function examples(tables: WarehouseTable[], models: ModelsResponse | undefined):
   return out
 }
 
-export default function SqlPage() {
+function SqlExplorerInner({ initialQ }: { initialQ: string }) {
   const { datasetId } = useDataset()
   const tables = useAsync(() => api.tables(), [])
   const models = useAsync(() => (datasetId ? api.models(datasetId).catch(() => undefined) : null), [datasetId])
-  const [query, setQuery] = React.useState("")
+  const [query, setQuery] = React.useState(initialQ)
   const [result, setResult] = React.useState<SqlResult | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [running, setRunning] = React.useState(false)
@@ -146,3 +147,18 @@ export default function SqlPage() {
     </PageShell>
   )
 }
+
+function SqlExplorerWithParams() {
+  const searchParams = useSearchParams()
+  const initialQ = searchParams.get("q") ?? ""
+  return <SqlExplorerInner key={initialQ} initialQ={initialQ} />
+}
+
+export default function SqlPage() {
+  return (
+    <React.Suspense fallback={<PageShell><LoadingState rows={3} /></PageShell>}>
+      <SqlExplorerWithParams />
+    </React.Suspense>
+  )
+}
+

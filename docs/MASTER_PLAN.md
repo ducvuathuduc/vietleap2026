@@ -64,6 +64,12 @@ P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K 
 
 **Lệnh nhanh 005** (`80bd00d`): Ctrl+K tìm trang không dấu, gọi Hỏi AI/Câu chuyện/Hướng dẫn, chuyển dataset và mở file xuất. Analyst nhận câu hỏi đã nhập để người dùng kiểm tra trước khi gửi. Browser kiểm tra chuyển trang bằng Enter, Esc và đóng inspect. Web 36 test, lint/build đạt. Mức tăng gzip còn chưa đo.
 
+**Tiến độ P2 (007 → 006 → 008)**:
+- **007 (What-if đa biến)**: trang `/whatif`, bootstrap đồng bộ CI90, cảnh báo ngoại suy/đa cộng tuyến, lưu localStorage và `scenarios.json` (`/whatif/scenario`, `/whatif/scenarios`), đồng bộ slide/pitch Tác động (`report.py`) và Việt hoá `/drivers`.
+- **006 (NL→SQL)**: guard chỉ đọc (`sql-guard.ts` + `test_security.py`), sinh biểu đồ (`sql-chart.ts`), mẫu offline tiếng Việt không dấu (`nl2sql-offline.ts`), thẻ `runSql` mở sẵn kèm CodeBlock/ResultTable/InsightChart, kiểm số hậu kiểm (`sqlTruthNumbers`/`ungroundedNumbers`) và prefill `/sql?q=`.
+- **008 (34 tỉnh/thành NQ 202/2025/QH15)**: `GET /geo` + chuẩn hoá 63→34 tỉnh (`geo-names.ts`, `vn.ts`) và thẻ xếp hạng 34 tỉnh/bảng + xuất PNG + ghi chú Hoàng Sa (Đà Nẵng) & Trường Sa (Khánh Hòa) → `Hỏi AI` (tuân thủ release gate 008, không vẽ polygon bản đồ khi chưa có ranh giới nguồn kiểm chứng đủ hai quần đảo).
+- **Kiểm chứng sandbox Node/Chromium**: `npm test --workspace=web` **63 pass / 0 fail**, `eslint` + `next build` đạt, `python3 -m py_compile` đạt, kiểm tra Chromium headless trên `:3000` (`/`, `/whatif`, `/drivers`, `/analyst`, `/sql?q=`, `/segments`) đạt với 0 lỗi console. Chưa chạy được `pytest`, `export_openapi.py`, render PPTX, khóa LLM thật (Groq) và `git commit/push` trong môi trường không có dependency Python/khoá API/`.git`.
+
 Hạn chế đã biết: LLM chưa chạy với khoá thật. YOLO chưa chạy với video thật. Docker chưa chạy thử. Deck tiếng Việt đã kiểm `deck_overflow()` và đối chiếu số, còn thiếu lượt xem ảnh render PowerPoint. Nhật ký làm sạch và provenance trong deck VI giữ nguyên văn tiếng Anh của engine (spec 003, mục Clarifications).
 
 **Blockers vận hành**: API World Bank trả 502 trong GitHub Actions, artifact Collect data hoàn tất bằng panel practice. Live S3 và LLM thiếu cấu hình. Chưa kiểm tra bundle trên máy thứ hai. Tệp ngân sách hiện có phục vụ bài toán bổ sung có mục tiêu, còn cần dữ liệu thu và chi cấp tỉnh để phân tích tự chủ.

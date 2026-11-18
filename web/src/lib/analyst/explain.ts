@@ -161,6 +161,34 @@ export function explainOffline(ctx: InsightContext, src: OfflineSources): Offlin
         : `${head}\n\nMô hình “${ctx.id}” chưa được dựng cho dataset này.`,
     }
   }
+  if (ctx.kind === "segment" && ctx.data && typeof ctx.data === "object" && "province" in ctx.data) {
+    const d = ctx.data as {
+      province?: string
+      region?: string | null
+      metric?: string
+      agg?: string
+      value?: number | null
+      n?: number
+      rank?: number
+      total_provinces?: number
+      national_value?: number | null
+    }
+    if (d.province) {
+      const rankLine = d.rank && d.total_provinces ? `xếp hạng ${d.rank}/${d.total_provinces} tỉnh thành` : "trên bảng xếp hạng 34 tỉnh"
+      const valStr = typeof d.value === "number" ? d.value.toLocaleString("vi-VN", { maximumFractionDigits: 2 }) : "không có dữ liệu"
+      let gapText = ""
+      if (typeof d.value === "number" && typeof d.national_value === "number" && d.national_value !== 0) {
+        const diffPct = ((d.value - d.national_value) / Math.abs(d.national_value)) * 100
+        const natStr = d.national_value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })
+        gapText = ` (${diffPct >= 0 ? "cao hơn" : "thấp hơn"} ${Math.abs(diffPct).toFixed(1).replace(".", ",")}% so với mức toàn quốc ${natStr})`
+      }
+      const smallSample = typeof d.n === "number" && d.n < 5 ? `\n• Lưu ý cỡ mẫu nhỏ: n=${d.n} (< 5 dòng), thận trọng khi diễn giải.` : ""
+      return {
+        output: d,
+        text: `${head}\n\n• **${d.province}**${d.region ? ` (${d.region})` : ""}: ${d.agg ?? "median"} **${d.metric ?? "chỉ số"}** = **${valStr}**${gapText}, ${rankLine} (n=${d.n ?? 0}).${smallSample}\n\nDữ liệu được chuẩn hoá về 34 tỉnh/thành theo NQ 202/2025/QH15. Đây là thống kê mô tả liên đới, không chứng minh nhân quả.`,
+      }
+    }
+  }
   const all = src.insights?.insights ?? []
   const matched = matchInsights(all, ctx)
   const recs = src.insights?.recommendations ?? []

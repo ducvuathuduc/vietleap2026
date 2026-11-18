@@ -1,6 +1,7 @@
-// Server-side helpers for the AI analyst: call FastAPI directly (no browser rewrite) and keep tool outputs small.
+// Server-side helpers for the AI analyst: use in-process TypeScript engine unless EXTERNAL_API_URL is explicitly configured.
+import { dispatchBackend } from "@/lib/engine/store"
 
-const API = process.env.API_URL ?? "http://127.0.0.1:8000"
+const API = process.env.EXTERNAL_API_URL || ""
 
 export class BackendError extends Error {
   constructor(public status: number, message: string) {
@@ -9,6 +10,14 @@ export class BackendError extends Error {
 }
 
 export async function backend<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!API) {
+    try {
+      return await dispatchBackend<T>(path, init)
+    } catch (e) {
+      const err = e as Error & { status?: number }
+      throw new BackendError(err.status ?? 500, err.message)
+    }
+  }
   let res: Response
   try {
     res = await fetch(`${API}${path}`, { ...init, cache: "no-store", signal: AbortSignal.timeout(60_000) })

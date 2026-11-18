@@ -68,6 +68,9 @@ const PAGES: Record<string, TourStep[]> = {
     { selector: '[data-insight-target^="driver:"]', title: "Yếu tố tác động", description: "Hệ số chuẩn hoá có khoảng tin cậy bootstrap; “ổn định” nghĩa là khoảng 90% không chứa 0." },
     { selector: '[data-insight-target^="whatif:"]', title: "Kịch bản what-if", description: "Thay đổi một yếu tố và xem chỉ số mục tiêu dịch chuyển bao nhiêu, kèm khoảng 90%." },
   ],
+  "/whatif": [
+    { selector: '[data-insight-target^="whatif:"]', title: "Kịch bản đa biến what-if", description: "Điều chỉnh tối đa 5 biến đồng thời; kết quả tính theo cùng lượt bootstrap để ra khoảng tin cậy 90% chính xác." },
+  ],
 }
 
 /** An inspectable element found on the page (used when a route has no hand-written steps). */
