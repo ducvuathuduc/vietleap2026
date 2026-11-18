@@ -43,10 +43,15 @@ export default function DecisionPage() {
             return (
               <Card key={`${rec.from_insight}-${idx}`} className="@container/card" {...insightTarget("decision", rec.from_insight, `Khuyến nghị ${idx + 1}`, { so_what: rec.so_what_vi, now_what: rec.now_what_vi, impact: rec.impact_vi, confidence: rec.confidence })}>
                 <CardHeader>
-                  <CardDescription>Khuyến nghị {idx + 1}{ins ? ` · từ insight #${ins.rank}` : ""}</CardDescription>
-                  <CardTitle className="text-lg">{ins?.title_vi ?? rec.type}</CardTitle>
+                  <CardDescription className="text-[11px] font-semibold uppercase tracking-wider text-primary">Khuyến nghị {String(idx + 1).padStart(2, "0")}{ins ? ` · từ insight #${ins.rank}` : ""}</CardDescription>
+                  <CardTitle className="text-xl font-semibold leading-snug">{ins?.title_vi ?? rec.type}</CardTitle>
                   <CardAction>
-                    <Badge variant={rec.confidence === "high" ? "default" : "outline"}>
+                    <Badge
+                      variant="outline"
+                      className={rec.confidence === "high"
+                        ? "border-emerald-600/30 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950 dark:text-emerald-300"
+                        : "border-amber-600/30 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950 dark:text-amber-300"}
+                    >
                       {rec.confidence === "high" && <CircleCheckIcon />}
                       {CONFIDENCE[rec.confidence] ?? rec.confidence}
                     </Badge>

@@ -33,8 +33,8 @@ export function BriefQuestionCard({ datasetId, hasBrief }: { datasetId: string; 
   return (
     <Card data-tour="brief-question">
       <CardHeader>
-        <CardDescription>{question ? "Câu hỏi quyết định · Đề bài (trích nguyên văn)" : "Câu hỏi quyết định"}</CardDescription>
-        <CardTitle>{question ? <q>{question.text}</q> : "Bộ dữ liệu chưa có đề bài"}</CardTitle>
+        <CardDescription className="text-[11px] font-semibold uppercase tracking-wider text-primary">{question ? "Câu hỏi quyết định · Đề bài (trích nguyên văn)" : "Câu hỏi quyết định"}</CardDescription>
+        <CardTitle className="text-xl font-semibold leading-snug">{question ? <q>{question.text}</q> : "Bộ dữ liệu chưa có đề bài"}</CardTitle>
       </CardHeader>
       {question ? (
         <CardContent>

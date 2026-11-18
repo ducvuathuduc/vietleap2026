@@ -92,7 +92,7 @@ import { InsightChart } from "@/components/insight-chart"
 import { api } from "@/lib/api/client"
 import type { Insight, Recommendation, RowsResponse } from "@/lib/api/types"
 import { fmtNum, fmtP } from "@/lib/format"
-import { GripVerticalIcon, CircleCheckIcon, LoaderIcon, EllipsisVerticalIcon, Columns3Icon, ChevronDownIcon, PlusIcon, ChevronsLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsRightIcon, TrendingUpIcon } from "lucide-react"
+import { GripVerticalIcon, CircleCheckIcon, LoaderIcon, EllipsisVerticalIcon, Columns3Icon, ChevronDownIcon, DownloadIcon, ChevronsLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsRightIcon, TrendingUpIcon } from "lucide-react"
 import { insightTarget } from "@/lib/insight-target"
 
 // New in v9: declare the features this table uses — anything you don't
@@ -466,7 +466,7 @@ export function DataTable({
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="outline" size="sm" nativeButton={false} render={<a href={api.fileUrl(datasetId, "results")} download />}>
-            <PlusIcon
+            <DownloadIcon
             />
             <span className="hidden lg:inline">Xuất JSON</span>
           </Button>
@@ -485,7 +485,7 @@ export function DataTable({
             id={sortableId}
           >
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted">
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
@@ -741,7 +741,7 @@ function DataRowsTable({ datasetId }: { datasetId: string }) {
       {err && <div className="text-sm text-destructive">{err}</div>}
       <div className="overflow-auto rounded-lg border">
         <Table>
-          <TableHeader className="sticky top-0 z-10 bg-muted">
+          <TableHeader className="sticky top-0 z-10 bg-card">
             <TableRow>
               {res?.columns.map((c) => (
                 <TableHead key={c.name} className="whitespace-nowrap">

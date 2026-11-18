@@ -281,7 +281,7 @@ export function ProvinceRankingCard({
           </div>
           <div className={showMap ? "lg:col-span-7 max-h-[500px] overflow-auto rounded-lg border" : "max-h-72 overflow-auto rounded-lg border"}>
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted">
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Tỉnh/Thành phố (chuẩn 34)</TableHead>
