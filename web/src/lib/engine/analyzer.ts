@@ -54,6 +54,7 @@ import {
   std,
   type DriverModelInternal,
 } from "./stats"
+import { computeMa3, detectTimeGaps } from "./time-gaps"
 
 export interface SourceInputMeta {
   name: string
@@ -398,6 +399,25 @@ export function analyzeDataset(opts: {
     if ((cp.outliers ?? 0) > 0) issues.push({ severity: "low", column: cp.name, issue: `${cp.outliers} extreme values (>3×IQR)` })
   }
   if (dupCount > 0) issues.push({ severity: "medium", column: "_row_hash", issue: `${dupCount} duplicate rows removed` })
+  if (timeCol) {
+    const rawPeriods = silverRaw
+      .map((r) => r[timeCol])
+      .filter((v): v is string | number => v !== null && v !== undefined && v !== "")
+      .map((v) => {
+        const s = String(v)
+        return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 7) : s
+      })
+    const gapInfo = detectTimeGaps(rawPeriods)
+    if (gapInfo.count > 0) {
+      const sampleText = gapInfo.samples.slice(0, 3).join(", ")
+      issues.push({
+        severity: gapInfo.pct_missing >= 20 ? "high" : "medium",
+        column: timeCol,
+        issue: `${gapInfo.count} missing period(s) (${gapInfo.pct_missing}%, e.g. ${sampleText})`,
+      })
+      cleaningLog.push(`Detected ${gapInfo.count} time gap(s) in '${timeCol}' (${gapInfo.pct_missing}% missing; e.g. ${sampleText}).`)
+    }
+  }
 
   const totalCells = Math.max(1, silverRaw.length * cols.length)
   const afterMissingCells = column_profiles.reduce((s, cp) => s + Math.round((cp.missing_pct / 100) * silverRaw.length), 0)
@@ -1004,7 +1024,9 @@ export function computeTimeSeries(
       return { period, value, n: xs.length }
     })
   const detectedFreq = freq ?? (points[0]?.period.length === 4 ? "Y" : points[0]?.period.includes("Q") ? "Q" : "M")
-  return { time: timeCol, metric: metricCol, agg, freq: detectedFreq, points }
+  const pointsWithMa3 = group ? points : computeMa3(points)
+  const gaps = group ? null : detectTimeGaps(points.map((p) => p.period), detectedFreq)
+  return { time: timeCol, metric: metricCol, agg, freq: detectedFreq, points: pointsWithMa3, gaps }
 }
 
 export function computeSegments(ds: AnalyzedDataset, by?: string | null, metric?: string | null): SegmentsResponse {

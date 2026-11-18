@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """VietLeap data pipeline CLI — Ingestion → Storage → Transform → Serving.
 
-  python de.py file  <path> [--name DS] [--impute median] [--serve] [--mode replace|append|incremental]  one file (csv/xlsx/json/parquet/zip)
-  python de.py run   <sources.yaml> [--impute median] [--serve]          many sources (file/api/sql/scrape/social/cv)
-                     (file|run) --lang vi|en|both                        deck/pitch language(s) with --serve (default both)
+  python de.py file     <path> [--name DS] [--impute median|interpolate] [--serve] [--mode replace|append|incremental]  one file (csv/xlsx/json/parquet/zip)
+  python de.py run      <sources.yaml> [--impute median|interpolate] [--serve]          many sources (file/api/sql/scrape/social/cv/reducto)
+  python de.py reducto  <path_or_url> [--name DS] [--mock] [--bronze] [--out PATH]     optional Reducto PDF/scan parse -> JSON / Bronze
+                        (file|run) --lang vi|en|both                        deck/pitch language(s) with --serve (default both)
   python de.py tables                                                    list warehouse tables
-  python de.py sql   "SELECT ..."                                        read-only query on the warehouse
+  python de.py sql      "SELECT ..."                                     read-only query on the warehouse
 """
 import argparse
 import sys
@@ -13,9 +14,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "engine"))
 
-from vlkit.de.flow import run_file, run_flow  # noqa: E402
-from vlkit.de.sources import load_recipe  # noqa: E402
-from vlkit.de.warehouse import Warehouse  # noqa: E402
 from vlkit.i18n import DEFAULT_REPORT_LANG, REPORT_LANGS  # noqa: E402
 
 
@@ -35,9 +33,11 @@ def _print(s):
         for j in c["joins"]:
             print(f"    join {j['source']:<28} on {','.join(j['keys']) or '-':<12} {j['status']:<15} "
                   f"{j.get('matched_rows', 0):,} rows matched ({j.get('match_pct', 0)}%)")
-    failed = [x for x in s["steps"] if x["status"] != "ok"]
-    for f in failed:
-        print(f"  ✗ {f['step']}: {f['error']}")
+    for f in s["steps"]:
+        if f["status"] == "skipped":
+            print(f"  ↷ {f['step']}: skipped")
+        elif f["status"] != "ok":
+            print(f"  ✗ {f['step']}: {f['error']}")
 
 
 def _brief(a):
@@ -63,6 +63,38 @@ def _brief(a):
         print(out)
 
 
+def _reducto(a):
+    try:
+        from vlkit.de.reducto import parse_document
+    except ModuleNotFoundError:
+        import importlib.util
+
+        mod_path = Path(__file__).parent / "engine" / "vlkit" / "de" / "reducto.py"
+        spec = importlib.util.spec_from_file_location("vlkit_de_reducto", mod_path)
+        assert spec and spec.loader
+        mod = importlib.util.module_from_spec(spec)
+        import sys as _sys
+        _sys.modules["vlkit_de_reducto"] = mod
+        spec.loader.exec_module(mod)
+        parse_document = mod.parse_document
+
+    outcome = parse_document(
+        a.source,
+        mock=a.mock,
+        out_json=a.out,
+        bronze=a.bronze,
+        dataset=a.name,
+        mode=a.mode,
+    )
+    print(outcome.message)
+    if outcome.output_json:
+        print(f"  json:   {outcome.output_json}")
+    if outcome.bronze_table:
+        print(f"  bronze: {outcome.bronze_table}")
+    if outcome.records:
+        print(f"  blocks: {len(outcome.records)}")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -70,11 +102,18 @@ def main(argv=None):
     r = sub.add_parser("run"); r.add_argument("yaml"); r.add_argument("--primary")
     r.add_argument("--offline", action="store_true", help="dùng tệp local hoặc snapshot đã chuẩn bị")
     for p in (f, r):
-        p.add_argument("--impute", choices=["median"]); p.add_argument("--serve", action="store_true")
+        p.add_argument("--impute", choices=["median", "interpolate"]); p.add_argument("--serve", action="store_true")
         p.add_argument("--target"); p.add_argument("--out")
         p.add_argument("--mode", choices=["replace", "append", "incremental"], default="replace",
                        help="bronze load: replace (default) | append | incremental (skip rows whose _row_hash exists)")
         p.add_argument("--lang", choices=REPORT_LANGS, default=DEFAULT_REPORT_LANG, help="deck/pitch language(s) with --serve")
+    rd = sub.add_parser("reducto", help="optional PDF/scan parse via Reducto API -> JSON / Bronze")
+    rd.add_argument("source", help="local document path or public http/https URL")
+    rd.add_argument("--name", help="dataset name override")
+    rd.add_argument("--mock", action="store_true", help="offline dry-run producing Reducto-shaped JSON without API key")
+    rd.add_argument("--bronze", action="store_true", help="write parsed blocks into DuckDB bronze layer")
+    rd.add_argument("--out", help="write structured Reducto JSON artifact to this path")
+    rd.add_argument("--mode", choices=["replace", "append", "incremental"], default="replace")
     sub.add_parser("tables")
     q = sub.add_parser("sql"); q.add_argument("query"); q.add_argument("--limit", type=int, default=50)
     b = sub.add_parser("brief", help="đề bài (.md/.txt) → brief.json"); b.add_argument("path")
@@ -90,6 +129,12 @@ def main(argv=None):
     sync = sub.add_parser("sync", help="đồng bộ bản sao Parquet gold")
     sync.add_argument("--to", choices=["s3"], required=True)
     a = ap.parse_args(argv)
+    if a.cmd == "reducto":
+        _reducto(a)
+        return
+    from vlkit.de.flow import run_file, run_flow
+    from vlkit.de.sources import load_recipe
+    from vlkit.de.warehouse import Warehouse
     if a.cmd in ("file", "run"):
         sk = {"lang": a.lang, **({"target": a.target} if a.target else {})}
         if a.cmd == "file":

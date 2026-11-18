@@ -18,3 +18,6 @@ Dataset `wdi_asean` · commit `cc2500c` · 2026-11-18
 - [/report](14-xuat-bao-cao.png)
 - [Hỏi AI](hoi-ai.png)
 - [Ảnh giao diện tối](DARK.md)
+- [/whatif — Kịch bản đa biến & KTC 90% (`synthetic_messy_bds`)](whatif.png)
+- [/analyst — NL→SQL offline + biểu đồ (`synthetic_messy_bds`)](analyst-sql.png)
+- [/segments — Phân khúc & xếp hạng 34 tỉnh/thành (`synthetic_messy_bds`)](segments-geo.png)

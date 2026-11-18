@@ -23,6 +23,7 @@ import {
   type SourceInputMeta,
 } from "./analyzer"
 import { loadBriefSamples, parseBrief } from "./brief"
+import { discoverStaticOutputs } from "./offline-fallback"
 import { executeReadOnlySql, getTableColumns, listWarehouseTables } from "./sql"
 import { parseDelimitedBuffer, repoRoot, slug } from "./vn"
 
@@ -125,6 +126,31 @@ function seedInitialDatasets(s: StoreState) {
       s.datasets.set(ds.id, ds)
     } catch {
       /* skip broken seed */
+    }
+  }
+
+  // Also hydrate any precomputed static outputs from out/<ds>/ so dashboard remains usable when :8000 is down
+  const outRoot = path.join(/*turbopackIgnore: true*/ root, "out")
+  for (const item of discoverStaticOutputs(outRoot)) {
+    if (item.briefRaw && !s.briefs.has(item.id)) {
+      s.briefs.set(item.id, item.briefRaw as Brief)
+    }
+    if (s.datasets.has(item.id) || !item.sampleCsvPath) continue
+    try {
+      const buf = fs.readFileSync(/*turbopackIgnore: true*/ item.sampleCsvPath)
+      const parsed = parseDelimitedBuffer(buf)
+      if (parsed.rows.length === 0) continue
+      const ds = analyzeDataset({
+        id: item.id,
+        name: item.id,
+        sourceFile: `out/${item.id}/clean_sample.csv`,
+        rawRows: parsed.rows,
+        domain: item.domain,
+        target: item.target,
+      })
+      s.datasets.set(ds.id, ds)
+    } catch {
+      /* skip invalid precomputed output */
     }
   }
 }

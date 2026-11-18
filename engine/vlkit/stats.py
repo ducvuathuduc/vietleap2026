@@ -3,7 +3,9 @@ insight engine, the API and the AI agent's tools (the agent may only quote numbe
 from __future__ import annotations
 
 import math
+import re
 import warnings
+from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
@@ -221,6 +223,73 @@ def choose_freq(t: pd.Series) -> str:
     return "W"
 
 
+def _parse_period_index(period: str, hinted: str | None = None) -> tuple[str, int] | None:
+    s = str(period).strip()
+    if re.fullmatch(r"\d{4}", s) and hinted in (None, "Y"):
+        return ("Y", int(s))
+    qm = re.fullmatch(r"(\d{4})-Q([1-4])", s, re.I)
+    if qm:
+        return ("Q", int(qm.group(1)) * 4 + (int(qm.group(2)) - 1))
+    mm = re.fullmatch(r"(\d{4})-(\d{2})", s)
+    if mm:
+        m = int(mm.group(2))
+        if 1 <= m <= 12:
+            return ("M", int(mm.group(1)) * 12 + (m - 1))
+    dm = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", s)
+    if dm:
+        try:
+            d = date(int(dm.group(1)), int(dm.group(2)), int(dm.group(3)))
+            return ("D", d.toordinal())
+        except ValueError:
+            return None
+    return None
+
+
+def _format_period_index(cadence: str, idx: int) -> str:
+    if cadence == "Y":
+        return str(idx)
+    if cadence == "Q":
+        return f"{idx // 4}-Q{(idx % 4) + 1}"
+    if cadence == "M":
+        return f"{idx // 12}-{(idx % 12) + 1:02d}"
+    return date.fromordinal(idx).isoformat()
+
+
+def detect_time_gaps(periods: list[str], freq: str | None = None) -> dict:
+    parsed = [p for p in (_parse_period_index(x, freq) for x in periods) if p is not None]
+    if len(parsed) < 2:
+        return {"count": 0, "samples": [], "pct_missing": 0.0, "expected_periods": len(parsed)}
+    cadence = parsed[0][0]
+    indices = sorted({idx for c, idx in parsed if c == cadence})
+    if len(indices) < 2:
+        return {"count": 0, "samples": [], "pct_missing": 0.0, "expected_periods": len(indices)}
+    span = indices[-1] - indices[0] + 1
+    if span <= 1 or span > 5000:
+        return {"count": 0, "samples": [], "pct_missing": 0.0, "expected_periods": len(indices)}
+    present = set(indices)
+    missing = [_format_period_index(cadence, idx) for idx in range(indices[0], indices[-1] + 1) if idx not in present]
+    return {
+        "count": len(missing),
+        "samples": missing[:5],
+        "pct_missing": round((len(missing) / span) * 100.0, 1),
+        "expected_periods": span,
+    }
+
+
+def moving_average(values: list[float | None], window: int = 3) -> list[float | None]:
+    out: list[float | None] = []
+    for i in range(len(values)):
+        if i < window - 1:
+            out.append(None)
+            continue
+        win = values[i - window + 1: i + 1]
+        if any(v is None or (isinstance(v, float) and math.isnan(v)) for v in win):
+            out.append(None)
+        else:
+            out.append(r(sum(float(v) for v in win) / window))
+    return out
+
+
 def time_series(df: pd.DataFrame, time_col: str, metric: str | None, agg: str = "median", freq: str | None = None,
                 group: str | None = None) -> dict:
     d = df[[time_col] + ([metric] if metric else []) + ([group] if group else [])].dropna(subset=[time_col])
@@ -240,8 +309,14 @@ def time_series(df: pd.DataFrame, time_col: str, metric: str | None, agg: str = 
     out = g.reset_index().rename(columns={"_p": "period", 0: "value", metric or 0: "value"})
     out.columns = ["period"] + ([group] if group else []) + ["value"]
     out["n"] = cnt.values
-    return {"time": time_col, "metric": metric, "agg": agg, "freq": freq,
-            "points": [{k: (r(v) if k in ("value",) else (int(v) if k == "n" else str(v))) for k, v in row.items()} for row in out.to_dict("records")]}
+    points = [{k: (r(v) if k in ("value",) else (int(v) if k == "n" else str(v))) for k, v in row.items()} for row in out.to_dict("records")]
+    gaps = None
+    if group is None and points:
+        ma3 = moving_average([p.get("value") for p in points], window=3)
+        for p, m in zip(points, ma3):
+            p["ma3"] = m
+        gaps = detect_time_gaps([p["period"] for p in points], freq=freq)
+    return {"time": time_col, "metric": metric, "agg": agg, "freq": freq, "points": points, "gaps": gaps}
 
 
 def trend_stats(periods: list[str], values: list[float]) -> dict | None:

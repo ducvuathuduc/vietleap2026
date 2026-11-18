@@ -735,6 +735,73 @@
     }
    }
   },
+  "/api/datasets/{ds_id}/geo": {
+   "get": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "Geo",
+    "operationId": "geo_api_datasets__ds_id__geo_get",
+    "parameters": [
+     {
+      "name": "ds_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ds Id"
+      }
+     },
+     {
+      "name": "metric",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Metric"
+      }
+     },
+     {
+      "name": "agg",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(median|mean|sum|count)$",
+       "default": "median",
+       "title": "Agg"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/datasets/{ds_id}/drivers": {
    "get": {
     "tags": [
@@ -803,6 +870,198 @@
       }
      }
     },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/datasets/{ds_id}/whatif/scenario": {
+   "post": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "Whatif Scenario",
+    "operationId": "whatif_scenario_api_datasets__ds_id__whatif_scenario_post",
+    "parameters": [
+     {
+      "name": "ds_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ds Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WhatIfScenarioRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WhatIfScenarioResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/datasets/{ds_id}/whatif/scenarios": {
+   "get": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "List Whatif Scenarios",
+    "operationId": "list_whatif_scenarios_api_datasets__ds_id__whatif_scenarios_get",
+    "parameters": [
+     {
+      "name": "ds_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ds Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/SavedScenario"
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "Save Whatif Scenario",
+    "operationId": "save_whatif_scenario_api_datasets__ds_id__whatif_scenarios_post",
+    "parameters": [
+     {
+      "name": "ds_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ds Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SaveScenarioBody"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "Delete Whatif Scenario",
+    "operationId": "delete_whatif_scenario_api_datasets__ds_id__whatif_scenarios_delete",
+    "parameters": [
+     {
+      "name": "ds_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Ds Id"
+      }
+     },
+     {
+      "name": "name",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -2057,7 +2316,7 @@
      "kind": {
       "type": "string",
       "title": "Kind",
-      "description": "one of ('file', 'api', 'sql', 'scrape', 'social', 'cv')"
+      "description": "one of ('file', 'api', 'sql', 'scrape', 'social', 'cv', 'reducto')"
      },
      "uri": {
       "type": "string",
@@ -2178,6 +2437,190 @@
      "pct_change"
     ],
     "title": "WhatIfRequest"
+   },
+   "WhatIfChange": {
+    "properties": {
+     "feature": {
+      "type": "string",
+      "maxLength": 200,
+      "title": "Feature"
+     },
+     "pct_change": {
+      "type": "number",
+      "maximum": 30.0,
+      "minimum": -30.0,
+      "title": "Pct Change"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feature",
+     "pct_change"
+    ],
+    "title": "WhatIfChange"
+   },
+   "WhatIfScenarioRequest": {
+    "properties": {
+     "changes": {
+      "items": {
+       "$ref": "#/components/schemas/WhatIfChange"
+      },
+      "maxItems": 5,
+      "minItems": 1,
+      "type": "array",
+      "title": "Changes"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     }
+    },
+    "type": "object",
+    "required": [
+     "changes"
+    ],
+    "title": "WhatIfScenarioRequest"
+   },
+   "WhatIfScenarioResult": {
+    "properties": {
+     "changes": {
+      "items": {
+       "$ref": "#/components/schemas/WhatIfChange"
+      },
+      "type": "array",
+      "title": "Changes"
+     },
+     "target": {
+      "type": "string",
+      "title": "Target"
+     },
+     "target_change_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Change Pct"
+     },
+     "ci90_pct": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "type": "array",
+      "title": "Ci90 Pct"
+     },
+     "target_change_abs": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Change Abs"
+     },
+     "baseline_target_mean": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Baseline Target Mean"
+     },
+     "range_warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Range Warnings"
+     },
+     "collinearity_warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Collinearity Warnings"
+     },
+     "interpretation": {
+      "type": "string",
+      "title": "Interpretation"
+     }
+    },
+    "type": "object",
+    "required": [
+     "changes",
+     "target",
+     "target_change_pct",
+     "ci90_pct",
+     "baseline_target_mean",
+     "interpretation"
+    ],
+    "title": "WhatIfScenarioResult"
+   },
+   "SaveScenarioBody": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "request": {
+      "$ref": "#/components/schemas/WhatIfScenarioRequest"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "request"
+    ],
+    "title": "SaveScenarioBody"
+   },
+   "SavedScenario": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "request": {
+      "$ref": "#/components/schemas/WhatIfScenarioRequest"
+     },
+     "result": {
+      "$ref": "#/components/schemas/WhatIfScenarioResult"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "request",
+     "result"
+    ],
+    "title": "SavedScenario"
    }
   }
  }

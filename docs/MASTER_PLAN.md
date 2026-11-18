@@ -68,20 +68,26 @@ P2: 007 trang what-if nhiều biến · 008 bản đồ 34 tỉnh · 005 Ctrl+K 
 - **007 (What-if đa biến)**: trang `/whatif`, bootstrap đồng bộ CI90, cảnh báo ngoại suy/đa cộng tuyến, lưu localStorage và `scenarios.json` (`/whatif/scenario`, `/whatif/scenarios`), đồng bộ slide/pitch Tác động (`report.py`) và Việt hoá `/drivers`.
 - **006 (NL→SQL)**: guard chỉ đọc (`sql-guard.ts` + `test_security.py`), sinh biểu đồ (`sql-chart.ts`), mẫu offline tiếng Việt không dấu (`nl2sql-offline.ts`), thẻ `runSql` mở sẵn kèm CodeBlock/ResultTable/InsightChart, kiểm số hậu kiểm (`sqlTruthNumbers`/`ungroundedNumbers`) và prefill `/sql?q=`.
 - **008 (34 tỉnh/thành NQ 202/2025/QH15)**: `GET /geo` + chuẩn hoá 63→34 tỉnh (`geo-names.ts`, `vn.ts`) và thẻ xếp hạng 34 tỉnh/bảng + xuất PNG + ghi chú Hoàng Sa (Đà Nẵng) & Trường Sa (Khánh Hòa) → `Hỏi AI` (tuân thủ release gate 008, không vẽ polygon bản đồ khi chưa có ranh giới nguồn kiểm chứng đủ hai quần đảo).
-- **Kiểm chứng sandbox Node/Chromium**: `npm test --workspace=web` **63 pass / 0 fail**, `eslint` + `next build` đạt, `python3 -m py_compile` đạt, kiểm tra Chromium headless trên `:3000` (`/`, `/whatif`, `/drivers`, `/analyst`, `/sql?q=`, `/segments`) đạt với 0 lỗi console. Chưa chạy được `pytest`, `export_openapi.py`, render PPTX, khóa LLM thật (Groq) và `git commit/push` trong môi trường không có dependency Python/khoá API/`.git`.
+- **Đồng bộ OpenAPI & hoàn thiện các gap mentor (#3, #5, #6)**:
+  - `specs/001-vietleap-insight-kit/contracts/openapi.json` đã cập nhật thêm `/api/datasets/{ds_id}/geo`, `/api/datasets/{ds_id}/whatif/scenario`, `/api/datasets/{ds_id}/whatif/scenarios` và schemas tương ứng (khớp các route FastAPI; xác thực JSON hợp lệ).
+  - **Gap #3 (Time-gap & MA3)**: `web/src/lib/engine/time-gaps.ts` + `analyzer.ts` + toggle `MA3` & badge cảnh báo khoảng trống trên biểu đồ Tổng quan (`chart-area-interactive.tsx`); song song ở Python (`engine/vlkit/stats.py` `detect_time_gaps`/`moving_average`, `profile.py`, `i18n.py` `issue_time_gap`, `tests/test_time_gaps.py`).
+  - **Gap #6 (Time-watermark cursor)**: `engine/vlkit/de/connectors.py` & `flow.py` hỗ trợ `watermark_col` / `watermark_param` / `watermark_format`, lưu cursor tại `lake/_watermarks/*.json` chỉ sau khi `write_bronze` thành công, và xử lý lần chạy tăng dần có 0 dòng mới (`tests/test_watermark.py`).
+  - **Gap #5 (Open-data recipes)**: thêm `scenarios/open_data/` (`sources.un_sdg.yaml` với `M49=704`, `sources.fx_open_er.yaml`, `sources.open_meteo.yaml`, `README.md`).
+  - **Ảnh chụp P2**: đã chụp và kiểm tra trực quan ở `1440×900` lưu tại `docs/screenshots/whatif.png`, `docs/screenshots/analyst-sql.png`, `docs/screenshots/segments-geo.png`.
+- **Kiểm chứng sandbox Node/Chromium**: `npm test --workspace=web` **67 pass / 0 fail**, `eslint` + `next build` đạt, `python3 -m py_compile` và kiểm tra khớp key/placeholder `i18n.py` (191/191) đạt; kiểm tra Chromium headless trên `:3000` (`/` toggle `MA3`, `/whatif` kéo slider + lưu kịch bản, `/analyst` NL→SQL offline, `/segments` xếp hạng 34 tỉnh) đạt với 0 lỗi console và 0 HTTP >= 400. Chưa chạy được `pytest`, `tools/export_openapi.py`, render PPTX, khóa LLM thật (Groq) và `git commit/push` trong môi trường không có `pandas`/`fastapi`/`duckdb`/khoá API/`.git`.
 
 Hạn chế đã biết: LLM chưa chạy với khoá thật. YOLO chưa chạy với video thật. Docker chưa chạy thử. Deck tiếng Việt đã kiểm `deck_overflow()` và đối chiếu số, còn thiếu lượt xem ảnh render PowerPoint. Nhật ký làm sạch và provenance trong deck VI giữ nguyên văn tiếng Anh của engine (spec 003, mục Clarifications).
 
 **Blockers vận hành**: API World Bank trả 502 trong GitHub Actions, artifact Collect data hoàn tất bằng panel practice. Live S3 và LLM thiếu cấu hình. Chưa kiểm tra bundle trên máy thứ hai. Tệp ngân sách hiện có phục vụ bài toán bổ sung có mục tiêu, còn cần dữ liệu thu và chi cấp tỉnh để phân tích tự chủ.
 
 ### Gaps theo checklist mentor
-Ánh xạ từng bước mentor → kit: [`WORKFLOW.md`](WORKFLOW.md) §0. Mỗi mục cần spec Spec Kit riêng trước khi code.
-1. `d45b374` — Data dictionary CSV/Markdown từ gold, file EDA Markdown và link tải qua API/Exports.
-2. `d45b374` — `make contest`, snapshot có checksum, lịch WDI hằng ngày và `python de.py sync --to s3` dùng bốn biến môi trường. Chạy WDI qua proxy không khả dụng đã tạo đủ file song ngữ. S3 đã test mock, test live skip do thiếu cấu hình.
-3. `d45b374` — `macro_monitoring` và brief mẫu. Đội cung cấp bảng CPI, sản xuất công nghiệp và giải ngân theo tháng. Kiểm tra khoảng trống kỳ và MA3 còn là bước phân tích.
-4. Nguồn bổ sung chờ xác nhận độ ổn định. Các lần thử trước ghi nhận World Bank 502 hoặc timeout, IMF 403 và Open-Meteo 429.
-5. **Connector/recipe UN SDG** (M49 = 704), **tỷ giá open.er-api**, **Open-Meteo archive** (mẫu `sources.yaml`).
-6. Incremental theo watermark/cursor thời gian cho API (hiện incremental theo `_row_hash`).
+Ánh xạ từng bước mentor → kit: [`WORKFLOW.md`](WORKFLOW.md) §0.
+1. ✅ `d45b374` — Data dictionary CSV/Markdown từ gold, file EDA Markdown và link tải qua API/Exports.
+2. ✅ `d45b374` — `make contest`, snapshot có checksum, lịch WDI hằng ngày và `python de.py sync --to s3` dùng bốn biến môi trường. S3 đã test mock, test live skip do thiếu cấu hình.
+3. ✅ `d45b374` + bản mới — `macro_monitoring`, `detect_time_gaps` + `MA3` ở cả Python (`stats.py`/`profile.py`) và Web (`time-gaps.ts` + toggle `MA3`/badge cảnh báo).
+4. ⚠️ Nguồn bổ sung chờ xác nhận độ ổn định ngoài thực địa (World Bank 502/timeout, IMF 403, Open-Meteo 429).
+5. ✅ Recipe mở sẵn trong `scenarios/open_data/`: UN SDG (`M49=704`), tỷ giá `open.er-api`, Open-Meteo archive.
+6. ✅ Incremental theo watermark/cursor thời gian (`connectors.py`, `flow.py`, `tests/test_watermark.py`) bên cạnh `_row_hash` (`pytest` chờ môi trường Python đầy đủ).
 
 ---
 

@@ -231,6 +231,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "issue_negative": "{pct}% negative values in a quantity that should be positive",
         "issue_skew": "heavily skewed (skew {skew}); use medians/log scale",
         "issue_unparsed": "{n} values could not be parsed as numbers",
+        "issue_time_gap": "{n} missing time period(s) ({pct}%, e.g. {samples})",
     },
     "vi": {
         "title_main": "{target} gắn với những yếu tố nào? Bằng chứng và quyết định từ {rows} bản ghi",
@@ -426,6 +427,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "issue_negative": "{pct}% giá trị âm ở một đại lượng lẽ ra phải dương",
         "issue_skew": "lệch rất mạnh (skew {skew}); dùng trung vị/thang log",
         "issue_unparsed": "{n} giá trị không đọc được thành số",
+        "issue_time_gap": "thiếu {n} kỳ thời gian ({pct}%, ví dụ {samples})",
     },
 }
 

@@ -1,0 +1,41 @@
+dataset: open_meteo_vn
+primary: hcmc_weather
+keys:
+  date: [date]
+sources:
+  - name: hcmc_weather
+    conform: &wide {prefix_columns: false}
+    kind: api
+    uri: https://archive-api.open-meteo.com/v1/archive
+    license: Open-Meteo Archive API (CC BY 4.0)
+    options:
+      params:
+        latitude: 10.8231
+        longitude: 106.6297
+        start_date: "2024-01-01"
+        end_date: "2024-12-31"
+        daily: "temperature_2m_mean,precipitation_sum"
+        timezone: "Asia/Bangkok"
+      records_path: daily
+      paging: none
+      rate_per_sec: 1
+      watermark_col: time
+      watermark_param: start_date
+  - name: hanoi_weather
+    conform: *wide
+    kind: api
+    uri: https://archive-api.open-meteo.com/v1/archive
+    license: Open-Meteo Archive API (CC BY 4.0)
+    options:
+      params:
+        latitude: 21.0285
+        longitude: 105.8542
+        start_date: "2024-01-01"
+        end_date: "2024-12-31"
+        daily: "temperature_2m_mean,precipitation_sum"
+        timezone: "Asia/Bangkok"
+      records_path: daily
+      paging: none
+      rate_per_sec: 1
+      watermark_col: time
+      watermark_param: start_date

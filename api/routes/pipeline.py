@@ -101,7 +101,8 @@ def source_kinds():
         "sql": {"uri": "sqlite:///path/to.db", "options": {"query": "SELECT * FROM t"}},
         "scrape": {"uri": "https://vi.wikipedia.org/wiki/Tỉnh_thành_Việt_Nam", "options": {"table_index": "largest"}},
         "social": {"uri": "https://vnexpress.net/rss/kinh-doanh.rss"},
-        "cv": {"uri": "scenarios/cv_counting/sample_counts.csv"}}}
+        "cv": {"uri": "scenarios/cv_counting/sample_counts.csv"},
+        "reducto": {"uri": "data/raw/report.pdf", "options": {"mock": False}}}}
 
 
 @router.post("/ingest", status_code=202)

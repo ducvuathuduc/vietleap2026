@@ -31,6 +31,7 @@ export default function OverviewPage() {
           title={meta ? `${ts.data?.agg ?? "median"} ${meta.target} over time` : "Trend"}
           subtitle={meta?.time_col ? `${meta.time_col} · ${ts.data?.freq ?? ""} periods · ${meta.source_file}` : "No time column"}
           metricLabel={meta?.target ?? "value"}
+          gaps={ts.data?.gaps}
         />
       </div>
       {datasetId && (

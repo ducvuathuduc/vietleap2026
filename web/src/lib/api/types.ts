@@ -168,6 +168,14 @@ export interface TimePoint {
   period: string
   value: number | null
   n: number
+  ma3?: number | null
+}
+
+export interface TimeGapSummary {
+  count: number
+  samples: string[]
+  pct_missing: number
+  expected_periods: number
 }
 
 export interface TimeSeriesResponse {
@@ -176,6 +184,7 @@ export interface TimeSeriesResponse {
   agg: string
   freq: string | null
   points: TimePoint[]
+  gaps?: TimeGapSummary | null
 }
 
 export interface RowsResponse {

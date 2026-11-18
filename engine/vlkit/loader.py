@@ -197,7 +197,7 @@ def guess_role(name: str, s: pd.Series, n: int) -> str:
     return "category"
 
 
-def clean(df: pd.DataFrame, log: list[str] | None = None) -> CleanResult:
+def clean(df: pd.DataFrame, log: list[str] | None = None, *, dedupe_keep: str = "last") -> CleanResult:
     log = log if log is not None else []
     n0 = len(df)
     df = df.copy()
@@ -240,11 +240,11 @@ def clean(df: pd.DataFrame, log: list[str] | None = None) -> CleanResult:
             if rep["failed"]:
                 msg += f", {rep['failed']} values unparseable → NaN"
             log.append(msg)
-    # duplicates
+    # duplicates (keep latest observation by default per mentor cleaning rule)
     before = len(df)
-    df = df.drop_duplicates()
+    df = df.drop_duplicates(keep=dedupe_keep)
     if len(df) < before:
-        log.append(f"removed {before - len(df)} exact duplicate rows ({(before - len(df)) / before:.1%})")
+        log.append(f"removed {before - len(df)} exact duplicate rows ({(before - len(df)) / before:.1%}, keep={dedupe_keep})")
     kept_index = df.index.to_numpy()   # raw row positions that survived (DE layer carries _row_hash / raw columns over)
     df = df.reset_index(drop=True)
     roles = {c: guess_role(c, df[c], len(df)) for c in df.columns}

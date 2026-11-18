@@ -36,7 +36,7 @@ import pandas as pd
 import yaml
 
 TZ = ZoneInfo("Asia/Saigon")
-KINDS = ("file", "api", "sql", "scrape", "social", "cv")
+KINDS = ("file", "api", "sql", "scrape", "social", "cv", "reducto")
 _VIEW = re.compile(
     r"^CREATE\s+OR\s+REPLACE\s+VIEW\s+(gold\.v_[a-z0-9_]+)\s+AS\s+((?:SELECT|WITH)\b.+)$",
     re.I | re.S | re.ASCII,

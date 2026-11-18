@@ -3,7 +3,7 @@ SHELL := /bin/bash
 ENV   := source tools/env.sh && export NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
 PORT  ?= 8000
 
-.PHONY: help setup api web web-dev demo demo-online brief contest screenshots demo-video test test-py test-web lint clean-out
+.PHONY: help setup api web web-dev demo demo-online brief contest screenshots demo-video test test-py test-web lint clean-out reducto-parse
 
 help:            ## list commands
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 16
@@ -51,3 +51,6 @@ test-web:        ## web unit tests + eslint
 
 clean-out:       ## delete generated outputs (out/, warehouse, lake) — keeps data/raw and cache
 	rm -rf out data/warehouse.duckdb data/warehouse.duckdb.wal data/lake
+
+reducto-parse:   ## optional PDF/scan parse via Reducto API -> JSON/Bronze (needs REDUCTO_API_KEY or MOCK=1)
+	$(ENV) && python de.py reducto "$(FILE)" $(if $(NAME),--name "$(NAME)",) $(if $(MOCK),--mock,) $(if $(OUT),--out "$(OUT)",) --bronze

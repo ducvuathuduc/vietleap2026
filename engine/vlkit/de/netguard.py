@@ -125,6 +125,11 @@ def guard_source(src) -> None:
             check_path(db)
         else:
             check_host(u.hostname, u.port)
+    elif src.kind == "reducto":
+        if src.uri.strip().startswith(("http://", "https://")):
+            check_url(src.uri)
+        else:
+            src.uri = str(check_path(src.uri))
     o["_net_guard"] = True
     src.options = o
 

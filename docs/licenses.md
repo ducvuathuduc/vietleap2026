@@ -43,4 +43,6 @@ recharts (MIT) · mermaid (MIT) · driver.js (MIT) · ai, @ai-sdk/* (Apache-2.0)
 ## Assets
 `web/src/app/vendor/shadcn-tailwind.css` is the unchanged stylesheet from the official `shadcn@4.23.0` npm package. The adjacent MIT notice is from the same package. The CLI is available separately when adding components.
 
-None besides shadcn/ui components (MIT) and lucide icons (ISC). Map GeoJSON (T053) must be recorded here when added.
+None besides shadcn/ui components (MIT) and lucide icons (ISC).
+
+- **34-province boundary asset (`web/public/geo/vn-34.geo.json`)**: derived via `tools/build_geo.py` from HDX *"Viet Nam – Subnational Administrative Boundaries"* (COD-AB v02, GSO/OCHA, reviewed 2025-09-25, 34 post-NQ 202/2025/QH15 units including Hoàng Sa under Đà Nẵng & Trường Sa under Khánh Hòa) — **CC BY-IGO**. See `web/public/geo/LICENSE.md`.

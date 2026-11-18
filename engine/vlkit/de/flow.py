@@ -17,7 +17,7 @@ from pathlib import Path
 
 from ..vn import ascii_key
 from .conformed import build_conformed
-from .connectors import ingest
+from .connectors import ingest, read_watermark, write_watermark
 from .exports import write_dictionary
 from .lineage import lineage_graph, lineage_mermaid
 from .modeling import build_models, erd
@@ -59,8 +59,17 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
         t0, bronze, provenance, conform_of, load = time.time(), [], [], {}, {}
         for src in sources:
             st = now_iso()
+            wm_col = src.options.get("watermark_col")
+            wm_path = Path(src.options["watermark_file"]) if src.options.get("watermark_file") else (
+                wh.lake / "_watermarks" / f"{ds}__{slugify(src.name)}.json"
+            )
+            prev_wm = read_watermark(wm_path) if (wm_col and mode in ("incremental", "append")) else None
+            run_src = (
+                Source(src.name, src.kind, src.uri, {**src.options, "_watermark_since": prev_wm}, src.license_note, src.conform)
+                if prev_wm is not None else src
+            )
             try:
-                res = ingest_offline(src) if offline else ingest(src)
+                res = ingest_offline(run_src) if offline else ingest(run_src)
                 if offline and not any(not frame.empty for frame in res.frames.values()):
                     raise ValueError(f"Nguồn offline {src.name!r} không có dữ liệu")
             except Exception as e:  # one broken source must not kill the run
@@ -72,17 +81,35 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
             provenance.append(res.provenance)
             src_load = {}
             for name, df in res.frames.items():
-                if df is None or df.empty:
-                    continue
                 tname = f"{ds}__{slugify(name)}"
+                if df is None or df.empty:
+                    if mode == "incremental" and wh.exists("bronze", tname):
+                        rows_now = int(wh.con.execute(f"SELECT count(*) FROM bronze.{ident(tname)}").fetchall()[0][0])
+                        load[f"bronze.{tname}"] = src_load[f"bronze.{tname}"] = {
+                            "inserted": 0, "skipped": 0, "rebuilt": False, "rows": rows_now, "reason": "watermark up to date",
+                        }
+                        bronze.append(f"bronze.{tname}")
+                        conform_of[f"silver.{tname}"] = src.conform
+                    continue
                 ls = wh.write_bronze(ds, tname, df, {**res.provenance, "source": src.name}, mode=mode)
                 load[ls["table"]] = src_load[ls["table"]] = {k: ls[k] for k in ("inserted", "skipped", "rebuilt", "rows", "reason")}
                 bronze.append(f"bronze.{tname}")
                 conform_of[f"silver.{tname}"] = src.conform
+            wm_info = res.provenance.get("watermark")
+            if wm_info and wm_info.get("to"):
+                write_watermark(wm_path, wm_info["to"], wm_info["column"], now_iso())
             ins, skp = sum(v["inserted"] for v in src_load.values()), sum(v["skipped"] for v in src_load.values())
-            wh.log_run(run_id, ds, f"ingest:{src.name}", "ok", st, {"tables": list(res.frames), "mode": mode,
-                                                                     "inserted": ins, "skipped": skp, "load": src_load})
-            steps.append({"step": f"ingest:{src.name}", "status": "ok", "tables": list(res.frames), "inserted": ins, "skipped": skp})
+            status = "skipped" if res.provenance.get("status") == "skipped" and not src_load else "ok"
+            log_detail = {"tables": list(res.frames), "mode": mode, "inserted": ins, "skipped": skp, "load": src_load}
+            if res.provenance.get("message"):
+                log_detail["message"] = res.provenance["message"]
+            if wm_info:
+                log_detail["watermark"] = wm_info
+            wh.log_run(run_id, ds, f"ingest:{src.name}", status, st, log_detail)
+            step_item = {"step": f"ingest:{src.name}", "status": status, "tables": list(res.frames), "inserted": ins, "skipped": skp}
+            if wm_info:
+                step_item["watermark"] = wm_info
+            steps.append(step_item)
         timings["ingest"] = round(time.time() - t0, 2)
         if not bronze:
             raise RuntimeError("no source produced data")

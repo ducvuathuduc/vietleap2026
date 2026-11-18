@@ -32,6 +32,42 @@ CACHE = Path(__file__).resolve().parents[3] / "data" / "cache"
 MAX_UNZIPPED_BYTES = 2 * 1024 ** 3
 
 
+def read_watermark(path: str | Path | None) -> str | None:
+    if not path:
+        return None
+    p = Path(path)
+    if not p.is_file():
+        return None
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        val = data.get("watermark")
+        return str(val) if val is not None and str(val) != "" else None
+    except Exception:
+        return None
+
+
+def write_watermark(path: str | Path, value: str, column: str, updated_at: str) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({"watermark": str(value), "column": column, "updated_at": updated_at}, ensure_ascii=False, indent=1),
+                 encoding="utf-8")
+
+
+def _wm_key(val) -> tuple[int, float | str]:
+    s = str(val).strip()
+    try:
+        return (0, float(s))
+    except ValueError:
+        return (1, s)
+
+
+def _wm_gt(a, b) -> bool:
+    ka, kb = _wm_key(a), _wm_key(b)
+    if ka[0] == kb[0]:
+        return ka[1] > kb[1]
+    return str(a) > str(b)
+
+
 # ----------------------------------------------------------------------------- file
 
 def ingest_file(src: Source) -> IngestResult:
@@ -132,6 +168,11 @@ def ingest_api(src: Source, client=None) -> IngestResult:
     own = client is None
     client = client or httpx.Client(headers=headers, timeout=30, follow_redirects=True, event_hooks=httpx_hooks(src))
     paging, params = o.get("paging", "none"), dict(o.get("params", {}))
+    wm_param = o.get("watermark_param")
+    prev_wm = o.get("_watermark_since") or read_watermark(o.get("watermark_file"))
+    if wm_param and prev_wm is not None and wm_param not in params:
+        fmt = o.get("watermark_format")
+        params[wm_param] = fmt.format(watermark=prev_wm) if fmt else str(prev_wm)
     min_interval = 1.0 / float(o.get("rate_per_sec", 2))
     max_pages, size = int(o.get("max_pages", 50)), int(o.get("page_size", 100))
     rows, pages, cached_pages, url = [], 0, 0, src.uri
@@ -346,10 +387,45 @@ def ingest_cv(src: Source) -> IngestResult:
     return IngestResult(src, frames, make_provenance(src, frames))
 
 
+# ----------------------------------------------------------------------------- reducto
+
+def ingest_reducto(src: Source) -> IngestResult:
+    """Optional Reducto PDF/scan document parser -> structured JSON + DataFrame.
+
+    Reads REDUCTO_API_KEY only from env. When unset (and mock=False), returns an empty frame
+    and status='skipped' provenance cleanly without raising.
+    """
+    from .reducto import parse_document
+
+    o = src.options or {}
+    outcome = parse_document(
+        src.uri,
+        mock=bool(o.get("mock", False)),
+        out_json=o.get("out_json"),
+        bronze=False,
+        dataset=src.name,
+        net_guard=bool(o.get("_net_guard", False)),
+    )
+    df = pd.DataFrame(outcome.records) if outcome.records else pd.DataFrame()
+    frames = {src.name: df}
+    return IngestResult(
+        src,
+        frames,
+        make_provenance(
+            src,
+            frames,
+            status=outcome.status,
+            job_id=outcome.job_id,
+            message=outcome.message,
+            output_json=outcome.output_json,
+        ),
+    )
+
+
 # ----------------------------------------------------------------------------- dispatch
 
 CONNECTORS = {"file": ingest_file, "api": ingest_api, "sql": ingest_sql, "scrape": ingest_scrape,
-              "social": ingest_social, "cv": ingest_cv}
+              "social": ingest_social, "cv": ingest_cv, "reducto": ingest_reducto}
 
 
 def ingest(src: Source) -> IngestResult:
@@ -357,9 +433,12 @@ def ingest(src: Source) -> IngestResult:
     columns = src.options.get("columns")
     rename = src.options.get("rename", {})
     filters = src.options.get("filters", {})
-    if columns is None and not rename and not filters:
+    wm_col = src.options.get("watermark_col")
+    prev_wm = src.options.get("_watermark_since") or read_watermark(src.options.get("watermark_file"))
+    if columns is None and not rename and not filters and not wm_col:
         return result
     frames = {}
+    wm_to: str | None = prev_wm if prev_wm is not None else None
     for name, frame in result.frames.items():
         if not frame.empty:
             for column, allowed in filters.items():
@@ -367,8 +446,21 @@ def ingest(src: Source) -> IngestResult:
             if columns is not None:
                 frame = frame.loc[:, columns]
             frame = frame.rename(columns=rename)
+            if wm_col and wm_col in frame.columns:
+                non_null = frame[wm_col].dropna()
+                if prev_wm is not None and src.options.get("watermark_filter", True):
+                    keep = frame[wm_col].map(lambda v: v is not None and pd.notna(v) and _wm_gt(v, prev_wm))
+                    frame = frame.loc[keep].reset_index(drop=True)
+                    non_null = frame[wm_col].dropna()
+                if not non_null.empty:
+                    cand = str(max(non_null.tolist(), key=_wm_key))
+                    if wm_to is None or _wm_gt(cand, wm_to):
+                        wm_to = cand
         frames[name] = frame
-    return IngestResult(src, frames, {**result.provenance, **make_provenance(src, frames)})
+    prov = {**result.provenance, **make_provenance(src, frames)}
+    if wm_col:
+        prov["watermark"] = {"column": wm_col, "from": prev_wm, "to": wm_to}
+    return IngestResult(src, frames, prov)
 
 
 def _tname(s: str) -> str:

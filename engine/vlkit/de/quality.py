@@ -91,14 +91,84 @@ def guess_key(df: pd.DataFrame) -> list[str] | None:
     return None
 
 
-def to_silver(df_bronze: pd.DataFrame, impute: str | None = None) -> tuple[pd.DataFrame, dict, list[str]]:
-    """Clean bronze → silver. impute: None (keep NaN, default — honest) | 'median' (numeric median + flag col)."""
+_TICKER_HINTS = ("ticker", "symbol", "ma ck", "ma cp", "stock", "entity", "firm", "cong ty", "company")
+
+
+def _detect_ticker_and_time(
+    df: pd.DataFrame,
+    roles: dict[str, str],
+    ticker_col: str | None = None,
+    time_col: str | None = None,
+) -> tuple[str | None, str | None]:
+    tcol = ticker_col if ticker_col and ticker_col in df.columns else None
+    if tcol is None:
+        for c in df.columns:
+            if c.startswith("_"):
+                continue
+            k = ascii_key(c)
+            if any(h in k for h in _TICKER_HINTS):
+                tcol = c
+                break
+    if tcol is None:
+        for c, r in roles.items():
+            if not c.startswith("_") and r in ("id", "geo", "category") and 1 < df[c].nunique(dropna=True) < len(df):
+                tcol = c
+                break
+    tmcol = time_col if time_col and time_col in df.columns else None
+    if tmcol is None:
+        for c, r in roles.items():
+            if not c.startswith("_") and r == "time":
+                tmcol = c
+                break
+    return tcol, tmcol
+
+
+def _dedupe_subset(
+    df: pd.DataFrame,
+    roles: dict[str, str],
+    key: list[str] | None,
+    dedupe_keep: str,
+    log: list[str],
+) -> pd.DataFrame:
+    subset = [c for c in (key or []) if c in df.columns]
+    if not subset:
+        tcol, tmcol = _detect_ticker_and_time(df, roles)
+        if tcol and tmcol and any(h in ascii_key(tcol) for h in _TICKER_HINTS):
+            subset = [tcol, tmcol]
+    if not subset or len(df) == 0:
+        return df
+    before = len(df)
+    dups = int(df.duplicated(subset=subset, keep=dedupe_keep).sum())
+    if dups:
+        df = df.drop_duplicates(subset=subset, keep=dedupe_keep).reset_index(drop=True)
+        log.append(f"deduplicated {dups} key-duplicate rows on {subset} (keep={dedupe_keep}): {before} → {len(df)} rows")
+    return df
+
+
+def to_silver(
+    df_bronze: pd.DataFrame,
+    impute: str | None = None,
+    *,
+    dedupe_keep: str = "last",
+    key: list[str] | None = None,
+    ticker_col: str | None = None,
+    time_col: str | None = None,
+) -> tuple[pd.DataFrame, dict, list[str]]:
+    """Clean bronze → silver.
+
+    impute:
+      - None (default — honest NaN preserved)
+      - 'median' (numeric median + ``{col}__imputed`` flag col)
+      - 'interpolate' (linear interpolation per ticker/entity sorted by time + ``{col}__imputed`` flag col)
+    dedupe_keep: 'last' (default — keeps latest observation for exact/key duplicates) | 'first'
+    Outliers are flagged in ``_outlier_any`` and never deleted.
+    """
     raw = df_bronze.drop(columns=[c for c in df_bronze.columns if c in ("_row_hash", "_ingested_at")], errors="ignore")
     src = raw.pop("_src") if "_src" in raw.columns else None
     log: list[str] = []
     dist_cols = {c: lvl for c in raw.columns if not str(c).startswith("_")
                  and (lvl := is_district_column(str(c), raw[c] if raw[c].dtype == object or pd.api.types.is_string_dtype(raw[c]) else None))}
-    res = clean(raw, log)
+    res = clean(raw, log, dedupe_keep=dedupe_keep)
     df = res.df
     roles = res.roles
     kept = res.source.get("kept_index")
@@ -111,14 +181,15 @@ def to_silver(df_bronze: pd.DataFrame, impute: str | None = None) -> tuple[pd.Da
             continue
         if any(str(x).endswith("__province") for x in df.columns if str(x).startswith(f"{c}__")):
             continue   # values were actually provinces
-        disp, key = canonical_districts(raw[c].loc[kept].reset_index(drop=True), "Quận" if lvl == "district" else "Phường")
-        if key.notna().mean() < 0.5 * max(raw[c].notna().mean(), 1e-9):
+        disp, dkey = canonical_districts(raw[c].loc[kept].reset_index(drop=True), "Quận" if lvl == "district" else "Phường")
+        if dkey.notna().mean() < 0.5 * max(raw[c].notna().mean(), 1e-9):
             continue
-        df[f"{c}__district"], df[f"{c}__district_key"] = disp.to_numpy(), key.to_numpy()
+        df[f"{c}__district"], df[f"{c}__district_key"] = disp.to_numpy(), dkey.to_numpy()
         roles[f"{c}__district"], roles[f"{c}__district_key"] = "geo", "geo_key"
         roles[c] = "geo_raw"
-        log.append(f"'{c}': {lvl} names normalised ({key.nunique()} units; prefixes Quận/Huyện/Q./TP. stripped, "
+        log.append(f"'{c}': {lvl} names normalised ({dkey.nunique()} units; prefixes Quận/Huyện/Q./TP. stripped, "
                    f"accent-insensitive key) → '{c}__district' + '{c}__district_key'")
+    df = _dedupe_subset(df, roles, key, dedupe_keep, log)
     for c in [c for c, r in roles.items() if r == "numeric"]:
         if any(h in ascii_key(c) for h in NONNEG_HINTS):
             neg = df[c] < 0
@@ -132,6 +203,30 @@ def to_silver(df_bronze: pd.DataFrame, impute: str | None = None) -> tuple[pd.Da
                 df[f"{c}__imputed"] = m
                 df[c] = df[c].fillna(df[c].median())
                 log.append(f"'{c}': imputed {int(m.sum())} missing with median; flag column '{c}__imputed'")
+    elif impute == "interpolate":
+        tcol, tmcol = _detect_ticker_and_time(df, roles, ticker_col=ticker_col, time_col=time_col)
+        num_cols = [c for c, r in roles.items() if r == "numeric"]
+        if num_cols and len(df):
+            orig_order = df.index
+            sort_cols = [c for c in (tcol, tmcol) if c is not None]
+            work = df.sort_values(sort_cols, kind="mergesort") if sort_cols else df.copy()
+            for c in num_cols:
+                miss_before = work[c].isna()
+                if not miss_before.any():
+                    continue
+                if tcol:
+                    filled = work.groupby(tcol, sort=False, dropna=False)[c].transform(
+                        lambda s: s.interpolate(method="linear", limit_area="inside")
+                    )
+                else:
+                    filled = work[c].interpolate(method="linear", limit_area="inside")
+                newly_imputed = miss_before & filled.notna()
+                if newly_imputed.any():
+                    work[f"{c}__imputed"] = newly_imputed.reindex(work.index, fill_value=False)
+                    work[c] = filled
+                    scope = f"per '{tcol}'" + (f" sorted by '{tmcol}'" if tmcol else "") if tcol else "across rows"
+                    log.append(f"'{c}': interpolated {int(newly_imputed.sum())} missing values ({scope}); flag column '{c}__imputed'")
+            df = work.reindex(orig_order)
     if src is not None:
         df["_src"] = src.iloc[0] if len(src) else None
     return df, roles, log
@@ -164,9 +259,25 @@ def _rollup_provinces(silver: pd.DataFrame, config: dict, log: list[str]) -> tup
     return rolled, roles
 
 
-def quality_step(bronze: pd.DataFrame, impute: str | None = None, province_rollup: dict | None = None) -> dict:
+def quality_step(
+    bronze: pd.DataFrame,
+    impute: str | None = None,
+    province_rollup: dict | None = None,
+    *,
+    dedupe_keep: str = "last",
+    key: list[str] | None = None,
+    ticker_col: str | None = None,
+    time_col: str | None = None,
+) -> dict:
     before = profile_quality(bronze)
-    silver, roles, log = to_silver(bronze, impute=impute)
+    silver, roles, log = to_silver(
+        bronze,
+        impute=impute,
+        dedupe_keep=dedupe_keep,
+        key=key,
+        ticker_col=ticker_col,
+        time_col=time_col,
+    )
     if province_rollup:
         silver, roles = _rollup_provinces(silver, province_rollup, log)
     after = profile_quality(silver.drop(columns=[c for c in silver.columns if c.endswith("__imputed")]))

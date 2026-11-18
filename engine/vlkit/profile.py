@@ -6,7 +6,7 @@ import pandas as pd
 
 from . import fmt
 from .i18n import LANGS, t
-from .stats import r
+from .stats import choose_freq, detect_time_gaps, r
 
 
 def _issue(severity: str, column: str, key: str, **values) -> dict:
@@ -41,6 +41,23 @@ def profile(df: pd.DataFrame, roles: dict, numeric_reports: dict, outlier_counts
         else:
             vc = s.astype(str).where(s.notna()).value_counts().head(8)
             info["top_values"] = [{"value": k, "count": int(v)} for k, v in vc.items()]
+        if roles.get(c) == "time":
+            d = s.dropna()
+            if len(d) >= 2:
+                if pd.api.types.is_numeric_dtype(d):
+                    periods = [str(int(v)) for v in d.unique()]
+                    freq = "Y"
+                elif pd.api.types.is_datetime64_any_dtype(d):
+                    freq = choose_freq(d)
+                    periods = d.dt.to_period(freq).astype(str).unique().tolist()
+                else:
+                    freq = None
+                    periods = [str(v) for v in d.unique()]
+                gaps = detect_time_gaps(periods, freq=freq)
+                if gaps["count"] > 0:
+                    info["time_gaps"] = gaps
+                    issues.append(_issue("high" if gaps["pct_missing"] >= 20 else "medium", c, "issue_time_gap",
+                                         n=gaps["count"], pct=gaps["pct_missing"], samples=", ".join(gaps["samples"][:3])))
         if c in numeric_reports:
             info["parsing"] = numeric_reports[c]
         cols.append(info)

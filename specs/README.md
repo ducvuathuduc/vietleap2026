@@ -19,11 +19,11 @@ Hours are single-developer estimates for the 2-CPU laptop, written 2026-11-16 (n
 | [012](012-contest-workflow/) | Offline contest command, dictionary/EDA, snapshots, S3 mirror and decision framing | **P1** | `d45b374`, offline WDI command verified | DE | — | 004 | T1201–T1206 |
 | [009](009-one-click-export/) | One-click "Xuất báo cáo" (deck + pitch + dashboard PDF + bundle) | **P1** (submission 21/11 13:00) | `3c02c26`, local browser pass. Second-machine check pending. | DE + ST | 5 | 002, 003 (007/008 optional) | T901–T911 |
 | [011](011-real-key-validation/) | Real-key LLM test (+ optional YOLO real run) | **P1** LLM / P3 YOLO | Offline smoke passed. Provider checks skipped without credentials. | LEAD/DE + AN | 3 (+2) | 001 (006 for q4) | T1101–T1110 |
-| [007](007-whatif-sliders/) | What-if sliders page (multi-driver, joint CI90) | P2 | 🔵 Web/TS/Chromium done (63 web tests green); `pytest`/OpenAPI/push pending | DE + AN | 4 | 001 | T701–T711 |
-| [008](008-province-choropleth/) | 34-province choropleth → Hỏi AI | P2 | 🔵 Ranked 34-province card + `/geo` + `Hỏi AI` verified; TopoJSON gated on T801 | DE + RQ | 5 | 001 (boundary licence gate T801) | T801–T811 |
+| [007](007-whatif-sliders/) | What-if sliders page (multi-driver, joint CI90) | P2 | 🔵 T701–T704 & T706–T710 implemented + Chromium/OpenAPI/71 web tests green; `pytest`/push pending | DE + AN | 4 | 001 | T701–T711 |
+| [008](008-province-choropleth/) | 34-province choropleth → Hỏi AI | P2 | 🔵 T801–T803, T805–T806, T808–T810 implemented (`vn-34.geo.json` 155 KB + Hoàng Sa/Trường Sa, `Hỏi AI` & Chromium verified); `pytest`/push pending | DE + RQ | 5 | 001 | T801–T811 |
 | [005](005-command-palette/) | Ctrl+K command palette (shadcn Command/cmdk) | P2 | `80bd00d`, browser verified | DE | 2.5 | 001 | T501–T508 |
-| [006](006-nl-to-sql/) | NL→SQL in AI Analyst (read-only guard, inline chart, cited query, offline templates) | P2 | 🔵 Guard, offline templates, card/chart & `/sql?q=` verified; Groq live test pending | DE + AN | 5 | 001 (T061 done) | T601–T612 |
-| [010](010-screenshots-demo-video/) | Screenshots + 90 s demo video script | P2 | Captured locally. Team review and sharing pending. | ST + DE | 3 | best after 005/007/008/009 | T1001–T1008 |
+| [006](006-nl-to-sql/) | NL→SQL in AI Analyst (read-only guard, inline chart, cited query, offline templates) | P2 | 🔵 Guard, offline templates, card/chart, `/sql?q=` & screenshot verified; Groq live test pending | DE + AN | 5 | 001 (T061 done) | T601–T612 |
+| [010](010-screenshots-demo-video/) | Screenshots + 90 s demo video script | P2 | Captured locally (+ P2 `whatif.png`, `analyst-sql.png`, `segments-geo.png`). Team review & upload pending. | ST + DE | 3 | best after 005/007/008/009 | T1001–T1008 |
 
 Total remaining (written 16/11, before 002/003 landed) ≈ 43.5 h (+2 h optional YOLO) — more than the ≈ 30 developer-hours available before 19/11 12:00, so
 [`docs/ROADMAP.md`](../docs/ROADMAP.md) draws a cut line: P1 rows first; P2 rows in table order until the 18/11 freeze.

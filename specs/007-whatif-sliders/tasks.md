@@ -6,7 +6,7 @@
 - [x] T701 Test-first `tests/test_whatif_multi.py`: single change == `what_if`; two changes == aligned-draw sum; log target; zero changes → 0/[0,0]; duplicate feature → ValueError; range warning (`py_compile` ok; `pytest` pending Python env).
 - [x] T702 `engine/vlkit/models.py what_if_multi` + `min`/`max` persisted by `fit_drivers`; `engine/vlkit/tools.py` wrapper → T701 (+ TS engine `stats.ts`/`analyzer.ts` parity).
 - [x] T703 Test-first API tests (same file): `POST /whatif/scenario` 200/422/404; `POST|GET /whatif/scenarios` max 4, name ≤ 60.
-- [x] T704 `api/schemas.py`, `api/routes/analysis.py`, `api/security.py` limited paths (+ Next.js routes `/whatif/scenario`, `/whatif/scenarios`); `python tools/export_openapi.py` deferred to full Python env → T702, T703.
+- [x] T704 `api/schemas.py`, `api/routes/analysis.py`, `api/security.py` limited paths (+ Next.js routes `/whatif/scenario`, `/whatif/scenarios`); `specs/001-vietleap-insight-kit/contracts/openapi.json` synced (live `python tools/export_openapi.py` check pending full Python env) → T702, T703.
 - [ ] T705 Commit + push "feat(whatif): T701–T704 multi-driver scenario with joint bootstrap CI90".
 
 ## Phase B — Web

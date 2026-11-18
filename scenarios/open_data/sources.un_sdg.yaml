@@ -1,0 +1,51 @@
+dataset: un_sdg_vn
+primary: poverty_extreme
+keys:
+  year: [year]
+sources:
+  - name: poverty_extreme
+    conform: &wide {prefix_columns: false}
+    kind: api
+    uri: https://unstats.un.org/sdgapi/v1/sdg/Series/Data
+    license: United Nations Global SDG Indicators Database (Open Data / CC BY 3.0 IGO)
+    options:
+      params:
+        seriesCode: SI_POV_DAY1
+        areaCode: 704
+        pageSize: 200
+      records_path: data
+      paging: page
+      page_param: page
+      size_param: pageSize
+      page_size: 200
+      rate_per_sec: 1
+      watermark_col: year
+      watermark_param: timePeriodStart
+      columns: [geoAreaName, timePeriodStart, value, seriesDescription]
+      rename:
+        geoAreaName: country
+        timePeriodStart: year
+        value: extreme_poverty_pct
+  - name: under5_mortality
+    conform: *wide
+    kind: api
+    uri: https://unstats.un.org/sdgapi/v1/sdg/Series/Data
+    license: United Nations Global SDG Indicators Database (Open Data / CC BY 3.0 IGO)
+    options:
+      params:
+        seriesCode: SH_DYN_MORT
+        areaCode: 704
+        pageSize: 200
+      records_path: data
+      paging: page
+      page_param: page
+      size_param: pageSize
+      page_size: 200
+      rate_per_sec: 1
+      watermark_col: year
+      watermark_param: timePeriodStart
+      columns: [geoAreaName, timePeriodStart, value]
+      rename:
+        geoAreaName: country
+        timePeriodStart: year
+        value: under5_mortality_per_1000
