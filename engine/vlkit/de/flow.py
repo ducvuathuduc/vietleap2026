@@ -228,6 +228,16 @@ def run_flow(dataset: str, sources: list[Source], out_root: str | Path | None = 
                 raise ValueError(f"analysis_table was not produced in this run: {serving_table}")
             obt = wh.lake / "gold" / f"{serving_table.split('.', 1)[1]}.parquet"
             options = dict(serve_kwargs or {})
+            if quality:
+                main_silver = max(quality, key=lambda t: quality[t]["after"]["rows"])
+                rep = quality[main_silver]
+                options["quality_summary"] = {
+                    "bronze_rows": rep["before"]["rows"],
+                    "silver_rows": rep["after"]["rows"],
+                    "duplicate_rows": rep["before"].get("duplicate_rows"),
+                    "score_before": rep["before"].get("score"),
+                    "score_after": rep["after"].get("score"),
+                }
             if brief_text is not None:
                 from ..brief import parse_brief
 

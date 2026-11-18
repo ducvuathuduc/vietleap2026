@@ -16,6 +16,11 @@ EDA_MD = "eda.md"
 FIELDS = ("gold_table", "column", "type", "description", "unit", "source", "missing_pct", "sample")
 
 
+def _usd(v: float) -> str:
+    """4,716.66 → '4.716,66' (Vietnamese thousands '.' and decimal ',')."""
+    return f"{v:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
 def _cell(value: object) -> str:
     raw = "—" if value is None or value == "" else str(value)
     return html.escape(" ".join(raw.splitlines())).replace("\\", "\\\\").replace("|", r"\|").replace("[", r"\[")
@@ -110,5 +115,28 @@ def write_eda(results: dict, out: Path) -> str:
         stats = f" · {fmt.p(insight['p_value'], 'vi')}" if insight["p_value"] is not None else ""
         lines.append(f"- {_cell(insight['sentence_vi'])} ({_cell(insight['test'])}{stats})")
     lines += ["", "## Hạn chế", "", *(f"- {_cell(text)}" for text in results["caveats_vi"])]
+    qs = results.get("quality_summary") or {}
+    if qs.get("bronze_rows") is not None and qs.get("silver_rows") is not None:
+        dup = qs.get("duplicate_rows")
+        dup_txt = (f" (loại {fmt.count(dup, 'vi')} dòng trùng hoàn toàn, giữ bản ghi mới nhất)"
+                   if isinstance(dup, (int, float)) and dup else "")
+        score_txt = ""
+        if qs.get("score_before") is not None and qs.get("score_after") is not None:
+            score_txt = f" · điểm chất lượng {fmt.dec(qs['score_before'], 'vi')} → {fmt.dec(qs['score_after'], 'vi')}"
+        lines += ["", "## Dòng dữ liệu", "",
+                  f"Bronze {fmt.count(qs['bronze_rows'], 'vi')} dòng → Silver {fmt.count(qs['silver_rows'], 'vi')} dòng"
+                  f"{dup_txt}{score_txt}."]
+    lines += ["", "## Ghi chú phương pháp (cho giám khảo)", "",
+              "- **Làm sạch:** giá trị thiếu được giữ nguyên (NaN) trừ khi chạy với `--impute interpolate` — khi đó thiếu được nội suy tuyến tính theo thời gian trong từng ticker, kèm cột cờ `__imputed`. Khử trùng lặp giữ bản ghi mới nhất (`keep='last'`): khử dòng trùng hoàn toàn, rồi khử theo khóa suy đoán tối đa 2 cột (recipe có thể chỉ định khóa khác). Giá trị ngoại lệ chỉ gắn cờ, không xóa.",
+              "- **Phục vụ (serving):** mỗi lần chạy xây cả OBT và star schema; dashboard đọc OBT (một bảng phẳng, nhanh) còn star schema là mô hình trình bày và phân tích."]
+    v = results.get("validation") or {}
+    if v.get("status"):
+        lines += ["", "## Kiểm chứng độc lập", ""]
+        if v["status"] == "match":
+            lines.append(f"- GDP bình quân đầu người Việt Nam {v['year']}: kho {_usd(v['warehouse_value'])} USD so với API World Bank trực tiếp ({v['indicator']}) {_usd(v['live_value'])} USD — chênh {fmt.pct(v['diff_pct'], 'vi')} (kiểm chứng {v['checked_at']}, nguồn {v['source']}).")
+        elif v["status"] == "mismatch":
+            lines.append(f"- **LỆCH:** GDP bình quân đầu người Việt Nam {v['year']}: kho {_usd(v['warehouse_value'])} USD nhưng API World Bank trực tiếp ({v['indicator']}) trả {_usd(v['live_value'])} USD — chênh {fmt.pct(v['diff_pct'], 'vi')} (kiểm chứng {v['checked_at']}, nguồn {v['source']}). Cần kiểm tra lại trước khi dùng số này.")
+        else:
+            lines.append(f"- Chưa kiểm chứng được với API World Bank ({v['indicator']}): {v.get('reason', 'không rõ lý do')} — giá trị trong kho: {_usd(v['warehouse_value'])} USD (kiểm chứng {v['checked_at']}).")
     (out / EDA_MD).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return EDA_MD

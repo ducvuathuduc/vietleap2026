@@ -117,9 +117,43 @@ def build_kpis(df, target, time_col, ts, prof, insights, domain_info):
     return k
 
 
+def _validate_headline(df) -> dict | None:
+    """One independent cross-check: VN GDP/capita 2024 in this frame vs the live
+    World Bank API (indicator NY.GDP.PCAP.CD). Runs only when the frame has the WDI
+    panel shape (iso3/year/gdp_per_capita_usd); never fails the run — on any error
+    the result is status 'unverified' with the reason recorded."""
+    if not {"iso3", "year", "gdp_per_capita_usd"}.issubset(df.columns):
+        return None
+    try:
+        wh_value = float(df.loc[(df["iso3"] == "VNM") & (df["year"] == 2024), "gdp_per_capita_usd"].iloc[0])
+    except (IndexError, KeyError, ValueError, TypeError):
+        return None
+    checked_at = time.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        from .de.connectors import ingest as _ingest
+        from .de.sources import Source as _Source
+        res = _ingest(_Source(name="wb_check", kind="api",
+                              uri="https://api.worldbank.org/v2/country/VN/indicator/NY.GDP.PCAP.CD",
+                              options={"params": {"format": "json", "date": "2024", "per_page": "5"},
+                                       "paging": "worldbank", "records_path": "1", "cache": False}))
+        live = float(res.frames["wb_check"]["value"].iloc[0])
+        diff = (live - wh_value) / wh_value * 100 if wh_value else None
+        return {"indicator": "NY.GDP.PCAP.CD", "country": "VNM", "year": 2024,
+                "warehouse_value": round(wh_value, 2), "live_value": round(live, 2),
+                "diff_pct": round(diff, 4) if diff is not None else None,
+                "status": "match" if diff is not None and abs(diff) < 0.5 else "mismatch",
+                "checked_at": checked_at, "source": "api.worldbank.org"}
+    except Exception as exc:  # noqa: BLE001 — validation must never fail the run
+        return {"indicator": "NY.GDP.PCAP.CD", "country": "VNM", "year": 2024,
+                "warehouse_value": round(wh_value, 2), "live_value": None, "diff_pct": None,
+                "status": "unverified", "reason": str(exc)[:200],
+                "checked_at": checked_at, "source": "api.worldbank.org"}
+
+
 def run(path: str | Path, out_root: str | Path = "out", target: str | None = None, time_col: str | None = None,
         geo_col: str | None = None, domain: str = "auto", sheet: str | None = None, transpose: bool | None = None,
-        name: str | None = None, reports: bool = True, max_insights: int = 12, lang: str = DEFAULT_REPORT_LANG) -> dict:
+        name: str | None = None, reports: bool = True, max_insights: int = 12, lang: str = DEFAULT_REPORT_LANG,
+        quality_summary: dict | None = None) -> dict:
     """`lang` (vi | en | both) selects the deck/pitch languages written when `reports` is on (feature 003)."""
     langs_for(lang)  # reject an unknown language before the expensive steps
     t0 = time.time()
@@ -184,7 +218,8 @@ def run(path: str | Path, out_root: str | Path = "out", target: str | None = Non
             "category_cols": [c for c, r in roles.items() if r in ("category", "geo") and 2 <= df[c].nunique() <= 60]}
     results = {"meta": meta, "cleaning_log": log, "profile": prof, "caveats": cav["en"], "caveats_vi": cav["vi"], "kpis": kpis, "timeseries": ts,
                "insights": insights, "recommendations": recs, "drivers": drivers, "segments": seg,
-               "correlations": extras.get("correlations")}
+               "correlations": extras.get("correlations"), "quality_summary": quality_summary,
+               "validation": _validate_headline(df)}
     if whatif:
         dump(whatif, out / "whatif.json")
     else:
