@@ -20,6 +20,7 @@ asset here **and** in the source's `license:` field in `sources.yaml` (it flows 
 | **ultralytics (optional)** | **AGPL-3.0** — not installed by default; used only by the stand-alone script `scenarios/cv_counting/count.py`; if a submission must avoid AGPL, use `--events` mode or another detector | | | |
 
 ## JavaScript (web/package.json)
+TypeScript 7 and the `@typescript/typescript6` compatibility API use Apache-2.0. The latter is used by ESLint tooling alongside the native compiler.
 next, react, react-dom (MIT) · shadcn/ui & `shadcn` CLI (MIT) · @base-ui/react (MIT) · tailwindcss, @tailwindcss/turbopack (MIT) ·
 cmdk (MIT) ·
 recharts (MIT) · mermaid (MIT) · driver.js (MIT) · ai, @ai-sdk/* (Apache-2.0) · zod (MIT) · lucide-react (ISC) · @tanstack/react-table (MIT) ·

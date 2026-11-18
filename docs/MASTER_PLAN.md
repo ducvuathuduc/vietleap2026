@@ -8,6 +8,10 @@
 
 Phiên tiếp theo dùng [master prompt bàn giao](HANDOFF_PROMPT.md). Các thay đổi trong phiên đã tích hợp trực tiếp vào `main`.
 
+**Gộp nhánh theo yêu cầu của chủ repo**: `03a27df` chứa đủ 14 đầu nhánh đã kiểm kê, gồm 13 nhánh Dependabot và WIP test 004. Các xung đột giữ đủ bản cập nhật workflow/dependency và bộ test hoàn thiện. Python sau gộp đạt 258 pass, 3 skip, 2 xfail. Mã web dùng ESLint 10.15.0, TypeScript 7.0.2 và React 19.3.1.
+
+Kiểm tra bản gộp đạt 36 test web, lint, build và audit production 0 lỗi. Compiler CLI là TypeScript 7.0.2, API TypeScript 6.0.3 chạy song song cho ESLint theo hướng dẫn Microsoft. Local gitleaks sạch. Xác nhận 14/14 đầu nhánh là ancestor của bản tích hợp trước khi đưa vào `main`.
+
 **Lịch BTC đã xác nhận (giờ Việt Nam; agenda trên https://vietleap2026.com/, đọc 17/11 — site đổi lịch 17/11 ~18:55):** 16/11 19:00 workshop online (Lưu Đức Cảnh, Tasco) · **19/11 14:45–15:30** Chi-Yu Lee (Konstanz) *From observation to data — Object tracking* · **19/11 15:30–16:15** Viet Nguyen-Tien (LSE) *Data to Decision / Combining Data for Socioeconomic Development* · 19/11 16:15–16:45 họp online với mentors · **20/11 09:00–09:30** khai mạc + Challenge Briefing + ghép đội · **20/11 09:30–10:15** Sacha Dray (World Bank VN) workshop Dashboard · **20/11 16:00–16:30** mentor check-in #1 · **21/11 10:30–11:00** check-in #2 · **21/11 13:00–13:15** hạn nộp · **21/11 13:15–15:15** pitch + Q&A · 21/11 15:45–16:45 trao giải. Chi tiết: [`CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) §1.3.
 
 **Kiểm tra local lần cuối (18/11, mã tới `80bd00d`)**: `pytest -q tests` 259 pass + 2 skip + 2 xfail · `npm test` 36 pass · `npm run lint` sạch · `npm run build` pass · audit production 0 lỗi. S3 live skip do thiếu env. Chạy tuần tự trên máy 2 CPU.

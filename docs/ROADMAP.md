@@ -21,6 +21,7 @@ Rules: every task group = commit + push (constitution VIII); never run `npm run 
 - `c4fe091`: removed the standalone shadcn CLI dependency and retained the original MIT stylesheet. `ee175c8`: export freshness and explicit decision questions covered by regression tests.
 - 005 (`80bd00d`): Ctrl+K, shared NAV, VI/EN matching, actions and query prefills verified in Chromium. Gzip delta remains unmeasured.
 - Handoff requested by the user. All task changes are on `main`. Resume from [HANDOFF_PROMPT.md](HANDOFF_PROMPT.md) after checking current GitHub CI/Security.
+- Additional handoff request covers all remaining branches. Four Actions branches, five Python branches, four web dependency branches and `wip/004-t401` are integrated in `03a27df`. Local Python 258 pass/3 skip/2 xfail, web 36 pass, lint/build and production audit green. TypeScript 7 compiler uses the official TypeScript 6 compatibility API for ESLint.
 
 ## Day by day
 | Day | Time | Work | Feature / tasks | Owner | Done when |

@@ -11,7 +11,7 @@ Mục tiêu ngày thi là một lệnh từ đề và dữ liệu đến pipelin
 ## Bắt đầu từ trạng thái hiện tại
 
 1. Đọc `AGENTS.md`, `web/AGENTS.md`, `.specify/memory/constitution.md`, `docs/MASTER_PLAN.md` §0, `specs/README.md`, `docs/ROADMAP.md`, `docs/WORKFLOW.md` §0, `docs/licenses.md` và bản đồ Reuse vs Build R13 trong spec 001.
-2. Kiểm tra `git status --short --branch`, `git log -12 --oneline`, `origin/main` và GitHub Actions trước khi sửa. Các thay đổi của phiên trước đã tích hợp trực tiếp vào `main`. Mã feature gần nhất là `80bd00d`, docs gần nhất trước master prompt này là `46b522f`. Xem log thực tế để nhận commit mới hơn.
+2. Kiểm tra `git status --short --branch`, `git log -20 --oneline`, `origin/main` và GitHub Actions trước khi sửa. Feature gần nhất là `80bd00d`. Sau đó người dùng yêu cầu gộp mọi nhánh còn lại, gồm 13 nhánh Dependabot và nhánh test WIP. Commit tích hợp đủ 14 đầu nhánh là `03a27df`. Xem log thực tế để nhận commit kiểm tra và bàn giao mới hơn.
 3. Đọc spec, plan, tasks và contract của feature đang làm. Dùng các mục Progress và checklist để tiếp tục đúng task. Bộ test từ nhánh WIP `wip/004-t401` đã được tích hợp và có implementation.
 4. Máy dùng PowerShell 7. Chạy `.venv/Scripts/python.exe` khi chưa activate venv. Dùng `npm.cmd`/`pnpm.cmd` nếu máy chặn shim PowerShell. `make` và `tools/env.sh` hỗ trợ Git Bash. Luôn đặt `NO_PROXY=localhost,127.0.0.1`.
 
@@ -31,9 +31,20 @@ Mục tiêu ngày thi là một lệnh từ đề và dữ liệu đến pipelin
 
 Các commit docs trong phiên gồm `6949417`, `bef5336`, `e9cff08`, `cc2500c`, `d197db8`, `46b522f`. Danh tính commit là `thanhdicode <116416942+thanhdicode@users.noreply.github.com>`.
 
+### Lượt gộp tất cả nhánh theo yêu cầu của chủ repo
+
+| Nhóm | Nhánh đã tích hợp |
+| --- | --- |
+| GitHub Actions | checkout v7, setup-node v7, setup-python v7, CodeQL v4 |
+| Python | plotly >=7.1.0, python-multipart >=0.0.33, scikit-learn >=1.9.1, scipy >=1.18.1, statsmodels >=0.15.0 |
+| Web | Nhóm minor/patch 11 gói, ESLint 10, TypeScript 7, @types/node 26 |
+| WIP | `wip/004-t401` được ghi nhận bằng merge commit. Bộ test hoàn thiện trên main được giữ trong phần xung đột. |
+
+Các merge commit giữ lịch sử của đầu nhánh đã kiểm kê. File lock npm được tái tạo theo package.json tổng hợp. TypeScript 7 được cài qua alias `@typescript/native`; alias `typescript` cung cấp API tương thích từ `@typescript/typescript6` cho ESLint. Đây là cách chạy song song trong hướng dẫn TypeScript 7 của Microsoft. Giữ cả hai khi cập nhật compiler. Next 16.4.6 dùng CLI `tsc` của TypeScript 7 để build. Một số peer range của plugin ESLint 10 còn cũ và có thể sinh cảnh báo khi cài.
+
 ## Bằng chứng kiểm tra
 
-- Local Python có **259 pass, 2 skip, 2 xfail**. Local web có **36 pass**, lint và build đạt, audit production có **0 vulnerabilities**. Skip live S3 khi thiếu biến môi trường. Giữ nguyên các xfail/skip đã có.
+- Sau lượt gộp dependency, Python có **258 pass, 3 skip, 2 xfail**. Lượt trước có Chromium cấu hình sẵn đạt **259 pass, 2 skip, 2 xfail**. Live S3 được skip khi thiếu biến môi trường. Giữ nguyên các xfail/skip đã có. Web có **36 pass**, lint và build đạt với compiler 7.0.2, audit production **0 vulnerabilities**. Xem CI mới nhất trong MASTER_PLAN §0 và GitHub Actions.
 - Kiểm OpenAPI bằng `python tools/export_openapi.py`, rồi so diff của contract canonical trong `specs/001-vietleap-insight-kit/contracts/openapi.json`.
 - Browser xuất ZIP WDI mất **39,01 giây**, kiểm 12 file bắt buộc và checksum, KPI **250 dòng** khớp giữa deck và PDF. Dashboard PDF sau kiểm layout có **4 trang**. Xem `docs/screenshots/export.png`.
 - Browser Ctrl+K đã kiểm tìm `chat luong`, Enter chuyển trang, Esc đóng, thoát inspect khi mở palette và prefill câu hỏi vào Analyst. Không có lỗi console/page trong lượt kiểm đó.
