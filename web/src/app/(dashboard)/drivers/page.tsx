@@ -74,10 +74,10 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
         ].map((k) => (
           <Card key={k.label}>
             <CardHeader>
-              <CardDescription>{k.label}</CardDescription>
-              <CardTitle className="text-2xl font-semibold tabular-nums">{k.value}</CardTitle>
+              <CardDescription className="line-clamp-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{k.label}</CardDescription>
+              <CardTitle className="text-3xl font-semibold tracking-tight tabular-nums">{k.value}</CardTitle>
             </CardHeader>
-            <CardFooter className="text-sm text-muted-foreground"><span className="line-clamp-1">{k.foot}</span></CardFooter>
+            <CardFooter className="border-t-0 bg-transparent text-sm text-muted-foreground"><span className="line-clamp-1">{k.foot}</span></CardFooter>
           </Card>
         ))}
       </div>
