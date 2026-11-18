@@ -25,3 +25,4 @@ pyyaml>=6
 tzdata; sys_platform == "win32"
 jsonschema>=4  # contract tests (specs/001-vietleap-insight-kit/contracts/*.schema.json)
 # optional: pytrends (Google Trends), psycopg[binary] / pymysql (Postgres/MySQL), ultralytics + supervision (CV)
+matplotlib>=3.8  # FiinQuantX 0.1.73 import chain needs it (not declared by the wheel)
