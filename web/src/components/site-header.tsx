@@ -69,10 +69,10 @@ export function SiteHeader() {
           </div>
           <div className="md:hidden">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Thêm hành động">
-                  <EllipsisVerticalIcon />
-                </Button>
+              <DropdownMenuTrigger
+                render={<Button variant="ghost" size="icon-sm" aria-label="Thêm hành động" />}
+              >
+                <EllipsisVerticalIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => window.dispatchEvent(new Event("vlk:open-command"))}>
