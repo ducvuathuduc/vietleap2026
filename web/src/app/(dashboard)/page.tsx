@@ -19,17 +19,17 @@ export default function OverviewPage() {
   const meta = detail?.meta
   return (
     <PageShell>
-      <SectionCards kpis={detail?.kpis} />
       {datasetId && detail && (
         <div className="px-4 lg:px-6">
           <BriefQuestionCard datasetId={datasetId} hasBrief={detail.has_brief} />
         </div>
       )}
+      <SectionCards kpis={detail?.kpis} />
       <div className="px-4 lg:px-6">
         <ChartAreaInteractive
           points={ts.data?.points}
-          title={meta ? `${ts.data?.agg ?? "median"} ${meta.target} over time` : "Trend"}
-          subtitle={meta?.time_col ? `${meta.time_col} · ${ts.data?.freq ?? ""} periods · ${meta.source_file}` : "No time column"}
+          title={meta ? `Diễn biến ${meta.target} theo thời gian` : "Xu hướng theo thời gian"}
+          subtitle={meta?.time_col ? `${meta.time_col} · ${ts.data?.freq ?? ""} · ${meta.source_file}` : "Chưa xác định cột thời gian"}
           metricLabel={meta?.target ?? "value"}
           gaps={ts.data?.gaps}
         />

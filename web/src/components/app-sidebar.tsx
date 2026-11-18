@@ -5,11 +5,9 @@ import * as React from "react"
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -27,7 +25,7 @@ import { availableLangs, exportKinds, pickLang } from "@/lib/export-lang"
 import { NAV } from "@/lib/nav"
 
 const rawDocs = process.env.NEXT_PUBLIC_API_DOCS_URL
-const API_DOCS = rawDocs && !rawDocs.includes("localhost:8000") ? rawDocs : "/api/health"
+const API_DOCS = rawDocs || "/api/health"
 const PAGE_ICONS = [LayoutDashboardIcon, FileTextIcon, UploadCloudIcon, WorkflowIcon, ShieldCheckIcon, NetworkIcon,
   TerminalSquareIcon, DatabaseIcon, LightbulbIcon, SlidersHorizontalIcon, SlidersVerticalIcon, ChartBarIcon, GavelIcon, SparklesIcon, FileChartColumnIcon]
 
@@ -35,7 +33,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { datasetId, detail } = useDataset()
   const [storedLang, setStoredLang] = useStoredExportLang()
   const file = (kind: ExportKind) => (datasetId ? api.fileUrl(datasetId, kind) : "#")
-  const files = detail?.meta.name === datasetId ? detail?.files : undefined
+  const files = detail?.files
   const lang = pickLang(files, storedLang)
   const langDocuments = (lang ? exportKinds(files, lang) : []).map((kind) =>
     kind.startsWith("deck")
@@ -43,14 +41,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       : { name: "Kịch bản pitch (.md)", url: file(kind), icon: <FileTextIcon /> }
   )
   const data = {
-    user: {
-      name: "VietLeap Team",
-      email: "UEH · 20–21/11/2026",
-      avatar: "",
-    },
     navMain: NAV.map((page, index) => ({ ...page, icon: React.createElement(PAGE_ICONS[index]) })),
     navSecondary: [
-      { title: "Tài liệu API", url: `${API_DOCS}`, icon: <Settings2Icon /> },
+      { title: rawDocs ? "Tài liệu API" : "Trạng thái dịch vụ", url: `${API_DOCS}`, icon: <Settings2Icon /> },
     ],
     documents: [
       ...langDocuments,
@@ -84,9 +77,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
     </Sidebar>
   )
 }

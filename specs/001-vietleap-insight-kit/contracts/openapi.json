@@ -971,7 +971,8 @@
          "type": "array",
          "items": {
           "$ref": "#/components/schemas/SavedScenario"
-         }
+         },
+         "title": "Response List Whatif Scenarios Api Datasets  Ds Id  Whatif Scenarios Get"
         }
        }
       }
@@ -1020,7 +1021,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/SavedScenario"
+         },
+         "title": "Response Save Whatif Scenario Api Datasets  Ds Id  Whatif Scenarios Post"
+        }
        }
       }
      },
@@ -1067,7 +1074,13 @@
       "description": "Successful Response",
       "content": {
        "application/json": {
-        "schema": {}
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/SavedScenario"
+         },
+         "title": "Response Delete Whatif Scenario Api Datasets  Ds Id  Whatif Scenarios Delete"
+        }
        }
       }
      },
@@ -2304,6 +2317,48 @@
     ],
     "title": "RowsResponse"
    },
+   "SaveScenarioBody": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "request": {
+      "$ref": "#/components/schemas/WhatIfScenarioRequest"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "request"
+    ],
+    "title": "SaveScenarioBody"
+   },
+   "SavedScenario": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "request": {
+      "$ref": "#/components/schemas/WhatIfScenarioRequest"
+     },
+     "result": {
+      "$ref": "#/components/schemas/WhatIfScenarioResult"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "request",
+     "result"
+    ],
+    "title": "SavedScenario"
+   },
    "SourceIn": {
     "properties": {
      "name": {
@@ -2407,6 +2462,75 @@
     ],
     "title": "ValidationError"
    },
+   "WhatIfChange": {
+    "properties": {
+     "feature": {
+      "type": "string",
+      "title": "Feature"
+     },
+     "pct_change": {
+      "type": "number",
+      "maximum": 30.0,
+      "minimum": -30.0,
+      "title": "Pct Change"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feature",
+     "pct_change"
+    ],
+    "title": "WhatIfChange"
+   },
+   "WhatIfContribution": {
+    "properties": {
+     "feature": {
+      "type": "string",
+      "title": "Feature"
+     },
+     "pct_change": {
+      "type": "number",
+      "maximum": 30.0,
+      "minimum": -30.0,
+      "title": "Pct Change"
+     },
+     "target_change_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Change Pct"
+     },
+     "ci90_pct": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Ci90 Pct"
+     }
+    },
+    "type": "object",
+    "required": [
+     "feature",
+     "pct_change",
+     "target_change_pct",
+     "ci90_pct"
+    ],
+    "title": "WhatIfContribution"
+   },
    "WhatIfRequest": {
     "properties": {
      "feature": {
@@ -2438,36 +2562,15 @@
     ],
     "title": "WhatIfRequest"
    },
-   "WhatIfChange": {
-    "properties": {
-     "feature": {
-      "type": "string",
-      "maxLength": 200,
-      "title": "Feature"
-     },
-     "pct_change": {
-      "type": "number",
-      "maximum": 30.0,
-      "minimum": -30.0,
-      "title": "Pct Change"
-     }
-    },
-    "type": "object",
-    "required": [
-     "feature",
-     "pct_change"
-    ],
-    "title": "WhatIfChange"
-   },
    "WhatIfScenarioRequest": {
     "properties": {
      "changes": {
       "items": {
        "$ref": "#/components/schemas/WhatIfChange"
       },
+      "type": "array",
       "maxItems": 5,
       "minItems": 1,
-      "type": "array",
       "title": "Changes"
      },
      "target": {
@@ -2523,9 +2626,9 @@
         }
        ]
       },
+      "type": "array",
       "maxItems": 2,
       "minItems": 2,
-      "type": "array",
       "title": "Ci90 Pct"
      },
      "target_change_abs": {
@@ -2564,6 +2667,13 @@
       "type": "array",
       "title": "Collinearity Warnings"
      },
+     "contributions": {
+      "items": {
+       "$ref": "#/components/schemas/WhatIfContribution"
+      },
+      "type": "array",
+      "title": "Contributions"
+     },
      "interpretation": {
       "type": "string",
       "title": "Interpretation"
@@ -2575,52 +2685,14 @@
      "target",
      "target_change_pct",
      "ci90_pct",
+     "target_change_abs",
      "baseline_target_mean",
+     "range_warnings",
+     "collinearity_warnings",
+     "contributions",
      "interpretation"
     ],
     "title": "WhatIfScenarioResult"
-   },
-   "SaveScenarioBody": {
-    "properties": {
-     "name": {
-      "type": "string",
-      "maxLength": 60,
-      "minLength": 1,
-      "title": "Name"
-     },
-     "request": {
-      "$ref": "#/components/schemas/WhatIfScenarioRequest"
-     }
-    },
-    "type": "object",
-    "required": [
-     "name",
-     "request"
-    ],
-    "title": "SaveScenarioBody"
-   },
-   "SavedScenario": {
-    "properties": {
-     "name": {
-      "type": "string",
-      "maxLength": 60,
-      "minLength": 1,
-      "title": "Name"
-     },
-     "request": {
-      "$ref": "#/components/schemas/WhatIfScenarioRequest"
-     },
-     "result": {
-      "$ref": "#/components/schemas/WhatIfScenarioResult"
-     }
-    },
-    "type": "object",
-    "required": [
-     "name",
-     "request",
-     "result"
-    ],
-    "title": "SavedScenario"
    }
   }
  }

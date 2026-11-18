@@ -41,10 +41,32 @@ class WhatIfScenarioRequest(BaseModel):
     target: str | None = None
 
 
+class WhatIfContribution(WhatIfChange):
+    target_change_pct: float | None
+    ci90_pct: list[float | None] = Field(min_length=2, max_length=2)
+
+
+class WhatIfScenarioResult(BaseModel):
+    changes: list[WhatIfChange]
+    target: str
+    target_change_pct: float | None
+    ci90_pct: list[float | None] = Field(min_length=2, max_length=2)
+    target_change_abs: float | None
+    baseline_target_mean: float | None
+    range_warnings: list[str]
+    collinearity_warnings: list[str]
+    contributions: list[WhatIfContribution]
+    interpretation: str
+
+
 class SaveScenarioBody(BaseModel):
     name: str = Field(min_length=1, max_length=60)
     request: WhatIfScenarioRequest
 
+
+
+class SavedScenario(SaveScenarioBody):
+    result: WhatIfScenarioResult
 
 
 class ChatMessage(BaseModel):

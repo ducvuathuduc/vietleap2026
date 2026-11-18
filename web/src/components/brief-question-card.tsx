@@ -34,15 +34,15 @@ export function BriefQuestionCard({ datasetId, hasBrief }: { datasetId: string; 
     <Card data-tour="brief-question">
       <CardHeader>
         <CardDescription>{question ? "Câu hỏi quyết định · Đề bài (trích nguyên văn)" : "Câu hỏi quyết định"}</CardDescription>
-        <CardTitle>{question ? <q>{question.text}</q> : "Chưa có đề bài cho dataset này"}</CardTitle>
+        <CardTitle>{question ? <q>{question.text}</q> : "Bộ dữ liệu chưa có đề bài"}</CardTitle>
       </CardHeader>
       {question ? (
         <CardContent>
           <dl className="grid gap-1 text-sm">
-            {ROWS.map(([label, key]) => (
+            {ROWS.filter(([, key]) => question[key]).map(([label, key]) => (
               <div key={key} className="flex gap-2">
                 <dt className="text-muted-foreground">{label}:</dt>
-                <dd>{question[key] ?? "____"}</dd>
+                <dd>{question[key]}</dd>
               </div>
             ))}
           </dl>

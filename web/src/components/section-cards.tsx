@@ -25,7 +25,7 @@ export function SectionCards({ kpis }: { kpis: Kpi[] | undefined }) {
             return (
               <Card key={k.label} className="@container/card" {...insightTarget("kpi", k.label, k.label_vi || k.label, k)}>
                 <CardHeader>
-                  <CardDescription className="truncate">{k.label}</CardDescription>
+                  <CardDescription className="truncate">{k.label_vi || k.label}</CardDescription>
                   <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                     {k.value}
                   </CardTitle>

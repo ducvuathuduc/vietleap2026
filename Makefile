@@ -15,7 +15,7 @@ api:             ## FastAPI on :8000 (docs at http://localhost:8000/docs)
 	$(ENV) && uvicorn api.main:app --host 127.0.0.1 --port $(PORT)
 
 web:             ## production build + start dashboard on :3000 (needs `make api` in another terminal)
-	cd web && npm run build && npm run start
+	cd web && export EXTERNAL_API_URL=http://127.0.0.1:$(PORT) && npm run build && npm run start
 
 web-dev:         ## Next.js dev server on :3000 (hot reload; heavier on RAM)
 	cd web && npm run dev

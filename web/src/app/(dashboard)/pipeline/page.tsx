@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import { useDataset } from "@/components/dataset-provider"
 import { JoinCoverageCard } from "@/components/join-coverage"
 import { MermaidDiagram } from "@/components/mermaid-diagram"
@@ -17,6 +19,7 @@ import { insightTarget } from "@/lib/insight-target"
 const MODEL_LABEL: Record<ModelKind, string> = { obt: "OBT", star: "Star", snowflake: "Snowflake", data_vault: "Data Vault", conformed: "Conformed" }
 
 export default function PipelinePage() {
+  const [diagramDataset, setDiagramDataset] = useState<string | null>(null)
   const { datasetId, loading: dsLoading, error: dsError } = useDataset()
   const r = useAsync(
     () => (datasetId ? Promise.all([api.pipeline(datasetId), api.lineage(datasetId)]) : null),
@@ -37,7 +40,7 @@ export default function PipelinePage() {
     <PageShell>
       <div className="px-4 lg:px-6">
         <p className="text-sm text-muted-foreground">
-          Vòng đời dữ liệu end-to-end <span className="font-medium text-foreground">Ingestion → Storage → Transform → Serving</span> · dataset{" "}
+          Quy trình xử lý <span className="font-medium text-foreground">Thu thập → Lưu trữ → Làm sạch → Phân tích</span> · dataset{" "}
           <span className="font-medium text-foreground">{p.dataset}</span> · lần chạy {p.run_id} · xong lúc {p.finished_at}
         </p>
       </div>
@@ -48,13 +51,11 @@ export default function PipelinePage() {
             value: `${p.provenance.length} nguồn`,
             badge: kinds.map((k) => SOURCE_KINDS[k]?.label ?? k).join(" · "),
             footer: `Thời gian ${fmtSeconds(p.timings.ingest)}`,
-            hint: "DB/JDBC · Public API · File · Scraping · Social",
             target: insightTarget("pipeline-stage", "ingestion", "Ingestion — thu thập", { sources: p.provenance.map((s) => ({ source: s.source, kind: s.kind, fetched_at: s.fetched_at })), seconds: p.timings.ingest }),
           },
           {
             label: "2 · Storage — DuckDB + Parquet",
             value: `${p.bronze.length} bảng bronze`,
-            badge: "medallion",
             footer: "Giữ dữ liệu thô + _src, _ingested_at, _row_hash",
             hint: "bronze → silver → gold, meta.lineage",
             target: insightTarget("pipeline-stage", "storage", "Storage — DuckDB + Parquet", { bronze: p.bronze }),
@@ -81,12 +82,14 @@ export default function PipelinePage() {
       <div className="px-4 lg:px-6">
         <Card data-tour="lineage">
           <CardHeader>
-            <CardTitle>Sơ đồ lineage</CardTitle>
+            <CardTitle>Truy vết dữ liệu</CardTitle>
             <CardDescription>Nguồn → bronze → silver → gold, mỗi cạnh là một bước biến đổi đã chạy thật.</CardDescription>
           </CardHeader>
           <CardContent>
             {lineage.mermaid ? (
-              <MermaidDiagram code={lineage.mermaid} label="Sơ đồ lineage dữ liệu" />
+              diagramDataset === datasetId ? <MermaidDiagram code={lineage.mermaid} label="Sơ đồ truy vết dữ liệu" /> : (
+                <Button variant="outline" onClick={() => setDiagramDataset(datasetId)}>Xem sơ đồ truy vết</Button>
+              )
             ) : (
               <p className="text-sm text-muted-foreground">Chưa có file lineage.mmd cho dataset này.</p>
             )}
@@ -103,7 +106,7 @@ export default function PipelinePage() {
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @5xl/main:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Nguồn dữ liệu & provenance</CardTitle>
+            <CardTitle>Nguồn gốc dữ liệu</CardTitle>
             <CardDescription>Nguồn, thời điểm tải (Asia/Saigon), giấy phép, số dòng — để truy vết mọi con số.</CardDescription>
           </CardHeader>
           <CardContent>

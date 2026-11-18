@@ -51,7 +51,8 @@ def test_whatif_multi_log_target():
     rng = np.random.default_rng(11)
     x1 = rng.normal(50, 5, 100)
     x2 = rng.normal(20, 3, 100)
-    y = np.exp(0.05 * x1 + 0.02 * x2 + rng.normal(0, 0.2, 100)) * 10
+    y = np.exp(0.2 * (x1 - 50) + 0.2 * (x2 - 20) + rng.normal(0, 0.2, 100)) * 10
+    assert pd.Series(y).skew() > 1
     df = pd.DataFrame({"x1": x1, "x2": x2, "y": y})
     model = fit_drivers(df, "y", ["x1", "x2"], n_boot=40)
     assert model["log_target"] is True

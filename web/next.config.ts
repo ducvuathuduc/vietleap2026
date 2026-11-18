@@ -26,6 +26,20 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  async rewrites() {
+    const backend = process.env.EXTERNAL_API_URL
+    if (!backend) return []
+    // Keep chat and story in Next.js. Serve engine results from the same store used by the analyst.
+    const resources = ["datasets", "health", "sql", "brief", "sources", "warehouse", "jobs", "ingest", "export"]
+    return {
+      beforeFiles: resources.map((resource) => ({
+        source: `/api/${resource}/:path*`,
+        destination: `${backend}/api/${resource}/:path*`,
+      })),
+      afterFiles: [],
+      fallback: [],
+    }
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }]
   },

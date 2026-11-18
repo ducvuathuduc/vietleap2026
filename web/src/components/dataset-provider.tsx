@@ -21,7 +21,8 @@ const KEY = "vietleap.dataset"
 export function DatasetProvider({ children }: { children: React.ReactNode }) {
   const [datasets, setDatasets] = React.useState<DatasetSummary[]>([])
   const [datasetId, setDatasetId] = React.useState<string | null>(null)
-  const [detail, setDetail] = React.useState<DatasetDetail | null>(null)
+  const [loaded, setLoaded] = React.useState<{ id: string; detail: DatasetDetail } | null>(null)
+  const detail = loaded?.id === datasetId ? loaded?.detail ?? null : null
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [revision, setRevision] = React.useState(0)
@@ -60,7 +61,7 @@ export function DatasetProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(KEY, datasetId)
     let alive = true
     api.dataset(datasetId).then(
-      (d) => alive && setDetail(d),
+      (d) => alive && setLoaded({ id: datasetId, detail: d }),
       (e: Error) => alive && setError(e.message)
     )
     return () => {

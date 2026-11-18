@@ -34,7 +34,7 @@ export function NavDocuments({
   const { isMobile } = useSidebar()
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Exports</SidebarGroupLabel>
+      <SidebarGroupLabel>Tệp kết quả</SidebarGroupLabel>
       <SidebarMenu>
         {toolbar && <SidebarMenuItem>{toolbar}</SidebarMenuItem>}
         {items.map((item) => (
@@ -54,7 +54,7 @@ export function NavDocuments({
               >
                 <MoreHorizontalIcon
                 />
-                <span className="sr-only">More</span>
+                <span className="sr-only">Tùy chọn</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-24"
@@ -64,13 +64,13 @@ export function NavDocuments({
                 <DropdownMenuItem render={<a href={item.url} target="_blank" rel="noreferrer" />}>
                   <FolderIcon
                   />
-                  <span>Open</span>
+                  <span>Mở tệp</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem render={<a href={item.url} download />}>
                   <ShareIcon
                   />
-                  <span>Download</span>
+                  <span>Tải xuống</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

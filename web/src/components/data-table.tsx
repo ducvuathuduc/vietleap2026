@@ -198,7 +198,7 @@ const columns = columnHelper.columns([
     enableHiding: false,
   }),
   columnHelper.accessor("type", {
-    header: "Type",
+    header: "Loại",
     cell: ({ row }) => (
       <div className="w-32">
         <Badge variant="outline" className="px-1.5 text-muted-foreground">
@@ -208,7 +208,7 @@ const columns = columnHelper.columns([
     ),
   }),
   columnHelper.accessor("status", {
-    header: "Status",
+    header: "Trạng thái",
     cell: ({ row }) => (
       <Badge variant="outline" className="px-1.5 text-muted-foreground">
         {row.original.status === "Significant" ? (
@@ -222,19 +222,19 @@ const columns = columnHelper.columns([
     ),
   }),
   columnHelper.accessor("target", {
-    header: () => <div className="w-full text-right">Effect</div>,
+    header: () => <div className="w-full text-right">Mức ảnh hưởng</div>,
     cell: ({ row }) => (
       <div className="w-16 text-right font-mono tabular-nums">{row.original.target}</div>
     ),
   }),
   columnHelper.accessor("limit", {
-    header: () => <div className="w-full text-right">Score</div>,
+    header: () => <div className="w-full text-right">Điểm</div>,
     cell: ({ row }) => (
       <div className="w-16 text-right font-mono tabular-nums">{row.original.limit}</div>
     ),
   }),
   columnHelper.accessor("reviewer", {
-    header: "Test",
+    header: "Kiểm định",
     cell: ({ row }) => (
       <div className="max-w-64 truncate text-muted-foreground" title={row.original.reviewer}>
         {row.original.reviewer}
@@ -400,10 +400,10 @@ export function DataTable({
           value={tab}
           onValueChange={(v) => v && setTab(v)}
           items={[
-            { label: "Ranked insights", value: "outline" },
-            { label: "Clean data", value: "past-performance" },
-            { label: "Recommendations", value: "key-personnel" },
-            { label: "Cleaning log", value: "focus-documents" },
+            { label: "Phát hiện nổi bật", value: "outline" },
+            { label: "Dữ liệu đã làm sạch", value: "past-performance" },
+            { label: "Khuyến nghị", value: "key-personnel" },
+            { label: "Nhật ký làm sạch", value: "focus-documents" },
           ]}
         >
           <SelectTrigger
@@ -411,25 +411,25 @@ export function DataTable({
             size="sm"
             id="view-selector"
           >
-            <SelectValue placeholder="Select a view" />
+            <SelectValue placeholder="Chọn nội dung" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="outline">Ranked insights</SelectItem>
-              <SelectItem value="past-performance">Clean data</SelectItem>
-              <SelectItem value="key-personnel">Recommendations</SelectItem>
-              <SelectItem value="focus-documents">Cleaning log</SelectItem>
+              <SelectItem value="outline">Phát hiện nổi bật</SelectItem>
+              <SelectItem value="past-performance">Dữ liệu đã làm sạch</SelectItem>
+              <SelectItem value="key-personnel">Khuyến nghị</SelectItem>
+              <SelectItem value="focus-documents">Nhật ký làm sạch</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>
         <TabsList className="hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="outline">Ranked insights</TabsTrigger>
-          <TabsTrigger value="past-performance">Clean data</TabsTrigger>
+          <TabsTrigger value="outline">Phát hiện nổi bật</TabsTrigger>
+          <TabsTrigger value="past-performance">Dữ liệu đã làm sạch</TabsTrigger>
           <TabsTrigger value="key-personnel">
-            Recommendations <Badge variant="secondary">{recommendations.length}</Badge>
+            Khuyến nghị <Badge variant="secondary">{recommendations.length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="focus-documents">
-            Cleaning log <Badge variant="secondary">{cleaningLog.length}</Badge>
+            Nhật ký làm sạch <Badge variant="secondary">{cleaningLog.length}</Badge>
           </TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
@@ -438,7 +438,7 @@ export function DataTable({
               render={<Button variant="outline" size="sm" />}
             >
               <Columns3Icon data-icon="inline-start" />
-              Columns
+              Chọn cột
               <ChevronDownIcon data-icon="inline-end" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-32">
@@ -468,7 +468,7 @@ export function DataTable({
           <Button variant="outline" size="sm" nativeButton={false} render={<a href={api.fileUrl(datasetId, "results")} download />}>
             <PlusIcon
             />
-            <span className="hidden lg:inline">Export JSON</span>
+            <span className="hidden lg:inline">Xuất JSON</span>
           </Button>
         </div>
       </div>
@@ -697,7 +697,7 @@ function TableCellViewer({ item }: { item: InsightRow }) {
           <Button nativeButton={false} render={<a href={`/analyst?q=${encodeURIComponent(`Explain and verify: ${ins.title_en}`)}`} />}>
             Ask AI Analyst
           </Button>
-          <DrawerClose render={<Button variant="outline" />}>Done</DrawerClose>
+          <DrawerClose render={<Button variant="outline" />}>Đóng</DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
@@ -730,7 +730,7 @@ function DataRowsTable({ datasetId }: { datasetId: string }) {
   return (
     <div className="flex flex-col gap-4">
       <Input
-        placeholder="Search text columns…"
+        placeholder="Tìm trong các cột văn bản…"
         className="h-8 max-w-sm"
         value={query}
         onChange={(e) => {

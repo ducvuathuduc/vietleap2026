@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from vlkit import stats
 from vlkit import tools as T
 
-from ..schemas import SaveScenarioBody, WhatIfRequest, WhatIfScenarioRequest
+from ..schemas import SavedScenario, SaveScenarioBody, WhatIfScenarioResult, WhatIfRequest, WhatIfScenarioRequest
 from ..store import Store, get_store
 from .datasets import ds_or_404
 
@@ -92,7 +92,7 @@ def whatif(ds_id: str, req: WhatIfRequest, store: Store = Depends(get_store)):
         raise HTTPException(422, str(e))
 
 
-@router.post("/whatif/scenario")
+@router.post("/whatif/scenario", response_model=WhatIfScenarioResult)
 def whatif_scenario(ds_id: str, req: WhatIfScenarioRequest, store: Store = Depends(get_store)):
     ds = ds_or_404(store, ds_id)
     ctx = T.Context(ds.df, ds.results, ds.whatif)
@@ -117,13 +117,13 @@ def _read_scenarios(ds_path: Path) -> list[dict]:
         return []
 
 
-@router.get("/whatif/scenarios")
+@router.get("/whatif/scenarios", response_model=list[SavedScenario])
 def list_whatif_scenarios(ds_id: str, store: Store = Depends(get_store)):
     ds = ds_or_404(store, ds_id)
     return _read_scenarios(ds.path)
 
 
-@router.post("/whatif/scenarios")
+@router.post("/whatif/scenarios", response_model=list[SavedScenario])
 def save_whatif_scenario(ds_id: str, body: SaveScenarioBody, store: Store = Depends(get_store)):
     ds = ds_or_404(store, ds_id)
     name = body.name.strip()
@@ -145,7 +145,7 @@ def save_whatif_scenario(ds_id: str, body: SaveScenarioBody, store: Store = Depe
     return next_items
 
 
-@router.delete("/whatif/scenarios")
+@router.delete("/whatif/scenarios", response_model=list[SavedScenario])
 def delete_whatif_scenario(ds_id: str, name: str, store: Store = Depends(get_store)):
     ds = ds_or_404(store, ds_id)
     items = [x for x in _read_scenarios(ds.path) if x.get("name") != name]

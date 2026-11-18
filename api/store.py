@@ -79,6 +79,7 @@ _store: Store | None = None
 
 def get_store() -> Store:
     global _store
-    if _store is None:
-        _store = Store()
+    out_dir = get_settings().out_dir
+    if _store is None or _store.out_dir != out_dir:
+        _store = Store(out_dir)
     return _store
