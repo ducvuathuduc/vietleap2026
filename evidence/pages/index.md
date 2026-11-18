@@ -29,7 +29,7 @@ select * from warehouse.insights
 ```
 
 <BigValue data={kpis} value=records fmt=num0 title="Số bản ghi · ASEAN-10, 2000–2024" />
-<BigValue data={kpis} value=median_gdp_pc fmt=usd title="Trung vị GDP bình quân đầu người" />
+<BigValue data={kpis} value=median_gdp_pc fmt=usd title="Trung vị ASEAN 2024 — GDP bình quân đầu người" />
 <BigValue data={kpis} value=gap_sgp_mmr fmt=num1 title="Chênh lệch trung vị SGP vs MMR (lần)" />
 <BigValue data={kpis} value=completeness fmt=pct1 title="Độ đầy đủ dữ liệu · bảng silver" />
 
