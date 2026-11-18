@@ -13,6 +13,6 @@ run() {
 }
 run bds_practice   data/practice/synthetic_messy_bds.csv
 run firms_2021     data/practice/vn_firms_2021.xlsx
-run wdi_fiscal     data/practice/wdi_asia_fiscal_panel.csv --target tax_revenue_pct_gdp
+run wdi_fiscal     data/practice/wdi_asia_fiscal_panel.csv --target gdp_per_capita_usd
 run hanoi_housing  data/practice/hanoi_housing_2020.csv
 echo ALL_DONE >> out/_logs/times.txt
