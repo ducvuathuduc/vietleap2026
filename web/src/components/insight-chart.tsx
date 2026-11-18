@@ -12,7 +12,7 @@ const key = (i: number) => `s${i}`
 /** Renders the engine's chart spec ({kind, x, series}) with shadcn charts (Recharts). */
 export function InsightChart({ spec, height = 240 }: { spec: ChartSpec; height?: number }) {
   const config: ChartConfig = Object.fromEntries(
-    spec.series.map((s, i) => [key(i), { label: s.name, color: i === 0 ? "var(--primary)" : COLORS[i % COLORS.length] }])
+    spec.series.map((s, i) => [key(i), { label: s.name, color: COLORS[i % COLORS.length] }])
   )
   const style = { height }
   const tick = (v: unknown) => (typeof v === "number" ? fmtNum(v) : String(v ?? "").slice(0, 14))

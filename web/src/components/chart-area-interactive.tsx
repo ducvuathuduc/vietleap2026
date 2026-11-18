@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Area, ComposedChart, Line, CartesianGrid, XAxis, YAxis } from "recharts"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
@@ -41,9 +41,9 @@ import { insightTarget } from "@/lib/insight-target"
 export const description = "An interactive area chart of the main time trend"
 
 const RANGES = [
-  { value: "all", label: "Tất cả các kỳ", n: Infinity },
-  { value: "12", label: "12 kỳ gần nhất", n: 12 },
-  { value: "6", label: "6 kỳ gần nhất", n: 6 },
+  { value: "all", label: "Tất cả các kỳ", short: "Tất cả", n: Infinity },
+  { value: "12", label: "12 kỳ gần nhất", short: "12 kỳ", n: 12 },
+  { value: "6", label: "6 kỳ gần nhất", short: "6 kỳ", n: 6 },
 ]
 
 export function ChartAreaInteractive({
@@ -67,7 +67,7 @@ export function ChartAreaInteractive({
   const chartConfig = {
     value: {
       label: metricLabel,
-      color: "var(--primary)",
+      color: "var(--chart-1)",
     },
     ma3: {
       label: "MA3 (3 kỳ)",
@@ -86,7 +86,7 @@ export function ChartAreaInteractive({
   return (
     <Card className="@container/card" {...insightTarget("chart", "timeseries", title, { title, subtitle, metric: metricLabel, points: points?.slice(-24), gaps })}>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         <CardDescription className="flex flex-wrap items-center gap-2">
           <span className="hidden @[540px]/card:block">
             {subtitle}
@@ -131,19 +131,19 @@ export function ChartAreaInteractive({
                   setTimeRange(value)
                 }
               }}
-              items={RANGES.map((r) => ({ label: r.label, value: r.value }))}
+              items={RANGES.map((r) => ({ label: r.short, value: r.value }))}
             >
               <SelectTrigger
-                className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
+                className="flex w-28 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
                 size="sm"
                 aria-label="Khoảng thời gian"
               >
-                <SelectValue placeholder="Tất cả các kỳ" />
+                <SelectValue placeholder="Tất cả" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {RANGES.map((r) => (
                   <SelectItem key={r.value} value={r.value} className="rounded-lg">
-                    {r.label}
+                    {r.short}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -153,9 +153,9 @@ export function ChartAreaInteractive({
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         {!points ? (
-          <Skeleton className="h-[250px] w-full" />
+          <Skeleton className="h-[280px] w-full" />
         ) : filteredData.length === 0 ? (
-          <div className="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
             Chưa có quan sát theo thời gian.
           </div>
         ) : (
@@ -167,9 +167,9 @@ export function ChartAreaInteractive({
             <TabsContent value="chart">
               <ChartContainer
                 config={chartConfig}
-                className="aspect-auto h-[250px] w-full"
+                className="aspect-auto h-[280px] w-full"
               >
-                <LineChart data={filteredData}>
+                <ComposedChart data={filteredData}>
                   <CartesianGrid vertical={false} />
                   <XAxis
                     dataKey="period"
@@ -193,10 +193,18 @@ export function ChartAreaInteractive({
                       />
                     }
                   />
+                  <Area
+                    dataKey="value"
+                    type="linear"
+                    fill="var(--color-value)"
+                    fillOpacity={0.08}
+                    stroke="none"
+                    isAnimationActive={false}
+                  />
                   <Line
                     dataKey="value"
                     type="linear"
-                    dot={filteredData.length === 1} strokeWidth={2} isAnimationActive={false}
+                    dot={filteredData.length === 1} strokeWidth={2.5} isAnimationActive={false}
                     stroke="var(--color-value)"
                   />
                   {hasMa3 && showMa3 && (
@@ -211,10 +219,10 @@ export function ChartAreaInteractive({
                       connectNulls={false}
                     />
                   )}
-                </LineChart>
+                </ComposedChart>
               </ChartContainer>
             </TabsContent>
-            <TabsContent value="table" className="max-h-[250px] overflow-auto">
+            <TabsContent value="table" className="max-h-[280px] overflow-auto">
               <Table aria-label={title}>
                 <TableHeader><TableRow>
                   <TableHead>Kỳ</TableHead><TableHead className="text-right">{metricLabel}</TableHead>
