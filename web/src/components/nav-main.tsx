@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -18,6 +19,7 @@ export function NavMain({
   items,
 }: {
   items: {
+    group: string
     title: string
     url: string
     icon?: React.ReactNode
@@ -52,20 +54,25 @@ export function NavMain({
             </Button>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                tooltip={item.title}
-                isActive={item.url === "/" ? pathname === "/" : pathname.startsWith(item.url)}
-                render={<Link href={item.url} />}
-              >
-                {item.icon}
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {Array.from(new Set(items.map((item) => item.group))).map((group) => (
+          <section key={group} aria-label={group}>
+            <SidebarGroupLabel>{group}</SidebarGroupLabel>
+            <SidebarMenu>
+              {items.filter((item) => item.group === group).map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    isActive={item.url === "/" ? pathname === "/" : pathname.startsWith(item.url)}
+                    render={<Link href={item.url} />}
+                  >
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </section>
+        ))}
       </SidebarGroupContent>
     </SidebarGroup>
   )

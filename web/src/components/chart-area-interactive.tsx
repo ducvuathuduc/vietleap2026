@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
@@ -29,6 +29,8 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Toggle } from "@/components/ui/toggle"
@@ -39,9 +41,9 @@ import { insightTarget } from "@/lib/insight-target"
 export const description = "An interactive area chart of the main time trend"
 
 const RANGES = [
-  { value: "all", label: "All periods", n: Infinity },
-  { value: "12", label: "Last 12 periods", n: 12 },
-  { value: "6", label: "Last 6 periods", n: 6 },
+  { value: "all", label: "Tất cả các kỳ", n: Infinity },
+  { value: "12", label: "12 kỳ gần nhất", n: 12 },
+  { value: "6", label: "6 kỳ gần nhất", n: 6 },
 ]
 
 export function ChartAreaInteractive({
@@ -72,13 +74,13 @@ export function ChartAreaInteractive({
       color: "var(--chart-2)",
     },
     n: {
-      label: "Records",
+      label: "Số quan sát",
       color: "var(--primary)",
     },
   } satisfies ChartConfig
 
   const n = RANGES.find((r) => r.value === timeRange)?.n ?? Infinity
-  const filteredData = (points ?? []).filter((p) => p.value !== null).slice(Number.isFinite(n) ? -n : 0)
+  const filteredData = (points ?? []).slice(Number.isFinite(n) ? -n : 0)
   const hasMa3 = filteredData.some((p) => typeof p.ma3 === "number" && Number.isFinite(p.ma3))
 
   return (
@@ -134,9 +136,9 @@ export function ChartAreaInteractive({
               <SelectTrigger
                 className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
                 size="sm"
-                aria-label="Select a value"
+                aria-label="Khoảng thời gian"
               >
-                <SelectValue placeholder="All periods" />
+                <SelectValue placeholder="Tất cả các kỳ" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {RANGES.map((r) => (
@@ -154,71 +156,82 @@ export function ChartAreaInteractive({
           <Skeleton className="h-[250px] w-full" />
         ) : filteredData.length === 0 ? (
           <div className="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
-            No time column detected in this dataset.
+            Chưa có quan sát theo thời gian.
           </div>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-auto h-[250px] w-full"
-          >
-            <AreaChart data={filteredData}>
-              <defs>
-                <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor="var(--color-value)"
-                    stopOpacity={1.0}
+          <Tabs defaultValue="chart">
+            <TabsList variant="line" aria-label="Kiểu hiển thị">
+              <TabsTrigger value="chart">Biểu đồ</TabsTrigger>
+              <TabsTrigger value="table">Bảng số liệu</TabsTrigger>
+            </TabsList>
+            <TabsContent value="chart">
+              <ChartContainer
+                config={chartConfig}
+                className="aspect-auto h-[250px] w-full"
+              >
+                <LineChart data={filteredData}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="period"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
                   />
-                  <stop
-                    offset="95%"
-                    stopColor="var(--color-value)"
-                    stopOpacity={0.1}
+                  <YAxis tickLine={false} axisLine={false} width="auto" tickFormatter={(value) => fmtNum(Number(value))} domain={["auto", "auto"]} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(value) => String(value)}
+                        formatter={(value, name) => (
+                          <span className="font-mono font-medium tabular-nums">
+                            {name === "ma3" ? "MA3 (3 kỳ)" : metricLabel}: {fmtNum(Number(value))}
+                          </span>
+                        )}
+                        indicator="dot"
+                      />
+                    }
                   />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="period"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-              />
-              <YAxis hide domain={["auto", "auto"]} />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) => String(value)}
-                    formatter={(value, name) => (
-                      <span className="font-mono font-medium tabular-nums">
-                        {name === "ma3" ? "MA3 (3 kỳ)" : metricLabel}: {fmtNum(Number(value))}
-                      </span>
-                    )}
-                    indicator="dot"
+                  <Line
+                    dataKey="value"
+                    type="linear"
+                    dot={filteredData.length === 1} strokeWidth={2} isAnimationActive={false}
+                    stroke="var(--color-value)"
                   />
-                }
-              />
-              <Area
-                dataKey="value"
-                type="natural"
-                fill="url(#fillValue)"
-                stroke="var(--color-value)"
-              />
-              {hasMa3 && showMa3 && (
-                <Area
-                  dataKey="ma3"
-                  type="monotone"
-                  fill="none"
-                  stroke="var(--color-ma3)"
-                  strokeWidth={2}
-                  strokeDasharray="4 4"
-                  dot={false}
-                  connectNulls={false}
-                />
-              )}
-            </AreaChart>
-          </ChartContainer>
+                  {hasMa3 && showMa3 && (
+                    <Line
+                      dataKey="ma3"
+                      type="linear" isAnimationActive={false}
+                      fill="none"
+                      stroke="var(--color-ma3)"
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={false}
+                      connectNulls={false}
+                    />
+                  )}
+                </LineChart>
+              </ChartContainer>
+            </TabsContent>
+            <TabsContent value="table" className="max-h-[250px] overflow-auto">
+              <Table aria-label={title}>
+                <TableHeader><TableRow>
+                  <TableHead>Kỳ</TableHead><TableHead className="text-right">{metricLabel}</TableHead>
+                  {hasMa3 && showMa3 && <TableHead className="text-right">MA3</TableHead>}
+                  <TableHead className="text-right">Số quan sát</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>{filteredData.map((point) => (
+                  <TableRow key={point.period}>
+                    <TableCell>{point.period}</TableCell>
+                    <TableCell className="text-right tabular-nums">{point.value == null ? "—" : fmtNum(point.value)}</TableCell>
+                    {hasMa3 && showMa3 && <TableCell className="text-right tabular-nums">{point.ma3 == null ? "—" : fmtNum(point.ma3)}</TableCell>}
+                    <TableCell className="text-right tabular-nums">{point.n}</TableCell>
+                  </TableRow>
+                ))}</TableBody>
+              </Table>
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

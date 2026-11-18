@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 
-import { BookOpenTextIcon, CompassIcon, ScanSearchIcon } from "lucide-react"
+import { BookOpenTextIcon, CompassIcon, ScanSearchIcon, SearchIcon } from "lucide-react"
 
 import { useDataset } from "@/components/dataset-provider"
 import { useInsightInspector } from "@/components/insight-inspector"
@@ -15,22 +15,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Spinner } from "@/components/ui/spinner"
 import { Toggle } from "@/components/ui/toggle"
 
-const TITLES: Record<string, string> = {
-  "/": "Tổng quan",
-  "/sources": "Nguồn dữ liệu (Ingestion)",
-  "/pipeline": "Pipeline: Ingestion → Storage → Transform → Serving",
-  "/quality": "Chất lượng dữ liệu",
-  "/model": "Mô hình dữ liệu: OBT · Star · Snowflake · Data Vault",
-  "/sql": "SQL Explorer",
-  "/profile": "Hồ sơ dữ liệu",
-  "/insights": "Insight",
-  "/drivers": "Drivers & What-if",
-  "/segments": "Phân khúc",
-  "/decision": "Quyết định & khuyến nghị",
-  "/analyst": "AI Analyst",
-  "/brief": "Đề bài → kế hoạch phân tích",
-  "/report": "Xuất báo cáo",
-}
+import { NAV } from "@/lib/nav"
 
 export function SiteHeader() {
   const pathname = usePathname()
@@ -38,18 +23,18 @@ export function SiteHeader() {
   const { inspecting, setInspecting, startTour, startStory, storyLoading } = useInsightInspector()
   const items = datasets.map((d) => ({ label: d.name, value: d.id }))
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+    <header className="flex min-h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+      <div className="flex w-full flex-wrap items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
           orientation="vertical"
           className="mx-2 h-4 data-vertical:self-auto"
         />
-        <h1 className="text-base font-medium">{TITLES[pathname] ?? "VietLeap Insight"}</h1>
-        <div className="ml-auto flex items-center gap-2">
+        <h1 className="text-base font-medium">{NAV.find((item) => item.url === pathname)?.title ?? "VietLeap Insight"}</h1>
+        <div className="ml-auto flex max-w-full flex-wrap items-center gap-1 sm:gap-2">
           <Button variant="ghost" size="sm" data-tour="command-button" aria-label="Mở lệnh nhanh (Ctrl+K)"
-            onClick={() => window.dispatchEvent(new Event("vlk:open-command"))}>Ctrl+K</Button>
-          <Button variant="ghost" size="sm" onClick={() => startTour(pathname)} data-tour="tour-button">
+            onClick={() => window.dispatchEvent(new Event("vlk:open-command"))}><SearchIcon className="sm:hidden" /><span className="hidden sm:inline">Ctrl+K</span></Button>
+          <Button variant="ghost" size="sm" onClick={() => startTour(pathname)} data-tour="tour-button" aria-label="Hướng dẫn">
             <CompassIcon /> <span className="hidden md:inline">Hướng dẫn</span>
           </Button>
           <Button
@@ -78,8 +63,8 @@ export function SiteHeader() {
             </Badge>
           )}
           <Select value={datasetId ?? ""} onValueChange={(v) => v && select(v)} items={items}>
-            <SelectTrigger size="sm" className="w-52 **:data-[slot=select-value]:truncate" aria-label="Dataset" data-tour="dataset-select">
-              <SelectValue placeholder="Chọn dataset" />
+            <SelectTrigger size="sm" className="w-32 lg:w-52 **:data-[slot=select-value]:truncate" aria-label="Dataset" data-tour="dataset-select">
+              <SelectValue placeholder="Chọn bộ dữ liệu" />
             </SelectTrigger>
             <SelectContent align="end">
               <SelectGroup>
