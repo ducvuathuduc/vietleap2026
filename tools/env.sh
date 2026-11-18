@@ -16,5 +16,11 @@ else
   [ -n "$HS" ] && export BROWSER_PATH="$HS"
 fi
 export PYTHONDONTWRITEBYTECODE=1 PYTHONUTF8=1
+# httpx (every live fetch: connectors.py, reducto.py) parses NO_PROXY with its URL
+# parser: the sandbox default contains bracketed IPv6 entries ([::1], ...) which raise
+# `httpx.InvalidURL: Invalid port: ':1]'` on ANY request. The Makefile and CI already
+# override NO_PROXY to this value; set it here too so direct `python de.py ...` runs
+# (which only source this file) get the same fix.
+export NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
 # keep BLAS/OpenMP thread pools small: lower peak memory on small laptops/containers
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-2} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-2} MKL_NUM_THREADS=${MKL_NUM_THREADS:-2}
