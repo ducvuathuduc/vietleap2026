@@ -51,6 +51,13 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  // The published payload is read with node:fs from outside the bundle, so tell the tracer
+  // which folder ships with the server instead of tracing the whole project. Turbopack rejects
+  // globs that leave the project root (`../out/vn_monitor/**` panics the build), and `next start`
+  // reads that payload from disk anyway, so only the in-project seed is declared here.
+  outputFileTracingIncludes: {
+    "/*": ["./seed/vn_monitor/**"],
+  },
   turbopack: {
     rules: {
       "*.css": {

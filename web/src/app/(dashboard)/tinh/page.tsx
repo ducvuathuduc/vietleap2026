@@ -23,6 +23,10 @@ const FRAME = "mx-auto w-full max-w-[1200px] space-y-6 px-4 md:space-y-8 md:px-6
 const CHIP =
   "shrink-0 rounded-lg px-2.5 py-1 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 
+// The group filters come from `?nhom=` / `?giai-ngan=` (request-time reads), and the page must
+// render its body before the first byte, so it is intentionally a blocking route.
+export const instant = false
+
 type SearchParams = Promise<{ nhom?: string | string[]; "giai-ngan"?: string | string[] }>
 
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {

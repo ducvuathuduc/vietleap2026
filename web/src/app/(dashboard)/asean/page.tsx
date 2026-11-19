@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   description: "Việt Nam đứng ở đâu trong ASEAN theo từng chỉ số kinh tế vĩ mô và tài chính.",
 }
 
+// The indicator comes from `?indicator=` (a request-time read), and the page must render its body
+// before the first byte, so it is intentionally a blocking route instead of a streamed shell.
+export const instant = false
+
 type SearchParams = Promise<{ indicator?: string | string[] }>
 
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {

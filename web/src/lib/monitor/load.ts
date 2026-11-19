@@ -52,8 +52,10 @@ async function readPublished(source: { file: string; mtimeMs: number }): Promise
 /** Read the published payload. Null when neither the primary file nor the seed exists. */
 export function loadMonitor(options?: { primary: string; seed: string }): Monitor | null {
   const paths = options ?? resolveMonitorPaths()
-  if (fs.existsSync(paths.primary)) return readCached(paths.primary)
-  if (fs.existsSync(paths.seed)) return readCached(paths.seed)
+  // These paths come from the caller or the environment, so the tracer cannot scope them;
+  // the ignore comments keep it from pulling the whole project into the server output.
+  if (fs.existsSync(/*turbopackIgnore: true*/ paths.primary)) return readCached(paths.primary)
+  if (fs.existsSync(/*turbopackIgnore: true*/ paths.seed)) return readCached(paths.seed)
   return null
 }
 

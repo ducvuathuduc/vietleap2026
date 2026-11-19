@@ -5,32 +5,66 @@
  * Pattern adapted from Kiranism/next-shadcn-dashboard-starter (MIT):
  * https://github.com/Kiranism/next-shadcn-dashboard-starter
  */
+import { Suspense } from "react"
 import type { ColumnDef, RowData } from "@tanstack/react-table"
-import { FlexRender } from "@tanstack/react-table"
+import { FlexRender, useTable } from "@tanstack/react-table"
 import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon } from "lucide-react"
 
 import { PAGE_SIZES } from "@/components/data-table/search-params"
-import type { DataTableFeatures } from "@/components/data-table/data-table-features"
+import { dataTableFeatures, type DataTableFeatures } from "@/components/data-table/data-table-features"
 import { useDataTable } from "@/hooks/use-data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table as TableElement, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
+type DataColumns<TData extends RowData> = ColumnDef<DataTableFeatures, TData>[]
+type TableInstance<TData extends RowData> = ReturnType<typeof useTable<DataTableFeatures, TData>>
 
 export function DataTable<TData extends RowData>({
   data,
   columns,
 }: {
   data: TData[]
-  columns: ColumnDef<DataTableFeatures, TData>[]
+  columns: DataColumns<TData>
 }) {
+  return (
+    <Suspense fallback={<StaticDataTable data={data} columns={columns} />}>
+      <UrlStateDataTable data={data} columns={columns} />
+    </Suspense>
+  )
+}
+
+/** The query string is only known on the client, so this island needs its own Suspense boundary. */
+function UrlStateDataTable<TData extends RowData>({ data, columns }: { data: TData[]; columns: DataColumns<TData> }) {
   const { table, query, setQuery } = useDataTable({ data, columns })
+  return <TableView table={table} query={query} onQueryChange={setQuery} />
+}
+
+/**
+ * Fallback for the boundary above: the same first page with default state, so the rows
+ * land in the initial HTML instead of arriving with the client bundle.
+ */
+function StaticDataTable<TData extends RowData>({ data, columns }: { data: TData[]; columns: DataColumns<TData> }) {
+  const table = useTable({ features: dataTableFeatures, data, columns })
+  return <TableView table={table} query="" onQueryChange={() => {}} />
+}
+
+function TableView<TData extends RowData>({
+  table,
+  query,
+  onQueryChange,
+}: {
+  table: TableInstance<TData>
+  query: string
+  onQueryChange: (value: string) => void
+}) {
   const pageSize = String(table.state.pagination.pageSize)
   return (
     <div className="flex flex-col gap-3">
-      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Lọc trong bảng" aria-label="Lọc trong bảng" />
+      <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Lọc trong bảng" aria-label="Lọc trong bảng" />
       <div className="overflow-hidden rounded-lg border">
-        <Table>
+        <TableElement>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -62,13 +96,13 @@ export function DataTable<TData extends RowData>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center text-muted-foreground">
+                <TableCell colSpan={table.getAllColumns().length} className="text-center text-muted-foreground">
                   Không có dòng phù hợp.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </TableElement>
       </div>
       <div className="flex items-center justify-between gap-2">
         <Select
