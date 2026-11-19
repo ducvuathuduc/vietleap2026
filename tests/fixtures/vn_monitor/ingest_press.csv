@@ -1,0 +1,3 @@
+﻿indicator_id,period,measure_type,value,unit,source_id,source_url,published_date,evidence,parser_version
+nsnn_thu,2026-10,ytd,2438.9,nghìn tỷ đồng,press_mof,https://example.com/mof,2026-11-01,Nguồn đối chiếu,v1
+bank_npl,2026-Q3,ratio,2.1,%,tcbs,https://example.com/tcbs,2026-11-16,Số liệu phụ lục,v1

@@ -96,6 +96,10 @@ def _reducto(a):
 
 
 def main(argv=None):
+    if (argv if argv is not None else sys.argv[1:])[:1] == ["monitor"]:
+        for stream in (sys.stdout, sys.stderr):
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("file"); f.add_argument("path"); f.add_argument("--name")
@@ -128,7 +132,19 @@ def main(argv=None):
     snapshot.add_argument("pack", help="tên pack hoặc đường dẫn sources.yaml")
     sync = sub.add_parser("sync", help="đồng bộ bản sao Parquet gold")
     sync.add_argument("--to", choices=["s3"], required=True)
+    monitor = sub.add_parser("monitor", help="dựng dữ liệu giám sát vĩ mô và tài chính Việt Nam")
+    monitor.add_argument("--offline", action="store_true", help="chỉ đọc dữ liệu nguồn đã lưu")
     a = ap.parse_args(argv)
+    if a.cmd == "monitor":
+        from vlkit.fmt import count
+        from vlkit.monitor.pipeline import run_monitor
+
+        summary = run_monitor(offline=a.offline)
+        rows = " · ".join(f"{layer} {count(n, lang='vi')}" for layer, n in summary["rows"].items())
+        print(f"Hoàn tất vn_monitor trong {summary['duration_s']:.2f} giây. {rows} dòng.")
+        print("Quy tắc kích hoạt " + (", ".join(summary["fired"]) or "chưa có"))
+        print("Tệp " + ", ".join(summary["files"]))
+        return
     if a.cmd == "reducto":
         _reducto(a)
         return
