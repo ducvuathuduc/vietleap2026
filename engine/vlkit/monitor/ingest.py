@@ -1,6 +1,7 @@
 """Resolve versioned exports and register their raw records in the existing warehouse."""
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import re
@@ -258,6 +259,7 @@ def period_end(period):
 
 def ingest_sources(wh, root, specs, source_meta, catalog, run_id, *, offline=False):
     loaded, missing, frames, by_source = [], [], [], {}
+    press_meta = _press_collection_metadata(root)
     for spec in specs:
         name = spec["name"]
         started = now_iso()
@@ -314,9 +316,50 @@ def ingest_sources(wh, root, specs, source_meta, catalog, run_id, *, offline=Fal
                                         "url": next((u for u in urls if u.startswith(("https://", "http://"))),
                                                     source_meta[source_id]["url"])}
                 cutoff = max(periods, key=lambda label: (periods[label], len(label)))
-                update_source(by_source, source_meta, sid, fetched, cutoff, len(frame))
+                if sid in press_meta and source_id == "press":
+                    metadata, collected_at = press_meta[sid]
+                    source_meta[sid] = {**source_meta[sid], **metadata}
+                    update_source(by_source, source_meta, sid, collected_at, cutoff, int(raw["source_id"].eq(sid).sum()))
+                else:
+                    update_source(by_source, source_meta, sid, fetched, cutoff, len(frame))
+    for feed in _rss_collection_sources(root):
+        by_source[feed["id"]] = feed
     observed = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=OBS_COLUMNS)
     return observed, list(by_source.values()), loaded, missing
+
+
+def _press_collection_metadata(root):
+    path = root / "data/raw/press/sources_meta.csv"
+    if not path.is_file():
+        return {}
+    with path.open(encoding="utf-8-sig", newline="") as file:
+        return {row["source_id"]: ({
+            "publisher": row["publisher"], "title_vi": row["title_vi"], "url": row["url"],
+            "method": {"tinyfetch": "scrape", "rss": "social"}.get(row["method"], row["method"]),
+            "license": row["license_note"], "robots": row["robots_status"],
+        }, row["fetched_at"]) for row in csv.DictReader(file)}
+
+
+def _rss_collection_sources(root):
+    """Register the saved news enrichment without adding articles to financial facts."""
+    from time import strftime
+
+    import feedparser
+
+    directory = root / "data/raw/press/raw"
+    for source_id, publisher, url in (
+        ("vnexpress_kinh_doanh", "VnExpress", "https://vnexpress.net/rss/kinh-doanh.rss"),
+        ("cafef_thi_truong", "CafeF", "https://cafef.vn/thi-truong-chung-khoan.rss"),
+    ):
+        path = directory / f"{source_id}_rss.xml"
+        if not path.is_file():
+            continue
+        dates = [stamp for entry in feedparser.parse(path.read_bytes()).entries
+                 if (stamp := entry.get("published_parsed") or entry.get("updated_parsed"))]
+        if dates:
+            yield {"id": source_id, "publisher": publisher, "title_vi": f"Tin kinh doanh · {publisher}",
+                   "url": url, "method": "social", "license": "RSS công khai, chỉ dùng tiêu đề và tóm tắt.",
+                   "fetched_at": file_time(path), "data_cutoff": strftime("%Y-%m-%d", max(dates)), "rows": len(dates)}
 
 
 def update_source(found, metadata, source_id, fetched, cutoff, rows):

@@ -364,6 +364,8 @@ def write_monitor(
     model: dict,
     erd: str,
     views: dict[str, pd.DataFrame | Callable[[Path], None]],
+    *,
+    deck: bool = False,
 ) -> dict:
     """Validate before publishing any artifact. A view callback can export CSV with SQL COPY."""
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -436,6 +438,13 @@ def write_monitor(
         _dictionary(stage, catalog)
         (stage / files["erd"]).write_text(erd, encoding="utf-8")
         (stage / files["eda"]).write_text(_eda(model["profiles"], reconciliation, evaluation["results"]), encoding="utf-8")
+        if deck:
+            from .deck import build_deliverables
+
+            files.update(build_deliverables(payload, stage))
+            payload["files"].update(files)
+            validator.validate(payload)
+            encoded = json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False)
         (stage / files["monitor"]).write_text(encoded + "\n", encoding="utf-8")
         for relative in [*(path for key, path in files.items() if key != "monitor"), files["monitor"]]:
             target = out / relative

@@ -847,6 +847,24 @@ def _province(a: _Analytics):
     return _fact(current, median, unit, sentence, metrics=stats[primary])
 
 
+def _province_disbursement(a: _Analytics):
+    rows = a.facts("dtc_province_disbursed", measure="pct_plan", geography="province")
+    rows = rows.loc[rows["unit"].eq("%") & rows["value"].ge(0) & rows["geo"].notna()]
+    if rows.empty:
+        return
+    period = rows["period"].max()
+    rows = a.unique(rows.loc[rows["period"].eq(period)], ["source_id", "geo"])
+    source = rows.groupby("source_id").size().idxmax()
+    values = rows.loc[rows["source_id"].eq(source), "value"]
+    cuts = values.quantile([0.2, 0.4, 0.6, 0.8]).tolist()
+    groups = values.groupby(values.map(lambda value: bisect_left(cuts, value) + 1))
+    a.table("public_finance", "province_disbursement", f"Giải ngân theo địa phương · {period_vi(period)}", [
+        _col("min", "Thấp nhất", "percent", "%"), _col("max", "Cao nhất", "percent", "%"),
+        _col("count", "Số tỉnh, thành phố", "number"),
+    ], [{"min": float(group.min()), "max": float(group.max()), "count": len(group), "period": period}
+        for _, group in groups], [source])
+
+
 def _monthly_heatmap(a: _Analytics):
     best = None
     for indicator, meta in sorted(a.catalog.items()):
@@ -898,5 +916,6 @@ def evaluate(frames: dict[str, pd.DataFrame], catalog: list[dict]) -> dict:
             "threshold_vi": rule.threshold_vi, "agency_vi": rule.agency_vi, "fired": outcome["status"] == "fired",
         })
         outcomes.append(outcome)
+    _province_disbursement(analytics)
     return {"rules": rules, "results": outcomes, "asean": analytics.asean, "province": analytics.province,
             "heatmap": analytics.heatmap, "tables": analytics.tables, "derived": analytics.derived}

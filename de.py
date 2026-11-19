@@ -134,12 +134,13 @@ def main(argv=None):
     sync.add_argument("--to", choices=["s3"], required=True)
     monitor = sub.add_parser("monitor", help="dựng dữ liệu giám sát vĩ mô và tài chính Việt Nam")
     monitor.add_argument("--offline", action="store_true", help="chỉ đọc dữ liệu nguồn đã lưu")
+    monitor.add_argument("--deck", action="store_true", help="tạo bản trình chiếu song ngữ và tóm tắt điều hành")
     a = ap.parse_args(argv)
     if a.cmd == "monitor":
         from vlkit.fmt import count
         from vlkit.monitor.pipeline import run_monitor
 
-        summary = run_monitor(offline=a.offline)
+        summary = run_monitor(offline=a.offline, deck=a.deck)
         rows = " · ".join(f"{layer} {count(n, lang='vi')}" for layer, n in summary["rows"].items())
         print(f"Hoàn tất vn_monitor trong {summary['duration_s']:.2f} giây. {rows} dòng.")
         print("Quy tắc kích hoạt " + (", ".join(summary["fired"]) or "chưa có"))

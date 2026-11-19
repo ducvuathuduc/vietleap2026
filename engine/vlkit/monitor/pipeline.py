@@ -75,7 +75,7 @@ def export_views(wh, names):
     return {name.split(".", 1)[1]: lambda path, name=name: export(name, path) for name in names}
 
 
-def run_monitor(*, root=ROOT, output=None, scenario=None, offline=False):
+def run_monitor(*, root=ROOT, output=None, scenario=None, offline=False, deck=False):
     from .model import build_model
     from .rules import evaluate
     from .writer import write_monitor
@@ -99,7 +99,7 @@ def run_monitor(*, root=ROOT, output=None, scenario=None, offline=False):
         gold = [record["name"] for record in model["tables"] if record["layer"] == "gold"]
         diagram = erd(wh, gold)
         payload = write_monitor(output, CONTRACT, catalog, sources, serving, evaluation, model,
-                                diagram, export_views(wh, model["views"]))
+                                diagram, export_views(wh, model["views"]), deck=deck)
         for view in model["views"]:
             wh.lineage(DATASET, view, "serving:monitor.json", "publish")
         graph = lineage_graph(wh, DATASET)
