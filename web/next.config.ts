@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { legacyRedirects } from "./src/lib/nav.ts";
+
 const isDev = process.env.NODE_ENV !== "production"
 
 // Security headers: allow same-origin and Google AI Studio preview/share iframe hosts while keeping strict CSP.
@@ -26,6 +28,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  async redirects() {
+    return legacyRedirects(process.env.ENABLE_LAB === "1")
+  },
   async rewrites() {
     const backend = process.env.EXTERNAL_API_URL
     if (!backend) return []

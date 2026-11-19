@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "VietLeap Insight",
-  description: "Từ dữ liệu đến quyết định — hồ sơ, nhận định đã xếp hạng, yếu tố tác động, kịch bản what-if và hỏi AI",
+  description: "Theo dõi tài chính công, FDI, ngân hàng, thị trường vốn, bất động sản và vị trí của Việt Nam trong ASEAN.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -29,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="font-sans min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          {children}
+          <NuqsAdapter>{children}</NuqsAdapter>
           <Toaster />
         </ThemeProvider>
       </body>

@@ -22,23 +22,49 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Spinner } from "@/components/ui/spinner"
 import { Toggle } from "@/components/ui/toggle"
+import { LAB_NAV, titleForPath } from "@/lib/nav"
 
-import { NAV } from "@/lib/nav"
+export function SiteHeader({ shell }: { shell: "judge" | "lab" }) {
+  if (shell === "lab") return <LabHeader />
+  return <JudgeHeader />
+}
 
-export function SiteHeader() {
+function JudgeHeader() {
   const pathname = usePathname()
-  const { datasets, datasetId, select, detail } = useDataset()
-  const { inspecting, setInspecting, startTour, startStory, storyLoading } = useInsightInspector()
-  const items = datasets.map((d) => ({ label: d.name, value: d.id }))
   return (
     <header className="flex shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
       <div className="flex w-full flex-wrap items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mx-2 h-4 data-vertical:self-auto"
-        />
-        <h1 className="text-[17px] font-semibold tracking-tight">{NAV.find((item) => item.url === pathname)?.title ?? "VietLeap Insight"}</h1>
+        <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto" />
+        <h1 className="text-[17px] font-semibold tracking-tight">{titleForPath(pathname)}</h1>
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Mở lệnh nhanh (Ctrl+K)"
+            onClick={() => window.dispatchEvent(new Event("vlk:open-command"))}
+          >
+            <SearchIcon className="sm:hidden" />
+            <span className="hidden sm:inline">Ctrl+K</span>
+          </Button>
+          <ModeToggle />
+        </div>
+      </div>
+    </header>
+  )
+}
+
+function LabHeader() {
+  const pathname = usePathname()
+  const { datasets, datasetId, select, detail } = useDataset()
+  const { inspecting, setInspecting, startTour, startStory, storyLoading } = useInsightInspector()
+  const items = datasets.map((dataset) => ({ label: dataset.name, value: dataset.id }))
+  return (
+    <header className="flex shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
+      <div className="flex w-full flex-wrap items-center gap-1 px-4 lg:gap-2 lg:px-6">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto" />
+        <h1 className="text-[17px] font-semibold tracking-tight">{titleForPath(pathname, LAB_NAV)}</h1>
         <div className="ml-auto flex max-w-full flex-wrap items-center gap-1 sm:gap-2">
           <div className="hidden items-center gap-1 md:flex">
             <Button variant="ghost" size="sm" data-tour="command-button" aria-label="Mở lệnh nhanh (Ctrl+K)"
@@ -69,9 +95,7 @@ export function SiteHeader() {
           </div>
           <div className="md:hidden">
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="ghost" size="icon-sm" aria-label="Thêm hành động" />}
-              >
+              <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Thêm hành động" />}>
                 <EllipsisVerticalIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -96,15 +120,15 @@ export function SiteHeader() {
               {detail.meta.domain.replace("_", " ")} · {detail.meta.rows.toLocaleString("vi-VN")} dòng
             </Badge>
           )}
-          <Select value={datasetId ?? ""} onValueChange={(v) => v && select(v)} items={items}>
+          <Select value={datasetId ?? ""} onValueChange={(value) => value && select(value)} items={items}>
             <SelectTrigger size="sm" className="w-32 lg:w-52 **:data-[slot=select-value]:truncate" aria-label="Dataset" data-tour="dataset-select">
               <SelectValue placeholder="Chọn bộ dữ liệu" />
             </SelectTrigger>
             <SelectContent align="end">
               <SelectGroup>
-                {items.map((d) => (
-                  <SelectItem key={d.value} value={d.value}>
-                    {d.label}
+                {items.map((dataset) => (
+                  <SelectItem key={dataset.value} value={dataset.value}>
+                    {dataset.label}
                   </SelectItem>
                 ))}
               </SelectGroup>

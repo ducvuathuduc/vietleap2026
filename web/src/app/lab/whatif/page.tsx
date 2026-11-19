@@ -45,7 +45,7 @@ export default function WhatIfPage() {
           title="Chưa có mô hình drivers — cần ≥ 2 biến số"
           description="Dataset cần ít nhất 2 biến số độc lập hợp lệ để ước lượng mô hình tác động đa biến."
         >
-          <Button render={<Link href="/drivers" />} variant="outline">Xem trang Yếu tố</Button>
+          <Button render={<Link href="/lab/drivers" />} variant="outline">Xem trang Yếu tố</Button>
         </EmptyState>
       </PageShell>
     )

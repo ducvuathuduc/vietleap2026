@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "generated_at": "2026-11-19T07:05:00.000Z",
+    "title_vi": "Tiêu đề tổng quan",
+    "question_vi": "Vốn đang kẹt ở đâu?",
+    "lead_vi": ["Câu dẫn một."]
+  },
+  "sources": [
+    {
+      "id": "nso",
+      "publisher": "NSO",
+      "title_vi": "Báo cáo KT-XH",
+      "url": "https://www.nso.gov.vn/",
+      "method": "scrape",
+      "license": "public",
+      "fetched_at": "2026-11-19T07:05:00.000Z",
+      "data_cutoff": "2026-10"
+    }
+  ],
+  "indicators": [
+    {
+      "id": "credit_ytd",
+      "name_vi": "Tăng tín dụng",
+      "sector": "banking",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "ytd",
+      "definition_vi": "Dư nợ tín dụng so với đầu năm.",
+      "source_id": "nso",
+      "last_updated": "2026-10",
+      "latest": { "period": "2026-10", "value": null },
+      "sparkline": []
+    }
+  ],
+  "series": {},
+  "sectors": {
+    "banking": {
+      "question_vi": "Tín dụng tăng nhanh hơn huy động?",
+      "headline_vi": "Bộ đệm ngân hàng đang mỏng.",
+      "cards": [
+        {
+          "value": 1,
+          "unit": "%",
+          "period": "2026-10",
+          "sentence_vi": "Câu thẻ.",
+          "action_vi": "Việc cần làm.",
+          "source_id": "nso",
+          "rule_id": "BR-BK1"
+        }
+      ],
+      "watch": ["Theo dõi chất lượng tài sản."],
+      "charts": [
+        {
+          "id": "credit_gap",
+          "kind": "line",
+          "title_vi": "Tín dụng lệch huy động.",
+          "indicator_ids": ["credit_ytd"],
+          "source_ids": ["nso"]
+        }
+      ],
+      "tables": [
+        {
+          "id": "credit_table",
+          "title_vi": "Bảng dư nợ.",
+          "columns": [{ "key": "ten", "label_vi": "Tên" }],
+          "rows": [],
+          "source_ids": ["nso"]
+        }
+      ]
+    }
+  },
+  "province": {
+    "question_vi": "Tỉnh nào lệch trung vị?",
+    "headline_vi": "Nhóm tỉnh.",
+    "metric_ids": ["credit_ytd"],
+    "rows": [
+      {
+        "code": "HN",
+        "name": "Hà Nội",
+        "region": "Đồng bằng sông Hồng",
+        "metrics": { "credit_ytd": null },
+        "group": 1
+      }
+    ],
+    "groups": []
+  },
+  "asean": {
+    "credit_ytd": {
+      "year": 2024,
+      "rows": [{ "iso3": "VNM", "name_vi": "Việt Nam", "value": 1, "rank": 1 }],
+      "vn_rank": 1,
+      "n": 1,
+      "source_id": "nso"
+    }
+  },
+  "recommendations": [
+    {
+      "id": "rec_credit",
+      "title_vi": "Siết bộ đệm vốn.",
+      "evidence": [{ "rule_id": "BR-BK1", "chart_id": "credit_gap", "fact_vi": "Một sự kiện." }],
+      "so_what_vi": "Hàm ý.",
+      "action_vi": "Hành động.",
+      "agency_vi": "SBV",
+      "horizon_vi": "Quý tới"
+    }
+  ],
+  "quality": [],
+  "reconciliation": []
+}
