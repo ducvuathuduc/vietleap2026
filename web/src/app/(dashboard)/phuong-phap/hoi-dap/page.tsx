@@ -7,6 +7,7 @@ import { PageShell } from "@/components/state"
 
 import { JudgeEmpty, readMonitor } from "../../judge-screen"
 import { askPage } from "../../_lib/method-view"
+import { AskBox } from "./ask-box"
 
 export const metadata: Metadata = {
   title: "Hỏi đáp về số liệu",
@@ -27,17 +28,23 @@ export default async function Page() {
       <div className={FRAME}>
         <p className="text-sm text-muted-foreground">{model.label}</p>
         <PageHeader level={model.level} headline={model.headline} generatedAt={model.generatedAt} />
-        <p className="max-w-3xl text-sm">{model.note}</p>
-        {model.questions.length ? (
-          <section className="flex flex-col gap-2">
-            <h2 className="text-xl font-semibold">Câu hỏi gợi ý</h2>
-            <ul className="flex list-disc flex-col gap-2 pl-5 text-sm">
-              {model.questions.map((question) => (
-                <li key={question}>{question}</li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+        {process.env.ENABLE_CHAT === "1" ? (
+          <AskBox questions={model.questions} />
+        ) : (
+          <>
+            <p className="max-w-3xl text-sm">{model.note}</p>
+            {model.questions.length ? (
+              <section className="flex flex-col gap-2">
+                <h2 className="text-xl font-semibold">Câu hỏi gợi ý</h2>
+                <ul className="flex list-disc flex-col gap-2 pl-5 text-sm">
+                  {model.questions.map((question) => (
+                    <li key={question}>{question}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </>
+        )}
         <Link href="/phuong-phap" className={LINK}>
           Về dữ liệu và phương pháp
         </Link>
