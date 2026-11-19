@@ -4,7 +4,15 @@
 
 ---
 
-## 0. TRẠNG THÁI (cập nhật 18/11/2026) — đọc mục này trước
+## 0. Trạng thái ngày 20/11/2026
+
+Nhánh `feat/vn-monitor` tại `c94b9ba` có phần thu thập FiinQuant, TinyFish, Cục Thống kê, SBV và báo cáo ngành; mô hình sao DuckDB; quy tắc nghiệp vụ, bản công bố JSON và bộ trình chiếu. Sáu mục dành cho giám khảo dùng cùng bản công bố. Đã kiểm tra HTML và 404 thật cho Tổng quan, ASEAN và các trang ngành trong lượt W3-SSR. Các mục Tỉnh thành, Phân tích & Khuyến nghị và Dữ liệu & Phương pháp có mã trong cây làm việc. Kết quả W3-SSR giới hạn ở các đường dẫn đã kiểm trong lượt đó.
+
+Lần xuất `de.py monitor --deck` ngày 19/11/2026 lúc 23:55 (giờ Việt Nam) ghi Bronze 1.975.461, Silver 1.973.438 và Gold 1.931.205 dòng, hai deck 13 trang và bản tóm tắt PDF hai trang. Bộ test của lượt W4-DECK có 59 test monitor và 458 test Python toàn bộ qua. Lượt W3-SSR ghi 163 test web qua và lint sạch. [Sáu bước và tệp đầu ra](WORKFLOW.md) · [Quy tắc và kết quả](BUSINESS_RULES.md) · [Danh mục nguồn](DATA_SOURCES.md)
+
+Việc trước khi chia sẻ gồm xác nhận quyền công bố số tổng hợp FiinQuant, kiểm tra thiết bị nhỏ và bản in A4 của web, rồi kiểm tra môi trường hosting với bản dữ liệu đã duyệt. Vercel là phương án chính và Cloudflare là phương án dự phòng. Việc bổ sung dữ liệu phân khúc CBRE/Savills, phạm vi FDI cấp tỉnh và cặp dư nợ ký quỹ cùng phạm vi nằm trong [lộ trình](ROADMAP.md). Xem [các bước nhận đề](PLAYBOOK.md#nhận-đề-sáng-20112026) để chọn dùng bản theo dõi hoặc kit tổng quát.
+
+### Hồ sơ kit trước bản theo dõi (18/11/2026)
 
 Phiên tiếp theo dùng [master prompt bàn giao](HANDOFF_PROMPT.md). Các thay đổi trong phiên đã tích hợp trực tiếp vào `main`.
 

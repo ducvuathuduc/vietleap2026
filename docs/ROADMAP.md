@@ -4,6 +4,21 @@ Source of truth for *what*: [`specs/README.md`](../specs/README.md) (features 00
 Source of truth for the *contest days*: [`docs/CONTEST_ANALYSIS.md`](CONTEST_ANALYSIS.md) §1.3 (official agenda — https://vietleap2026.com/, read 17/11; the site changed the schedule on 17/11 ~18:55) and §4.2 (hour-by-hour plan).
 Rules: every task group = commit + push (constitution VIII); never run `npm run build` together with pytest (2-CPU laptop); `NO_PROXY=localhost,127.0.0.1`.
 
+## Bộ theo dõi tài chính Việt Nam · 20/11/2026
+
+| Việc | Trạng thái ngày 20/11/2026 | Điều kiện chốt |
+| --- | --- | --- |
+| Thu thập và chuẩn hóa | FiinQuant, NSO, SBV, báo cáo, WDI và phụ lục công bố đã vào bản 19/11/2026. RSS ghi nhận ở nguồn bổ sung. | Kiểm lại kỳ nguồn và dấu vết khi thay bản dữ liệu. [Danh mục](DATA_SOURCES.md) |
+| Quy tắc và bản công bố | Đã ghi công thức, mức kích hoạt, kết quả và giới hạn. Bộ trình chiếu song ngữ, Markdown và PDF đã xuất từ cùng bản. | Người phụ trách nghiệp vụ đối chiếu [quy tắc](BUSINESS_RULES.md) với đề thi chính thức. |
+| Trang giám khảo | Có khung sáu mục. Lượt W3-SSR đã kiểm tra HTML máy chủ và 404 của phần Tổng quan, ASEAN và Ngành. | Kiểm toàn bộ đường dẫn, cả trạng thái thiếu dữ liệu, với bản phát hành dùng để nộp. |
+| Quyền công bố FiinQuant | Chờ xác nhận. Dữ liệu thô, mẫu và Parquet giữ nội bộ. | Xác nhận quyền chia sẻ số tổng hợp có ghi nguồn trước khi đưa bản chụp lên hosting hoặc gửi ra ngoài nhóm. |
+| Mobile và A4 | Chờ kiểm tra trang web trên thiết bị nhỏ và luồng in A4. PDF tóm tắt của W4-DECK đã kiểm riêng. | Không tràn ngang, đọc được nguồn và bảng. Kiểm bản in đủ nội dung, có nguồn và kỳ. |
+| Hosting | Chưa công bố. Vercel là phương án chính, Cloudflare dự phòng. | Sau khi chốt quyền dữ liệu, kiểm bản chụp và tệp tải ở môi trường đích. Để cổng công cụ nội bộ và chat đóng mặc định. |
+| Độ phủ CBRE/Savills | Đã dùng bảng nguồn công khai dẫn CBRE. Savills mới có danh mục và trang báo cáo. | Bổ sung bảng phân khúc có quyền sử dụng, giữ đúng rổ dự án và tách các kỳ thay đổi địa giới. |
+| Khoảng trống bổ sung | Chưa có bảng FDI đủ tỉnh và cặp dư nợ ký quỹ cùng phạm vi cho hai quý cần so sánh. | Chỉ mở rộng chỉ tiêu khi có số cùng định nghĩa và bằng chứng nguồn. |
+
+Các mốc bên dưới là hồ sơ lập kế hoạch của kit tổng quát trước bản theo dõi. [Luồng dùng khi nhận đề](PLAYBOOK.md)
+
 ## Capacity vs scope (planning numbers, not measurements)
 - Remaining spec work ≈ 43.5 h (+2 h optional YOLO). Developer time before the 19/11 check-in (window 09:00–11:30 / 13:30–14:45) ≈ 29 h (16/11 ≈ 6 h, 17/11 ≈ 10 h, 18/11 ≈ 10 h, 19/11 morning ≈ 3 h).
 - **Cut line**: all P1 (002, 003, 004, 009, 011-LLM ≈ 24 h) + 010 (3 h) must land; 007 is the first stretch goal; 005, 006, 008 only if P1 finishes early. Anything not merged by **18/11 22:00 (feature freeze)** is dropped for the contest.

@@ -2,6 +2,14 @@
 
 Giờ Việt Nam (Asia/Saigon). Đội ngẫu nhiên 4–5 người, chưa chắc ai biết code. Mục tiêu: **một quyết định rõ ràng, có bằng chứng thống kê, truy được về dữ liệu** — không phải nhiều biểu đồ.
 
+## Nhận đề sáng 20/11/2026
+
+1. Khi nhận đề lúc 09:00 theo lịch đã lưu, ghi câu hỏi quyết định, cơ quan nhận kết quả, chỉ tiêu, kỳ, địa bàn và yêu cầu nộp. Giữ nguyên tệp BTC cung cấp ở vùng dữ liệu gốc. [Lịch và ghi chú](CONTEST_ANALYSIS.md)
+2. Nếu câu hỏi thuộc tài chính công, FDI, ngân hàng, thị trường vốn hoặc bất động sản, đối chiếu ngay phạm vi với bản công bố gần nhất. Giữ chỉ tiêu và quy tắc có cùng định nghĩa. Hai tệp chốt gồm [quy tắc nghiệp vụ](BUSINESS_RULES.md) và [danh mục nguồn](DATA_SOURCES.md). Dùng dữ liệu ASEAN hoặc tỉnh khi câu hỏi cần đúng phạm vi đó.
+3. Nếu có nguồn mới phù hợp, làm mới đúng trình lấy nguồn trong README, kiểm kỳ, địa bàn và đơn vị rồi chạy `python de.py monitor --deck`. Nếu dùng vùng dữ liệu đã có, chạy `python de.py monitor --offline --deck`. Mở `out/vn_monitor/monitor.json`, EDA và deck để kiểm cùng bản công bố. Dùng bản gần nhất đã kiểm nếu lịch nguồn chưa có số mới. [Bắt đầu nhanh](../README.md#bắt-đầu-nhanh)
+4. Nếu đề vượt phạm vi, dùng `python de.py brief <brief.md> --data <dataset>` để chốt câu hỏi và biến mục tiêu. Chọn pack có sẵn dữ liệu rồi chạy `python de.py contest <pack> <brief.md>`. Với một tệp ngoài các pack, dùng `python de.py file <dataset> --serve --lang both`. Bản theo dõi có thể làm nguồn tham chiếu nếu định nghĩa khớp. Giữ sản phẩm đề thi trong thư mục riêng.
+5. Trước khi nộp, mở bản trình chiếu và PDF trên máy sẽ dùng, kiểm đường dẫn web, thiết bị nhỏ và A4. Chỉ đính kèm số liệu đã xác nhận quyền chia sẻ. Để dữ liệu gốc FiinQuant trong vùng nội bộ. Khi phục vụ bản công khai, giữ `ENABLE_LAB` và `ENABLE_CHAT` ở mặc định đóng. [Kiểm tra trước khi chia sẻ](ROADMAP.md)
+
 ## 0. Trước ngày thi (16–19/11)
 
 | Khi | Việc | Kiểm tra xong khi |
