@@ -10,6 +10,11 @@ def evaluate(frames, catalog=()):
 
     evaluation = run(frames, list(catalog))
     json.dumps(evaluation, allow_nan=False)
+    for result in evaluation["results"]:
+        if result["status"] != "not evaluated" and result["sector"] not in ("asean", "province", "macro"):
+            sentence = result["sentence_vi"]
+            assert 25 <= len(sentence.split()) <= 35, (result["id"], sentence)
+            assert sentence.endswith(".") and ". " not in sentence, (result["id"], sentence)
     return evaluation
 
 
@@ -131,7 +136,8 @@ def test_banks_valuation_uses_only_its_own_history_and_keeps_roe():
     rows[len(dates) - 1]["roe"] = 12.5
     evaluation = evaluate({"valuation": pd.DataFrame(rows)})
     rule = outcome(evaluation, "BR-BK3")
-    assert (rule["value"], rule["metrics"]["roe"], rule["period"]) == (100, 12.5, "2025-10-01")
+    assert (rule["value"], rule["unit"], rule["period"]) == (61, "lần", "2025-10-01")
+    assert (rule["metrics"]["pb_pctile"], rule["metrics"]["roe"]) == (100, 12.5)
     assert {row["ticker"]: row["pb_pctile"] for row in evaluation["tables"]["banking"][0]["rows"]} == {
         "BANKS_L2": 100.0, "OTHER_L2": 0.0,
     }
@@ -249,7 +255,7 @@ def test_heatmap_only_ranks_complete_calendar_windows_and_centers_ties():
 
 def test_missing_inputs_are_explicit_and_yield_no_synthetic_values():
     evaluation = evaluate({})
-    assert len(evaluation["rules"]) == len(evaluation["results"]) == 14
+    assert len(evaluation["rules"]) == len(evaluation["results"]) == 16
     assert all(result["status"] == "not evaluated" and "value" not in result for result in evaluation["results"])
     assert all(not rule["fired"] for rule in evaluation["rules"])
     assert not evaluation["derived"]
@@ -273,3 +279,48 @@ def test_real_estate_aligns_city_supply_with_absorption_and_national_rate():
     rule = outcome(evaluate({"observations": pd.DataFrame(rows)}), "BR-RE1")
     assert rule["value"] == 60
     assert "HÀ NỘI" in rule["sentence_vi"]
+
+
+def test_drawdown_drops_highs_outside_52_weeks():
+    market = pd.DataFrame({"date": pd.to_datetime(["2024-01-01", "2025-01-02", "2025-01-03"]),
+                           "close": [200, 100, 90]})
+    rows = evaluate({"market": market})["derived"]
+    latest = next(row for row in rows if row["indicator_id"] == "vnindex_drawdown" and row["period"] == "2025-01-03")
+    assert latest["value"] == pytest.approx(-10)
+    assert outcome(evaluate({"market": market}), "BR-CM4")["value"] == pytest.approx(-10)
+
+
+def test_foreign_sector_table_identifies_buy_and_sell_extremes():
+    dates = pd.bdate_range("2026-01-01", periods=60)
+    market = pd.DataFrame({"date": dates, "foreign_net": 1})
+    foreign = pd.DataFrame([
+        {"date": day, "icb_l2": sector, "foreign_net": amount}
+        for day in dates for sector, amount in [("BANKS_L2", -3), ("REAL_ESTATE_L2", 4)]
+    ])
+    rule = outcome(evaluate({"market": market, "foreign": foreign}), "BR-CM2")
+    assert rule["metrics"]["sell_20d"] == "BANKS_L2"
+    assert rule["metrics"]["buy_60d"] == "REAL_ESTATE_L2"
+
+
+def test_bank_league_uses_latest_complete_vendor_quarter():
+    bank = pd.DataFrame([
+        {"ticker": ticker, "period": period, "nim": nim}
+        for ticker, period, nim in [("AAA", "2026-Q2", 2), ("BBB", "2026-Q2", 3),
+                                    ("CCC", "2026-Q2", 4), ("AAA", "2026-Q3", 5)]
+    ])
+    evaluation = evaluate({"bank": bank})
+    league = evaluation["tables"]["banking"][0]["rows"]
+    assert {row["ticker"] for row in league} == {"AAA", "BBB", "CCC"}
+    assert {row["period"] for row in league} == {"2026-Q2"}
+    assert sorted(row["nim_tier"] for row in league) == [1, 2, 3]
+    assert outcome(evaluation, "BR-BK4")["value"] == 3
+
+
+def test_asean_ranks_widest_comparable_year_when_coverage_is_incomplete():
+    rows = [
+        observation("tax_revenue_pct_gdp", year, value, "ratio", "%", geo, "country", "wdi")
+        for geo, year, value in [("VNM", "2023", 15), ("THA", "2023", 20), ("MYS", "2023", 12),
+                                 ("VNM", "2024", 16), ("THA", "2024", 21), ("IDN", "2022", 8)]
+    ]
+    rank = evaluate({"observations": pd.DataFrame(rows)})["asean"]["tax_revenue_pct_gdp"]
+    assert (rank["year"], rank["vn_rank"], rank["n"]) == (2023, 2, 3)

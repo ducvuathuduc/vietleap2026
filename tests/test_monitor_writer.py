@@ -231,3 +231,68 @@ def test_rule_charts_include_related_indicators_tables_and_source_notes(inputs):
     assert chart["indicator_ids"] == ["total_spending_ytd", "planned_spending"]
     assert chart["source_ids"] == ["nso", "press", "sbv"]
     assert "Đối chiếu dự toán đã duyệt." in chart["note_vi"]
+
+
+_COPY_BANS = (
+    "toàn diện|đột phá|mạnh mẽ|vượt trội|tối ưu hoá|tối ưu hóa|hệ sinh thái|nâng tầm|khai phá|"
+    "đòn bẩy|chuyển đổi số|kỷ nguyên|bức tranh toàn cảnh|điểm sáng|đáng chú ý|nhìn chung|"
+    "về cơ bản|có thể nói rằng|dữ liệu cho thấy|góc nhìn|câu chuyện|hành trình|sức mạnh|theo dõi sát sao|"
+    "unlock|unleash|seamless|powerful|effortless|supercharge|elevate|empower|revolutionize|"
+    "cutting-edge|world-class|robust|leverage|delve|underscore|showcase|intricate|tapestry|"
+    "landscape|ai-powered|powered by ai|insights-driven|one-stop|end-to-end|ai|engine|pipeline|beta|live|"
+    "chính xác 100%|thời gian thực|đảm bảo|dự báo chắc chắn|tối ưu nhất|dẫn đầu|"
+    "pp|điểm phần trăm|n/a|null|nan|undefined"
+)
+
+
+def _assert_copy(payload):
+    import re
+
+    banned = re.compile(rf"(?<!\w)(?:{_COPY_BANS})(?!\w)|\d{{4}}-\d{{2}}|[!★\u2600-\u27bf\U0001f000-\U0001faff\ufe0f\u20e3]", re.I)
+
+    def scan(value, path=(), copy=False):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                scan(child, (*path, key), key.endswith("_vi"))
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                scan(child, (*path, index), copy)
+        elif copy and isinstance(value, str) and (match := banned.search(value)):
+            yield_path = ".".join(map(str, path))
+            failures.append((yield_path, match.group(), value))
+
+    failures = []
+    scan(payload)
+    assert not failures, failures
+
+
+def test_fixture_copy_uses_vietnamese_periods_and_avoids_banned_words(inputs):
+    from vlkit.monitor.writer import write_monitor
+
+    inputs["evaluation"]["results"][0]["sentence_vi"] = "Chi ngân sách đạt 1.234,5 tỷ đồng trong kỳ 2026-09."
+    _assert_copy(write_monitor(**inputs))
+
+
+def test_real_monitor_copy_avoids_banned_words(kit_root):
+    output = kit_root / "out/vn_monitor/monitor.json"
+    if not output.is_file():
+        pytest.skip("Real monitor output is absent")
+    _assert_copy(json.loads(output.read_text(encoding="utf-8")))
+
+
+def test_real_monitor_cards_and_published_insight_depth(kit_root):
+    output = kit_root / "out/vn_monitor/monitor.json"
+    if not output.is_file():
+        pytest.skip("Real monitor output is absent")
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    sectors = payload["sectors"]
+    for item in sectors.values():
+        assert len(item["headline_vi"]) <= 120 and "?" not in item["headline_vi"]
+        for card in item["cards"]:
+            assert 25 <= len(card["sentence_vi"].split()) <= 35, card
+            assert card["sentence_vi"].endswith(".") and ". " not in card["sentence_vi"], card
+    assert {"budget_time_pace", "fdi_dang_ky_ytd", "fdi_thuc_hien_ytd",
+            "market_breadth", "vnindex_drawdown", "vnindex_pe_pctile"} <= payload["series"].keys()
+    assert len(next(t["rows"] for t in sectors["banking"]["tables"] if t["id"] == "bank_league")) == 27
+    assert len(sectors["banking"]["cards"]) >= 2
+    assert any(c.get("indicator_id") == "vnindex_drawdown" for c in sectors["capital_market"]["cards"])

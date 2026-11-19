@@ -15,6 +15,7 @@ import pandas as pd
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 from .. import fmt
+from .copy import localize_periods, period_vi
 
 _GRAIN = ["indicator_id", "period", "geo_type", "geo", "measure_type", "unit"]
 _SCOPE = [column for column in _GRAIN if column != "period"]
@@ -23,7 +24,7 @@ _QUESTIONS = {
     "public_finance": "Khâu nào đang chậm trong quá trình thu, chi và giải ngân?",
     "fdi": "Vốn đăng ký chuyển thành vốn thực hiện đến đâu và tập trung ở đâu?",
     "banking": "Tín dụng tăng nhanh hơn huy động đến đâu và ngân hàng nào có bộ đệm mỏng?",
-    "capital_market": "Thanh khoản, khối ngoại, định giá và đòn bẩy đang thay đổi ra sao?",
+    "capital_market": "Thanh khoản, khối ngoại, định giá và dư nợ ký quỹ đang thay đổi ra sao?",
     "real_estate": "Sức mua và nguồn cung thay đổi ra sao khi lãi suất biến động?",
 }
 _QUESTION = "Vốn của nền kinh tế đang kẹt ở đâu trên đường từ nguồn thu đến chi tiêu, đầu tư và tăng trưởng?"
@@ -162,7 +163,8 @@ def _headline(indicator) -> str:
     latest = indicator["latest"]
     unit = indicator["unit"]
     unit_suffix = unit if unit == "%" else f" {unit}" if unit else ""
-    return f"{indicator['name_vi']} đạt {_number(latest['value'])}{unit_suffix} kỳ {latest['period']}."
+    period = period_vi(latest["period"], cumulative=indicator["measure_type"] == "ytd")
+    return f"{indicator['name_vi']} đạt {_number(latest['value'])}{unit_suffix} · {period}"
 
 
 def _charts(facts, tables, indicators, measured):
@@ -185,7 +187,7 @@ def _charts(facts, tables, indicators, measured):
         source_ids.extend(indicators[key]["source_id"] for key in ids)
         notes = dict.fromkeys(indicators[key]["note_vi"] for key in ids if indicators[key].get("note_vi"))
         charts[chart_id] = {
-            "id": chart_id, "title_vi": results[0]["sentence_vi"],
+            "id": chart_id, "title_vi": _fact_title(results[0]),
             "kind": "table" if table else "heatmap" if chart_id == "monthly_heatmap" else "line",
             "indicator_ids": list(ids), "level": "overview", "source_ids": list(dict.fromkeys(source_ids)),
             "note_vi": " ".join(notes),
@@ -199,6 +201,10 @@ def _charts(facts, tables, indicators, measured):
                 "note_vi": indicator.get("note_vi", ""), "level": "overview",
             }
     return list(charts.values())
+
+
+def _fact_title(fact):
+    return localize_periods(fact.get("headline_vi", fact["sentence_vi"]))
 
 
 def _sections(evaluation, indicators, card_fields):
@@ -221,13 +227,14 @@ def _sections(evaluation, indicators, card_fields):
         for fact in facts[:3]:
             card = {key: value for key, value in fact.items() if key in card_fields}
             card["rule_id"] = fact["id"]
+            card["sentence_vi"] = localize_periods(card["sentence_vi"])
             if card.get("indicator_id") not in indicators:
                 card.pop("indicator_id", None)
             cards.append(card)
         kpi_ids = dict.fromkeys([*(card.get("indicator_id") for card in cards), *(item["id"] for item in measured)])
         sectors[sector_id] = {
             "question_vi": question, "headline_vi": (
-                cards[0]["sentence_vi"] if cards else _headline(measured[0]) if measured else _MISSING
+                _fact_title(facts[0]) if cards else _headline(measured[0]) if measured else _MISSING
             ),
             "cards": cards, "watch": missing[:4], "kpi_ids": [key for key in kpi_ids if key in indicators][:6],
             "charts": _charts(facts, tables, indicators, measured), "tables": tables, "heatmap": heatmap,
@@ -241,16 +248,16 @@ def _recommendations(results):
         if fact["status"] != "fired":
             continue
         key = fact["id"].lower().replace("-", "_")
-        evidence = {"rule_id": fact["id"], "chart_id": fact["chart_id"], "fact_vi": fact["sentence_vi"]}
+        evidence = {"rule_id": fact["id"], "chart_id": fact["chart_id"], "fact_vi": localize_periods(fact["sentence_vi"])}
         if key in recommendations:
             recommendations[key]["evidence"].append(evidence)
             continue
         recommendations[key] = {
-            "id": key, "title_vi": fact["sentence_vi"], "sector": fact["sector"],
+            "id": key, "title_vi": _fact_title(fact), "sector": fact["sector"],
             "evidence": [evidence], "so_what_vi": fact["so_what_vi"], "action_vi": fact["action_vi"],
-            "agency_vi": fact["agency_vi"], "horizon_vi": fact.get("horizon_vi", "Quý tới"),
+            "agency_vi": fact["agency_vi"], "horizon_vi": "quý I/2027",
         }
-    return list(recommendations.values())
+    return list(recommendations.values())[:5]
 
 
 def _md_table(headers, rows):
@@ -325,7 +332,7 @@ def _eda(profiles, reconciliation, results):
             (result["id"], statuses[result["status"]], result["sentence_vi"]) for result in results
         )),
     ]
-    return "\n\n".join(parts) + "\n"
+    return localize_periods("\n\n".join(parts)) + "\n"
 
 
 def _json_scalar(value):
@@ -369,10 +376,25 @@ def write_monitor(
     )
     sectors = _sections(evaluation, indicators, schema["$defs"]["card"]["properties"])
     recommendations = _recommendations(evaluation["results"])
-    headlines = dict.fromkeys([
-        *(item["title_vi"] for item in recommendations),
-        *(sector["headline_vi"] for sector in sectors.values() if sector["headline_vi"] != _MISSING),
-    ])
+    results = evaluation["results"]
+    measured = {fact["id"]: fact for fact in results if fact["status"] != "not evaluated"}
+    lead = [localize_periods(measured[key]["sentence_vi"])
+            for key in ("BR-PF1", "BR-FDI1", "BR-CM1") if key in measured]
+    if "BR-CM1" in measured and "BR-BK3" in measured and measured["BR-BK3"]["metrics"]["pb_pctile"] < 2:
+        lead[-1] += " " + _fact_title(measured["BR-BK3"]) + ", thuộc nhóm thấp nhất trong 5 năm."
+    if not lead:
+        lead = [sector["headline_vi"] for sector in sectors.values() if sector["headline_vi"] != _MISSING][:3]
+    title = sectors["public_finance"]["headline_vi"]
+    if title == _MISSING:
+        title = next((sector["headline_vi"] for sector in sectors.values() if sector["headline_vi"] != _MISSING),
+                     "Theo dõi vốn, ngân sách và thị trường Việt Nam")
+    watch = [fact["threshold_vi"] for fact in results
+             if fact["status"] == "fired" and fact.get("threshold_vi")]
+    if any(fact["id"] == "BR-BK2" and fact["status"] == "not evaluated" for fact in results):
+        watch.append("Thiếu số liệu cùng quý để kiểm tra ngưỡng nợ xấu trên 3% và bao phủ dưới 100%.")
+    priority_kpis = [fact["indicator_id"] for key in ("BR-PF1", "BR-FDI1", "BR-BK3", "BR-CM1", "BR-CM4")
+                     if (fact := measured.get(key)) and fact.get("indicator_id") in indicators]
+    fallback_kpis = [key for sector in sectors.values() for key in sector["kpi_ids"]]
     tolerances = {entry["id"]: entry["tolerance_pct"] for entry in catalog if "tolerance_pct" in entry}
     reconciliation = reconcile(observations, tolerances)
     files = {
@@ -383,10 +405,10 @@ def write_monitor(
         "schema_version": 1,
         "meta": {
             "generated_at": datetime.now(ZoneInfo("Asia/Saigon")).isoformat(timespec="seconds"),
-            "title_vi": "Theo dõi kinh tế vĩ mô và tài chính Việt Nam", "question_vi": _QUESTION,
-            "lead_vi": list(headlines)[:3] or [_MISSING],
-            "kpi_ids": list(dict.fromkeys(key for sector in sectors.values() for key in sector["kpi_ids"]))[:6],
-            "watch_vi": [watch for sector in sectors.values() for watch in sector["watch"]][:4],
+            "title_vi": title, "question_vi": _QUESTION,
+            "lead_vi": lead or [_MISSING],
+            "kpi_ids": list(dict.fromkeys([*priority_kpis, *fallback_kpis]))[:6],
+            "watch_vi": watch[:4],
         },
         "sources": sources, "indicators": list(indicators.values()), "series": series,
         "sectors": sectors, "province": evaluation["province"], "asean": evaluation["asean"],

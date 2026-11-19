@@ -759,9 +759,8 @@
   unit: '%'
   frequency: daily
   measure_type: ratio
-  definition_vi: Mức giảm của VN-Index từ đỉnh. So với đỉnh trong lịch sử dữ liệu
-    đang có.
-  note_vi: So với đỉnh trong lịch sử dữ liệu đang có.
+  definition_vi: Chênh lệch tương đối giữa mức đóng cửa và đỉnh đóng cửa trong 52 tuần gần nhất.
+  note_vi: Cửa sổ 52 tuần tính đến phiên quan sát.
   source_id: fiinquant
   higher_is_better: true
 - id: vnindex_pe_pctile
@@ -795,5 +794,38 @@
   definition_vi: Phân vị P/B ngành ngân hàng. Phân vị của P/B ngành trong lịch sử
     tối đa 5 năm.
   note_vi: Phân vị của P/B ngành trong lịch sử tối đa 5 năm.
+  source_id: fiinquant
+  higher_is_better: true
+
+- id: budget_time_pace
+  name_vi: Mốc tiến độ theo tháng
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: pct_plan
+  definition_vi: Số tháng đã qua chia cho số tháng trong năm.
+  note_vi: Mốc tham chiếu theo thời gian, độc lập với lịch thanh toán.
+  source_id: nso
+  higher_is_better: true
+
+- id: bank_sector_pb
+  name_vi: P/B ngành ngân hàng
+  sector: banking
+  unit: lần
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Giá thị trường chia giá trị sổ sách theo rổ ngành ngân hàng.
+  note_vi: Dùng rổ ngành do FiinQuant công bố.
+  source_id: fiinquant
+  higher_is_better: true
+
+- id: bank_nim_median
+  name_vi: Biên lãi ròng trung vị
+  sector: banking
+  unit: '%'
+  frequency: quarterly
+  measure_type: ratio
+  definition_vi: Trung vị biên lãi ròng của các ngân hàng có số liệu trong cùng quý.
+  note_vi: Cỡ nhóm là số ngân hàng có chỉ tiêu trong bảng so sánh.
   source_id: fiinquant
   higher_is_better: true
