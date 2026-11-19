@@ -93,7 +93,7 @@ export function ChartAreaInteractive({
           </span>
           <span className="@[540px]/card:hidden">{metricLabel}</span>
           {gaps && gaps.count > 0 && (
-            <Badge variant="outline" className="font-normal text-amber-700 dark:text-amber-300 border-amber-500/40">
+            <Badge variant="outline" className="font-normal">
               Thiếu {gaps.count} kỳ ({gaps.samples.slice(0, 3).join(", ")}{gaps.count > 3 ? "…" : ""})
             </Badge>
           )}

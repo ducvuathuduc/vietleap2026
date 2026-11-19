@@ -1,7 +1,6 @@
 # Licences — code dependencies, data and assets
 
-Kit licence: Apache-2.0 (`LICENSE`). Constitution V: only open-source / openly licensed components; record every new data source or
-asset here **and** in the source's `license:` field in `sources.yaml` (it flows into provenance and the deck's Provenance slide).
+Kit licence: Apache-2.0 (`LICENSE`). Dataset and service terms are recorded separately from code licences. Record new sources or assets here and in the relevant source metadata. The monitor carries those notes into `monitor.json`.
 
 ## Python (requirements.txt)
 | Package | Licence | | Package | Licence |
@@ -13,6 +12,7 @@ asset here **and** in the source's `license:` field in `sources.yaml` (it flows 
 | selectolax | MIT | | lxml | BSD-3-Clause |
 | feedparser | BSD-2-Clause | | PyYAML | MIT |
 | python-pptx | MIT | | plotly, kaleido | MIT |
+| pdfplumber | MIT | | Matplotlib | Matplotlib licence, PSF-based |
 | FastAPI, pydantic, uvicorn | MIT / MIT / BSD-3 | | jsonschema | MIT |
 | playwright (optional) | Apache-2.0 | | pytrends (optional) | Apache-2.0 |
 | tzdata (Windows) | Apache-2.0 | | DuckDB httpfs extension | MIT |
@@ -39,6 +39,12 @@ recharts (MIT) · mermaid (MIT) · driver.js (MIT) · ai, @ai-sdk/* (Apache-2.0)
 | Wikipedia tables (scrape demo) | `scenarios/demo/sources.yaml` | CC BY-SA 4.0 |
 | VnExpress RSS (social demo) | `scenarios/demo/sources.yaml` | publisher terms; headlines/links only, no full-text redistribution |
 | Province 63 → 34 mapping, regions | `engine/vlkit/resources/province_63_to_34.csv`, `province_region.csv` | compiled from Nghị quyết 202/2025/QH15 and GSO region list (public legal/official information) |
+
+### Monitor publication record · 20/11/2026
+
+- FiinQuant landings, raw records and samples stay internal. Prepare attributed aggregates only and confirm permission with FiinGroup before an external dashboard, deck, or data export exposes those aggregates. The source record distinguishes the SDK and dataset terms from the licence of this repository. [Recorded provider terms](https://fiinquant.vn/Home/Privacy?isShowPolicy=True)
+- TCBS and Realtique/CBRE figures are used as cited research excerpts. Attribute TCBS for its appendix and Realtique and CBRE for the real-estate observations. Retain the source period and project coverage. Savills landing pages are reference links. Confirm any additional reuse of report tables or figures with the publisher. [Recorded source terms](DATA_SOURCES.md)
+- NSO, SBV, and the Ministry of Finance appendix carry the issuing body, period and source reference. WDI retains World Bank attribution with indicator-specific exceptions. VnExpress and CafeF RSS supply counts and keywords. Keep full articles and collected raw files internal. [Source register](DATA_SOURCES.md)
 
 ## Assets
 `web/src/app/vendor/shadcn-tailwind.css` is the unchanged stylesheet from the official `shadcn@4.23.0` npm package. The adjacent MIT notice is from the same package. The CLI is available separately when adding components.

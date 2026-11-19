@@ -6,7 +6,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](requirements.txt)
 [![Node.js 20+](https://img.shields.io/badge/node-20%2B-339933.svg)](web/package.json)
 
-**Thả dataset + đề bài → pipeline Data Engineering chuẩn, insight có kiểm định thống kê, khuyến nghị chính sách, dashboard và deck pitch song ngữ — mọi con số đến từ engine/DuckDB, không bịa số.**
+**Bộ theo dõi tài chính Việt Nam** xem vốn đang chậm ở đâu trên đường từ nguồn thu đến chi tiêu, đầu tư và tăng trưởng, và cơ quan nào cần rà soát trong quý tới. Phiên bản này theo dõi ngân sách, FDI, ngân hàng, thị trường vốn và bất động sản, với so sánh ASEAN và dữ liệu địa phương. Kit phân tích dữ liệu theo đề bài vẫn dùng được cho thử thách khác.
 
 Bộ công cụ mã nguồn mở cho **VietLeap Hackathon 2026 — From Data to Decision** (UEH School of Public Finance × AVSE Economic Policy Network),
 chạy được trên laptop 2 CPU / 7 GB RAM, offline khi không có khoá LLM.
@@ -19,12 +19,18 @@ chạy được trên laptop 2 CPU / 7 GB RAM, offline khi không có khoá LLM.
 [Lộ trình](#lộ-trình) · [Đóng góp](#đóng-góp) · [Giấy phép](#giấy-phép) · [Ghi nhận](#ghi-nhận)
 
 ## Tính năng
-- **Ingestion 6 loại nguồn** — file (CSV/XLSX/JSON/Parquet/ZIP), REST API (phân trang, rate limit, retry + exponential backoff, cache đĩa), SQL qua SQLAlchemy (chỉ `SELECT`), web scraping (tôn trọng robots.txt, có delay), social listening (RSS, Google Trends tuỳ chọn), số đếm CV (YOLO + ByteTrack, tuỳ chọn).
+
+Sáu mục dành cho giám khảo gồm Tổng quan (`/`), Chỉ số & ASEAN (`/asean`), Ngành (`/nganh/[sector]`), Tỉnh thành (`/tinh` và `/tinh/[code]`), Phân tích & Khuyến nghị (`/khuyen-nghi`), Dữ liệu & Phương pháp (`/phuong-phap`). Mục Ngành gồm tài chính công, FDI, ngân hàng, thị trường vốn và bất động sản. Các trang đọc bản công bố `monitor.json` trên máy chủ.
+
+Nguồn gồm FiinQuant, World Bank WDI, Cục Thống kê, Ngân hàng Nhà nước, phụ lục công bố của Quốc hội và Bộ Tài chính, báo cáo ngành và tin RSS. Các điều kiện công bố, kỳ dữ liệu và quy tắc cảnh báo được ghi trong [Danh mục nguồn](docs/DATA_SOURCES.md) và [Quy tắc nghiệp vụ](docs/BUSINESS_RULES.md).
+
+- **Ingestion 8 loại nguồn** — `file` (CSV/XLSX/JSON/Parquet/ZIP), `api` (phân trang, rate limit, retry + exponential backoff, cache đĩa), `sql` qua SQLAlchemy (chỉ `SELECT`), `scrape` (tôn trọng robots.txt, có delay), `social` (RSS, Google Trends tuỳ chọn), `cv` (số đếm YOLO + ByteTrack, tuỳ chọn), `reducto` (PDF/scan qua API, tuỳ chọn), `tinyfish` (agent browser cho trang JS/403, tuỳ chọn).
+- **TinyFish (`kind: tinyfish`, tùy chọn)** — hỗ trợ trích xuất từ trang có JavaScript khi nguồn cho phép. Tôn trọng robots.txt và điều khoản của nhà xuất bản. Lưu bộ nhớ đệm và nhật ký chi phí tại `data/cache/tinyfish/`. `TINYFISH_MAX_USD` giới hạn chi phí và TinyFetch hỗ trợ đối chiếu số trích với văn bản nguồn.
 - **Storage medallion** — DuckDB `bronze / silver / gold / meta` + Parquet lake; bronze giữ dữ liệu thô kèm `_src`, `_ingested_at`, `_row_hash`.
 - **Transform** — làm sạch theo kiểu số/ngày Việt Nam, missing / duplicate / outlier (3×IQR, **gắn cờ, không xoá**), điểm chất lượng 0–100 trước/sau, nhật ký làm sạch; tự dựng **OBT, Star schema (Kimball), Snowflake, Data Vault 2.0** + ERD; conformed dimensions nhiều nguồn (tỉnh 63 → 34 theo NQ 202/2025/QH15, năm, quận/huyện) kèm độ phủ ghép nối.
 - **Phân tích** — hồ sơ dữ liệu (EDA), so sánh nhóm (Kruskal–Wallis / Mann–Whitney + effect size), tương quan Spearman có hiệu chỉnh Bonferroni + tương quan riêng phần, drivers (Ridge + gradient boosting, CV 5-fold, permutation importance), what-if có khoảng bootstrap 90%, phân khúc k-means, dự báo có khoảng 80% và MAE holdout.
 - **Quyết định** — "So what → Now what" kèm tác động ước tính và mức tin cậy; đề bài → `brief.json` (câu hỏi, biến mục tiêu, người quyết định, KPI) mở đầu deck và câu chuyện.
-- **Serving** — FastAPI (OpenAPI), dashboard Next.js 16 + shadcn/ui `dashboard-01` (Tổng quan, Đề bài, Nguồn, Pipeline, Chất lượng, Mô hình, SQL Explorer read-only, Hồ sơ, Insight, Drivers & What-if, Phân khúc, Quyết định, AI Analyst), dashboard HTML tĩnh, executive summary MD/HTML/PDF.
+- **Công bố** — Next.js 16 và shadcn/ui cho bộ theo dõi. Kit dùng FastAPI (OpenAPI), các trang nội bộ `/lab`, trang HTML tĩnh và tóm tắt điều hành MD/HTML/PDF.
 - **AI Analyst & "Hỏi AI"** — Vercel AI SDK với tool chỉ đọc; Groq hoặc mọi endpoint OpenAI-compatible (kể cả Ollama cục bộ); **chế độ offline** trả lời bằng số do engine tính; câu chuyện insight có kiểm tra số chống bịa.
 - **Deck & pitch song ngữ** — `deck.pptx` (EN) / `deck.vi.pptx` (VI) và `pitch.md` (VI, Marp) / `pitch.en.md`, chọn bằng `--lang vi|en|both`; chuỗi cố định do người viết và duyệt (không dịch máy), hai ngôn ngữ mang cùng con số.
 
@@ -76,6 +82,28 @@ Chi tiết: [`docs/SPEC.md`](docs/SPEC.md) · luồng nghiệp vụ và ánh x�
 
 Cần: Python 3.11+ (CI dùng 3.12), Node.js 20+ (CI dùng 22), `make`, Git. Linux/macOS (Windows: WSL2).
 
+### Bộ theo dõi tài chính Việt Nam
+
+Chạy ở thư mục gốc bằng Python trong môi trường đã cài `requirements.txt`. Khi cần lấy dữ liệu FiinQuant, cài SDK từ [hướng dẫn của trình trích xuất](tools/fiinquant/README.md) rồi cấp `FIINQUANT_USERNAME` và `FIINQUANT_PASSWORD` qua môi trường. Trình lấy báo chí đọc `TINYFISH_API_KEY` và `TINYFISH_MAX_USD` từ môi trường hoặc tệp `.env.local` cục bộ.
+
+```powershell
+.venv\Scripts\python.exe tools/fiinquant/fetch_fiinquant.py --all
+.venv\Scripts\python.exe tools/nso/extract.py
+.venv\Scripts\python.exe tools/sbv/extract.py
+.venv\Scripts\python.exe tools/press/run.py
+.venv\Scripts\python.exe de.py monitor --deck
+Set-Location web
+npm.cmd run dev
+```
+
+Trên Linux/macOS dùng Python của `.venv` và `npm`. Các lệnh lấy nguồn chỉ cần khi bổ sung hoặc làm mới dữ liệu. Với vùng dữ liệu đã có, dùng `de.py monitor --offline --deck`. Recipe đọc bản WDI CSV và phụ lục dự toán đã lưu, xem [cấu hình nguồn](scenarios/vn_monitor/sources.yaml). Cài phụ thuộc web theo hướng dẫn `make setup` nếu chưa có `web/node_modules`.
+
+Mở `http://localhost:3000`. Mặc định máy chủ đọc `out/vn_monitor/monitor.json` hoặc bản seed `web/seed/vn_monitor/monitor.json` khi có. `MONITOR_PATH` chọn một bản công bố khác. Các tệp trình chiếu `deck.vi.pptx`, `deck.en.pptx` và báo cáo `report.vi.md` ở `out/vn_monitor/`. `report.vi.pdf` có khi môi trường xuất hỗ trợ Chromium. Dùng `PLAYWRIGHT_BROWSERS_PATH` nếu Chromium cài ở vị trí riêng.
+
+Trang giám khảo đọc tệp đã công bố. Đặt cấu hình web qua môi trường của Next.js hoặc `web/.env.local`. `ENABLE_LAB=1` mở `/lab` và các điểm cuối nội bộ dành cho SQL, nạp nguồn, kho dữ liệu, tác vụ, kết xuất, tải dataset lên, tạo brief và diễn giải. `ENABLE_CHAT=1` mở `/api/chat` độc lập. Đọc dataset và kiểm tra sức khỏe không thuộc hai cổng này. `EXTERNAL_API_URL` dùng khi web cần chuyển tiếp yêu cầu sang FastAPI của kit.
+
+### Kit dùng cho đề bài bất kỳ
+
 ```bash
 git clone https://github.com/ducvuathuduc/vietleap2026.git && cd vietleap2026
 make setup                            # .venv + requirements.txt + npm install + Chromium headless (xuất PNG/PDF) — một lần, ~5–10 phút
@@ -86,18 +114,7 @@ make web                              # terminal 2: build + chạy dashboard htt
 
 Máy có proxy: `export NO_PROXY=localhost,127.0.0.1` (Makefile đã đặt cho `api`/`demo`). Máy yếu: đừng chạy `make web` (build) cùng lúc với `make test` hay `make demo`.
 
-**AI Analyst (tuỳ chọn)** — `cp web/.env.example web/.env.local`, rồi điền một trong hai:
-
-```dotenv
-API_URL=http://127.0.0.1:8000
-GROQ_API_KEY=gsk_...                       # lựa chọn 1 — Groq
-GROQ_MODEL=llama-3.3-70b-versatile
-OPENAI_COMPATIBLE_BASE_URL=                # lựa chọn 2 — OpenRouter, Together, Ollama http://localhost:11434/v1, LM Studio…
-OPENAI_COMPATIBLE_MODEL=
-OPENAI_COMPATIBLE_API_KEY=
-```
-
-Không có khoá → AI chạy **offline** bằng kết quả engine. Groq được ưu tiên nếu có cả hai. Không commit `.env*`.
+**Trợ lý nội bộ tùy chọn.** Đặt `GROQ_API_KEY` và `GROQ_MODEL`, hoặc `OPENAI_COMPATIBLE_BASE_URL`, `OPENAI_COMPATIBLE_MODEL` và `OPENAI_COMPATIBLE_API_KEY`. Khi mở cổng chat, chế độ không có nhà cung cấp mô hình dùng kết quả cục bộ. Groq được ưu tiên nếu cả hai cấu hình tồn tại. Giữ giá trị thật trong môi trường hoặc tệp cục bộ bị loại khỏi Git.
 
 **Docker** (đã viết, **chưa chạy thử**): `docker compose up --build` → dashboard `http://localhost:3000`, API `http://localhost:8000/docs`; cổng chỉ mở trên 127.0.0.1.
 
@@ -135,7 +152,7 @@ python tools/export_openapi.py
 
 Đầu ra trong `out/<dataset>/`: `results.json`, `pipeline.json`, `quality.json`, `lineage.json`, `provenance.json`, `conformed.json` (khi nhiều nguồn), `clean.parquet`,
 `charts/*.png`, `deck.pptx` / `deck.vi.pptx`, `pitch.md` / `pitch.en.md`, `executive_summary.{md,html,pdf}`, `dashboard.html`.
-Dashboard: **Đề bài** → **Upload** → **Pipeline / Chất lượng / Mô hình** → **Insight / Drivers & What-if / Phân khúc** → **Hỏi AI** → **Quyết định** → **Exports** (chọn Tiếng Việt / English).
+Trong `/lab`, bắt đầu ở Đề bài, nạp dữ liệu, kiểm tra hồ sơ và mô hình rồi mở Quyết định và Xuất báo cáo. Chọn tiếng Việt hoặc tiếng Anh theo nhu cầu nộp bài.
 
 Recipe nhiều nguồn có thể đặt `conform.agg` theo từng cột, ví dụ `{default: sum, columns: {rank: min}}`,
 và `conform.ratios: {tu_chu: [thu, chi]}` để tính tỷ lệ từ tổng thu và tổng chi sau khi ghép tỉnh.
@@ -164,7 +181,7 @@ Nếu dùng PowerShell hoặc cần chỉ định lại cột mục tiêu, chạ
 
 **Mirror tuỳ chọn.** Đặt `KIT_S3_ENDPOINT`, `KIT_S3_BUCKET`, `KIT_S3_ACCESS_KEY_ID` và `KIT_S3_SECRET_ACCESS_KEY` qua môi trường, sau đó chạy `python de.py sync --to s3`. Lệnh dùng DuckDB `httpfs` và ghi Parquet gold vào `gold/` trong bucket. DuckDB + Parquet local là kho chính. Cloudflare R2 Standard có mức miễn phí lưu trữ 10 GB-tháng và không tính phí egress. [Giá Cloudflare R2](https://developers.cloudflare.com/r2/pricing/) · [DuckDB httpfs](https://duckdb.org/docs/current/core_extensions/httpfs/s3api)
 
-**Gói ZIP để nộp.** Mở **Exports → Xuất báo cáo**, chọn ngôn ngữ và **Tạo gói ZIP**. Gói kèm deck, pitch, báo cáo, dashboard và README có checksum. Chromium in dashboard từ web tại `WEB_URL` (mặc định `http://127.0.0.1:3000`) và dùng HTML tĩnh khi web chưa chạy.
+**Gói ZIP của kit.** Mở Xuất báo cáo tại `/lab/report`, chọn ngôn ngữ và tạo gói ZIP. Gói kèm deck, pitch, báo cáo, dashboard và README có mã băm. Chromium dùng địa chỉ web từ `WEB_URL` khi in trang của kit, với HTML tĩnh làm phương án dự phòng.
 
 Khi API và web đang chạy, `python tools/llm_smoke.py --offline --dataset wdi_asean` kiểm tra câu trả lời và Câu chuyện từ engine. `python tools/llm_smoke.py --dataset <id>` kiểm tra model khi đã cấu hình và tự bỏ qua nếu server báo offline.
 
@@ -255,6 +272,8 @@ Thành phần tuỳ chọn `ultralytics` (AGPL-3.0) **không** cài mặc địn
 
 ## English summary
 
+The Vietnam Macro-Financial Monitor asks where capital stalls between revenue, spending, investment and growth. Its six judge sections read a published `monitor.json` on the server. Run `python de.py monitor --deck` from the repository root with the saved source files to produce the snapshot and bilingual pitch. See the [source register](docs/DATA_SOURCES.md) and [rule register](docs/BUSINESS_RULES.md).
+
 **VietLeap Insight Kit** turns a raw dataset plus a problem statement into a reproducible data-engineering pipeline
 (**Ingestion → Storage → Transform → Serving**), statistically tested insights, policy recommendations, a shadcn/ui dashboard,
 an AI analyst with an offline fallback, and a bilingual pitch deck — every number comes from the engine or a DuckDB query.
@@ -265,5 +284,4 @@ an AI analyst with an offline fallback, and a bilingual pitch deck — every num
 - **Analyse** with tests, effect sizes, Bonferroni correction, bootstrap intervals and forecasts with holdout error; associations are never presented as causal effects.
 - **Serve** through FastAPI (read-only SQL), a Next.js dashboard, a static HTML dashboard, executive summaries and `deck.pptx` / `deck.vi.pptx` + Marp pitch (`--lang vi|en|both`).
 
-Quick start: `make setup && make demo`, then `make api` and `make web` (http://localhost:3000). Known gaps (data dictionary export, EDA report file,
-offline data pack, scheduled collection workflow) are listed in `docs/MASTER_PLAN.md` §0. Licence: Apache-2.0. Contributions: see `CONTRIBUTING.md`.
+For the generic kit, run `make setup && make demo`, then `make api` and `make web` (http://localhost:3000). The [roadmap](docs/ROADMAP.md) records the remaining monitor checks. The code is Apache-2.0. See [contribution instructions](CONTRIBUTING.md).

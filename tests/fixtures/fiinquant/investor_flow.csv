@@ -1,0 +1,4 @@
+ticker,timestamp,localIndividualNetMatchVolume,foreignIndividualNetMatchVolume,localInstitutionalNetMatchVolume,foreignInstitutionalNetMatchVolume,localIndividualNetMatchValue,foreignIndividualNetMatchValue,localInstitutionalNetMatchValue,foreignInstitutionalNetMatchValue,proprietaryNetTotalMatchVolume,proprietaryNetTotalMatchValue
+ACB,2026-11-18 00:00,,,,,,,,,-2919820.0,-58967216000.0
+ACB,2026-11-12 00:00,,,,,,,,,-99200.0,-2016350000.0
+ACB,2026-11-06 00:00,,,,,,,,,-435400.0,-8826365000.0

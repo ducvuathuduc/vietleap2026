@@ -1,6 +1,7 @@
 import { generateText } from "ai"
 import { z } from "zod"
 
+import { guardApi } from "@/lib/api-guard"
 import { rateLimited } from "@/lib/rate-limit"
 
 import type { Brief, DatasetDetail, Insight, Recommendation } from "@/lib/api/types"
@@ -24,6 +25,8 @@ const Body = z.object({
  * story; both are passed through untouched — the brief is user text and never reaches the model prompt.
  */
 export async function POST(req: Request) {
+  const denied = guardApi(req)
+  if (denied) return denied
   const limited = rateLimited(req)
   if (limited) return limited
   let body: z.infer<typeof Body>

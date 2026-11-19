@@ -77,7 +77,7 @@ export function NavDocuments({
           </SidebarMenuItem>
         ))}
         <SidebarMenuItem>
-          <SidebarMenuButton className="text-sidebar-foreground/70" render={<Link href="/report" />}>
+          <SidebarMenuButton className="text-sidebar-foreground/70" render={<Link href="/lab/report" />}>
             <MoreHorizontalIcon className="text-sidebar-foreground/70" />
             <span>Xuất báo cáo</span>
           </SidebarMenuButton>

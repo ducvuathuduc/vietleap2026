@@ -28,7 +28,7 @@ from .warehouse import KIT
 
 AUTH_ENV_PREFIX = "KIT_TOKEN_"
 CV_OPTION_KEYS = {"every", "stride", "line", "classes", "start", "conf", "model"}
-NET_KINDS = {"api", "scrape", "social"}
+NET_KINDS = {"api", "scrape", "social", "tinyfish"}
 PATH_KINDS = {"file", "cv"}
 
 
@@ -110,6 +110,8 @@ def guard_source(src) -> None:
             raise SourceRejected("render_js is not allowed through the API (browser redirects cannot be checked)")
         if o.get("auth_env") and not str(o["auth_env"]).startswith(AUTH_ENV_PREFIX):
             raise SourceRejected(f"auth_env must name a variable starting with {AUTH_ENV_PREFIX}")
+        if src.kind == "tinyfish" and o.get("api_key"):
+            raise SourceRejected("tinyfish reads TINYFISH_API_KEY from the environment; api_key in options is refused")
     elif src.kind in PATH_KINDS:
         src.uri = str(check_path(src.uri))
         if src.kind == "cv":

@@ -1,56 +1,99 @@
-"use client"
+import type { Metadata } from "next"
 
-import { BriefQuestionCard } from "@/components/brief-question-card"
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
-import { useDataset } from "@/components/dataset-provider"
-import { ProvinceRankingCard } from "@/components/province-ranking-card"
-import { SectionCards } from "@/components/section-cards"
-import { ErrorState, LoadingState, PageShell } from "@/components/state"
-import { useAsync } from "@/hooks/use-async"
-import { api } from "@/lib/api/client"
+import { InsightCard } from "@/components/judge/insight-card"
+import { KpiTile } from "@/components/judge/kpi-tile"
+import { PageHeader } from "@/components/judge/page-header"
+import { SiteFooter } from "@/components/judge/site-footer"
+import { TrustLine } from "@/components/judge/trust-line"
+import { WatchList } from "@/components/judge/watch-list"
+import { PageShell } from "@/components/state"
 
-export default function OverviewPage() {
-  const { datasetId, detail, error } = useDataset()
-  const ts = useAsync(() => (datasetId ? api.timeseries(datasetId) : null), [datasetId])
-  const ins = useAsync(() => (datasetId ? api.insights(datasetId) : null), [datasetId])
-  const prof = useAsync(() => (datasetId ? api.profile(datasetId) : null), [datasetId])
-  if (error) return <PageShell><ErrorState error={error} /></PageShell>
-  const meta = detail?.meta
+import { overviewPage } from "./_lib/overview"
+import { JudgeEmpty, JudgeFigure, readMonitor } from "./judge-screen"
+
+export const metadata: Metadata = {
+  title: "Tổng quan",
+  description: "Vốn của nền kinh tế đang kẹt ở đâu trên đường từ nguồn thu đến chi tiêu, đầu tư và tăng trưởng.",
+}
+
+export default async function Page() {
+  const monitor = await readMonitor()
+  if (!monitor) return <JudgeEmpty />
+
+  const model = overviewPage(monitor)
   return (
     <PageShell>
-      {datasetId && detail && (
-        <div className="px-4 lg:px-6">
-          <BriefQuestionCard datasetId={datasetId} hasBrief={detail.has_brief} />
-        </div>
-      )}
-      <SectionCards kpis={detail?.kpis} />
-      <div className="px-4 lg:px-6">
-        <ChartAreaInteractive
-          points={ts.data?.points}
-          title={meta ? `Diễn biến ${meta.target} theo thời gian` : "Xu hướng theo thời gian"}
-          subtitle={meta?.time_col ? `${meta.time_col} · ${ts.data?.freq ?? ""} · ${meta.source_file}` : "Chưa xác định cột thời gian"}
-          metricLabel={meta?.target ?? "value"}
-          gaps={ts.data?.gaps}
+      <div className="mx-auto w-full max-w-[1200px] space-y-6 px-4 md:space-y-8 md:px-6">
+        <PageHeader
+          level={model.level}
+          headline={model.headline}
+          lead={model.lead}
+          generatedAt={model.generatedAt}
+          actions={model.actions}
         />
+
+        {model.kpis.length ? (
+          <section aria-label="Chỉ số chính" className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+              {model.kpis.map((kpi) => (
+                <KpiTile
+                  key={kpi.id}
+                  name={kpi.name}
+                  value={kpi.value}
+                  unit={kpi.unit}
+                  period={kpi.period}
+                  change={kpi.change}
+                  sparkline={kpi.sparkline}
+                />
+              ))}
+            </div>
+            {model.kpiTrust ? <TrustLine {...model.kpiTrust} /> : null}
+          </section>
+        ) : null}
+
+        {model.cards.length ? (
+          <section aria-label="Kết luận chính" className="grid gap-4 md:grid-cols-3">
+            {model.cards.map((card, index) => (
+              <InsightCard
+                key={`${card.sentence}-${index}`}
+                eyebrow={card.eyebrow}
+                value={card.value}
+                unit={card.unit}
+                period={card.period}
+                sentence={card.sentence}
+                action={card.action}
+                source={card.source}
+                indicatorHref={card.indicatorHref}
+              />
+            ))}
+          </section>
+        ) : null}
+
+        {model.figure ? <JudgeFigure figure={model.figure} /> : null}
+
+        <WatchList items={model.watch} />
+
+        {model.recommendations.length ? (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-xl font-semibold">Khuyến nghị</h2>
+            <ul className="flex flex-col gap-3">
+              {model.recommendations.map((item) => (
+                <li key={item.id} className="flex flex-col gap-0.5 text-sm">
+                  <a
+                    href={item.href}
+                    className="w-fit underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {item.title}
+                  </a>
+                  {item.meta ? <span className="text-xs text-muted-foreground">{item.meta}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <SiteFooter sources={model.footer.sources} generatedAt={model.footer.generatedAt} />
       </div>
-      {datasetId && (
-        <div className="px-4 lg:px-6">
-          <ProvinceRankingCard datasetId={datasetId} silentOnMissing />
-        </div>
-      )}
-      {ins.error ? (
-        <ErrorState error={ins.error} />
-      ) : ins.data && datasetId && prof.data ? (
-        <DataTable
-          insights={ins.data.insights}
-          recommendations={ins.data.recommendations}
-          cleaningLog={prof.data.cleaning_log}
-          datasetId={datasetId}
-        />
-      ) : (
-        <LoadingState rows={1} />
-      )}
     </PageShell>
   )
 }

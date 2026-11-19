@@ -1,0 +1,831 @@
+- id: nsnn_thu_level
+  name_vi: Thu ngân sách nhà nước trong tháng
+  sector: public_finance
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: level
+  definition_vi: Thu ngân sách nhà nước trong tháng. Số phát sinh riêng trong tháng.
+  note_vi: Số phát sinh riêng trong tháng.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_thu
+- id: nsnn_thu_ytd
+  name_vi: Thu ngân sách nhà nước lũy kế
+  sector: public_finance
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Thu ngân sách nhà nước lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo
+    cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_thu
+- id: nsnn_thu_pct_plan
+  name_vi: Thu ngân sách nhà nước so với dự toán hoặc kế hoạch
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: pct_plan
+  definition_vi: Thu ngân sách nhà nước so với dự toán hoặc kế hoạch. Tỷ lệ trên dự
+    toán hoặc kế hoạch năm của phạm vi báo cáo.
+  note_vi: Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_thu
+- id: nsnn_thu_yoy
+  name_vi: Thu ngân sách nhà nước so với cùng kỳ
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Thu ngân sách nhà nước so với cùng kỳ. Tăng hoặc giảm so với cùng
+    kỳ năm trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_thu
+- id: nsnn_chi_level
+  name_vi: Chi ngân sách nhà nước trong tháng
+  sector: public_finance
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: level
+  definition_vi: Chi ngân sách nhà nước trong tháng. Số phát sinh riêng trong tháng.
+  note_vi: Số phát sinh riêng trong tháng.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_chi
+- id: nsnn_chi_ytd
+  name_vi: Chi ngân sách nhà nước lũy kế
+  sector: public_finance
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Chi ngân sách nhà nước lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo
+    cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_chi
+- id: nsnn_chi_pct_plan
+  name_vi: Chi ngân sách nhà nước so với dự toán hoặc kế hoạch
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: pct_plan
+  definition_vi: Chi ngân sách nhà nước so với dự toán hoặc kế hoạch. Tỷ lệ trên dự
+    toán hoặc kế hoạch năm của phạm vi báo cáo.
+  note_vi: Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_chi
+- id: nsnn_chi_yoy
+  name_vi: Chi ngân sách nhà nước so với cùng kỳ
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Chi ngân sách nhà nước so với cùng kỳ. Tăng hoặc giảm so với cùng
+    kỳ năm trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: nsnn_chi
+- id: dtc_giai_ngan_level
+  name_vi: Giải ngân đầu tư công trong tháng
+  sector: public_finance
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: level
+  definition_vi: Giải ngân đầu tư công trong tháng. Số phát sinh riêng trong tháng.
+  note_vi: Số phát sinh riêng trong tháng.
+  source_id: nso
+  higher_is_better: true
+  base_id: dtc_giai_ngan
+- id: dtc_giai_ngan_ytd
+  name_vi: Giải ngân đầu tư công lũy kế
+  sector: public_finance
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Giải ngân đầu tư công lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo
+    cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: dtc_giai_ngan
+- id: dtc_giai_ngan_pct_plan
+  name_vi: Giải ngân đầu tư công so với dự toán hoặc kế hoạch
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: pct_plan
+  definition_vi: Giải ngân đầu tư công so với dự toán hoặc kế hoạch. Tỷ lệ trên dự
+    toán hoặc kế hoạch năm của phạm vi báo cáo.
+  note_vi: Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: dtc_giai_ngan
+- id: dtc_giai_ngan_yoy
+  name_vi: Giải ngân đầu tư công so với cùng kỳ
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Giải ngân đầu tư công so với cùng kỳ. Tăng hoặc giảm so với cùng
+    kỳ năm trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: dtc_giai_ngan
+- id: fdi_dang_ky_ytd
+  name_vi: Vốn FDI đăng ký lũy kế
+  sector: fdi
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Vốn FDI đăng ký lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: fdi_dang_ky
+- id: fdi_dang_ky_yoy
+  name_vi: Vốn FDI đăng ký so với cùng kỳ
+  sector: fdi
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Vốn FDI đăng ký so với cùng kỳ. Tăng hoặc giảm so với cùng kỳ năm
+    trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: fdi_dang_ky
+- id: fdi_thuc_hien_ytd
+  name_vi: Vốn FDI thực hiện lũy kế
+  sector: fdi
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Vốn FDI thực hiện lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: fdi_thuc_hien
+- id: fdi_thuc_hien_yoy
+  name_vi: Vốn FDI thực hiện so với cùng kỳ
+  sector: fdi
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Vốn FDI thực hiện so với cùng kỳ. Tăng hoặc giảm so với cùng kỳ năm
+    trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: fdi_thuc_hien
+- id: fdi_cap_moi_ytd
+  name_vi: Vốn FDI cấp mới lũy kế
+  sector: fdi
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Vốn FDI cấp mới lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: fdi_cap_moi
+- id: fdi_dieu_chinh_ytd
+  name_vi: Vốn FDI điều chỉnh lũy kế
+  sector: fdi
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Vốn FDI điều chỉnh lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: fdi_dieu_chinh
+- id: fdi_gop_von_ytd
+  name_vi: Vốn góp và mua cổ phần của nhà đầu tư nước ngoài lũy kế
+  sector: fdi
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Vốn góp và mua cổ phần của nhà đầu tư nước ngoài lũy kế. Cộng dồn
+    từ đầu năm đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: fdi_gop_von
+- id: cpi_mom
+  name_vi: Chỉ số giá tiêu dùng so với tháng trước
+  sector: macro
+  unit: '%'
+  frequency: monthly
+  measure_type: mom
+  definition_vi: Chỉ số giá tiêu dùng so với tháng trước. Tăng hoặc giảm so với tháng
+    liền trước.
+  note_vi: Tăng hoặc giảm so với tháng liền trước.
+  source_id: nso
+  higher_is_better: false
+  base_id: cpi
+- id: cpi_yoy
+  name_vi: Chỉ số giá tiêu dùng so với cùng kỳ
+  sector: macro
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Chỉ số giá tiêu dùng so với cùng kỳ. Tăng hoặc giảm so với cùng kỳ
+    năm trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: false
+  base_id: cpi
+- id: cpi_avg_ytd
+  name_vi: Chỉ số giá tiêu dùng bình quân lũy kế
+  sector: macro
+  unit: '%'
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Chỉ số giá tiêu dùng bình quân lũy kế. Biến động bình quân từ đầu
+    năm so với cùng kỳ năm trước.
+  note_vi: Biến động bình quân từ đầu năm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: false
+  base_id: cpi
+- id: iip_mom
+  name_vi: Chỉ số sản xuất công nghiệp so với tháng trước
+  sector: macro
+  unit: '%'
+  frequency: monthly
+  measure_type: mom
+  definition_vi: Chỉ số sản xuất công nghiệp so với tháng trước. Tăng hoặc giảm so
+    với tháng liền trước.
+  note_vi: Tăng hoặc giảm so với tháng liền trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: iip
+- id: iip_yoy
+  name_vi: Chỉ số sản xuất công nghiệp so với cùng kỳ
+  sector: macro
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Chỉ số sản xuất công nghiệp so với cùng kỳ. Tăng hoặc giảm so với
+    cùng kỳ năm trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: iip
+- id: ban_le_level
+  name_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng trong tháng
+  sector: macro
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: level
+  definition_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng trong tháng. Số phát sinh riêng
+    trong tháng.
+  note_vi: Số phát sinh riêng trong tháng.
+  source_id: nso
+  higher_is_better: true
+  base_id: ban_le
+- id: ban_le_ytd
+  name_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng lũy kế
+  sector: macro
+  unit: nghìn tỷ đồng
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng lũy kế. Cộng dồn từ đầu năm
+    đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: ban_le
+- id: ban_le_yoy
+  name_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng so với cùng kỳ
+  sector: macro
+  unit: '%'
+  frequency: monthly
+  measure_type: yoy
+  definition_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng so với cùng kỳ. Tăng hoặc giảm
+    so với cùng kỳ năm trước.
+  note_vi: Tăng hoặc giảm so với cùng kỳ năm trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: ban_le
+- id: ban_le_mom
+  name_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng so với tháng trước
+  sector: macro
+  unit: '%'
+  frequency: monthly
+  measure_type: mom
+  definition_vi: Doanh thu bán lẻ và dịch vụ tiêu dùng so với tháng trước. Tăng hoặc
+    giảm so với tháng liền trước.
+  note_vi: Tăng hoặc giảm so với tháng liền trước.
+  source_id: nso
+  higher_is_better: true
+  base_id: ban_le
+- id: xuat_khau_level
+  name_vi: Kim ngạch xuất khẩu trong tháng
+  sector: macro
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: level
+  definition_vi: Kim ngạch xuất khẩu trong tháng. Số phát sinh riêng trong tháng.
+  note_vi: Số phát sinh riêng trong tháng.
+  source_id: nso
+  higher_is_better: true
+  base_id: xuat_khau
+- id: xuat_khau_ytd
+  name_vi: Kim ngạch xuất khẩu lũy kế
+  sector: macro
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Kim ngạch xuất khẩu lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: xuat_khau
+- id: nhap_khau_level
+  name_vi: Kim ngạch nhập khẩu trong tháng
+  sector: macro
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: level
+  definition_vi: Kim ngạch nhập khẩu trong tháng. Số phát sinh riêng trong tháng.
+  note_vi: Số phát sinh riêng trong tháng.
+  source_id: nso
+  higher_is_better: false
+  base_id: nhap_khau
+- id: nhap_khau_ytd
+  name_vi: Kim ngạch nhập khẩu lũy kế
+  sector: macro
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Kim ngạch nhập khẩu lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: false
+  base_id: nhap_khau
+- id: can_can_thuong_mai_level
+  name_vi: Cán cân thương mại hàng hóa trong tháng
+  sector: macro
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: level
+  definition_vi: Cán cân thương mại hàng hóa trong tháng. Số phát sinh riêng trong
+    tháng.
+  note_vi: Số phát sinh riêng trong tháng.
+  source_id: nso
+  higher_is_better: true
+  base_id: can_can_thuong_mai
+- id: can_can_thuong_mai_ytd
+  name_vi: Cán cân thương mại hàng hóa lũy kế
+  sector: macro
+  unit: tỷ USD
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Cán cân thương mại hàng hóa lũy kế. Cộng dồn từ đầu năm đến hết kỳ
+    báo cáo.
+  note_vi: Cộng dồn từ đầu năm đến hết kỳ báo cáo.
+  source_id: nso
+  higher_is_better: true
+  base_id: can_can_thuong_mai
+- id: gdp_per_capita_usd
+  name_vi: GDP bình quân đầu người
+  sector: asean
+  unit: USD
+  frequency: annual
+  measure_type: level
+  definition_vi: GDP bình quân đầu người. USD hiện hành chịu ảnh hưởng của tỷ giá.
+  note_vi: USD hiện hành chịu ảnh hưởng của tỷ giá.
+  source_id: wdi
+  higher_is_better: true
+- id: gdp_growth_pct
+  name_vi: Tăng trưởng GDP thực
+  sector: asean
+  unit: '%'
+  frequency: annual
+  measure_type: level
+  definition_vi: Tăng trưởng GDP thực. Tốc độ tăng hằng năm theo giá so sánh.
+  note_vi: Tốc độ tăng hằng năm theo giá so sánh.
+  source_id: wdi
+  higher_is_better: true
+- id: revenue_pct_gdp
+  name_vi: Thu ngân sách trên GDP
+  sector: asean
+  unit: '% GDP'
+  frequency: annual
+  measure_type: level
+  definition_vi: Thu ngân sách trên GDP. Phạm vi ngân sách có thể khác giữa các nền
+    kinh tế.
+  note_vi: Phạm vi ngân sách có thể khác giữa các nền kinh tế.
+  source_id: wdi
+  higher_is_better: true
+- id: tax_revenue_pct_gdp
+  name_vi: Thu thuế trên GDP
+  sector: asean
+  unit: '% GDP'
+  frequency: annual
+  measure_type: level
+  definition_vi: Thu thuế trên GDP. Độ phủ Việt Nam phụ thuộc vào kỳ công bố WDI.
+  note_vi: Độ phủ Việt Nam phụ thuộc vào kỳ công bố WDI.
+  source_id: wdi
+  higher_is_better: true
+- id: expense_pct_gdp
+  name_vi: Chi phí ngân sách trên GDP
+  sector: asean
+  unit: '% GDP'
+  frequency: annual
+  measure_type: level
+  definition_vi: Chi phí ngân sách trên GDP. Phạm vi theo phân loại ngân sách của
+    WDI.
+  note_vi: Phạm vi theo phân loại ngân sách của WDI.
+  source_id: wdi
+  higher_is_better: false
+- id: net_lending_pct_gdp
+  name_vi: Cho vay ròng trên GDP
+  sector: asean
+  unit: '% GDP'
+  frequency: annual
+  measure_type: level
+  definition_vi: Cho vay ròng trên GDP. Giá trị âm là vay ròng.
+  note_vi: Giá trị âm là vay ròng.
+  source_id: wdi
+  higher_is_better: true
+- id: central_gov_debt_pct_gdp
+  name_vi: Nợ chính phủ trung ương trên GDP
+  sector: asean
+  unit: '% GDP'
+  frequency: annual
+  measure_type: level
+  definition_vi: Nợ chính phủ trung ương trên GDP. Phạm vi gồm chính phủ trung ương.
+  note_vi: Phạm vi gồm chính phủ trung ương.
+  source_id: wdi
+  higher_is_better: false
+- id: population
+  name_vi: Dân số
+  sector: asean
+  unit: người
+  frequency: annual
+  measure_type: level
+  definition_vi: Dân số. Dùng để đọc quy mô và các chỉ tiêu bình quân.
+  note_vi: Dùng để đọc quy mô và các chỉ tiêu bình quân.
+  source_id: wdi
+  higher_is_better: true
+- id: urban_pop_pct
+  name_vi: Tỷ lệ dân số thành thị
+  sector: asean
+  unit: '%'
+  frequency: annual
+  measure_type: level
+  definition_vi: Tỷ lệ dân số thành thị. Định nghĩa khu vực thành thị theo từng nền
+    kinh tế.
+  note_vi: Định nghĩa khu vực thành thị theo từng nền kinh tế.
+  source_id: wdi
+  higher_is_better: true
+- id: inflation_pct
+  name_vi: Lạm phát giá tiêu dùng
+  sector: asean
+  unit: '%'
+  frequency: annual
+  measure_type: level
+  definition_vi: Lạm phát giá tiêu dùng. Tốc độ thay đổi chỉ số giá tiêu dùng hằng
+    năm.
+  note_vi: Tốc độ thay đổi chỉ số giá tiêu dùng hằng năm.
+  source_id: wdi
+  higher_is_better: false
+- id: fdi_inflow_pct_gdp
+  name_vi: FDI vào ròng trên GDP
+  sector: asean
+  unit: '% GDP'
+  frequency: annual
+  measure_type: level
+  definition_vi: FDI vào ròng trên GDP. Dòng vốn ròng theo cán cân thanh toán.
+  note_vi: Dòng vốn ròng theo cán cân thanh toán.
+  source_id: wdi
+  higher_is_better: true
+- id: education_spend_pct_gdp
+  name_vi: Chi giáo dục trên GDP
+  sector: asean
+  unit: '% GDP'
+  frequency: annual
+  measure_type: level
+  definition_vi: Chi giáo dục trên GDP. Phạm vi công bố theo chỉ tiêu WDI.
+  note_vi: Phạm vi công bố theo chỉ tiêu WDI.
+  source_id: wdi
+  higher_is_better: true
+- id: earmarked_transfers
+  name_vi: Tổng bổ sung có mục tiêu từ ngân sách trung ương
+  sector: province
+  unit: tỷ đồng
+  frequency: annual
+  measure_type: level
+  definition_vi: Tổng bổ sung có mục tiêu từ ngân sách trung ương. Dự toán đã gộp
+    về địa giới 34 tỉnh. Số lớn hơn biểu thị quy mô phân bổ lớn hơn.
+  note_vi: Dự toán đã gộp về địa giới 34 tỉnh. Số lớn hơn biểu thị quy mô phân bổ
+    lớn hơn.
+  source_id: transfers
+  higher_is_better: true
+- id: earmarked_capex
+  name_vi: Bổ sung vốn đầu tư
+  sector: province
+  unit: tỷ đồng
+  frequency: annual
+  measure_type: level
+  definition_vi: Bổ sung vốn đầu tư. Dự toán theo phụ lục, đã gộp về địa giới 34 tỉnh.
+  note_vi: Dự toán theo phụ lục, đã gộp về địa giới 34 tỉnh.
+  source_id: transfers
+  higher_is_better: true
+- id: earmarked_current
+  name_vi: Bổ sung vốn sự nghiệp
+  sector: province
+  unit: tỷ đồng
+  frequency: annual
+  measure_type: level
+  definition_vi: Bổ sung vốn sự nghiệp. Dự toán theo phụ lục, đã gộp về địa giới 34
+    tỉnh.
+  note_vi: Dự toán theo phụ lục, đã gộp về địa giới 34 tỉnh.
+  source_id: transfers
+  higher_is_better: true
+- id: earmarked_programs
+  name_vi: Bổ sung kinh phí chương trình mục tiêu quốc gia
+  sector: province
+  unit: tỷ đồng
+  frequency: annual
+  measure_type: level
+  definition_vi: Bổ sung kinh phí chương trình mục tiêu quốc gia. Dự toán theo phụ
+    lục, đã gộp về địa giới 34 tỉnh.
+  note_vi: Dự toán theo phụ lục, đã gộp về địa giới 34 tỉnh.
+  source_id: transfers
+  higher_is_better: true
+- id: credit_ytd
+  name_vi: Tăng trưởng dư nợ tín dụng từ đầu năm
+  sector: banking
+  unit: '%'
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Tăng trưởng dư nợ tín dụng từ đầu năm. Mốc so sánh là cuối năm trước.
+  note_vi: Mốc so sánh là cuối năm trước.
+  source_id: sbv
+  higher_is_better: true
+- id: sbv_credit_balance
+  name_vi: Dư nợ tín dụng đối với nền kinh tế
+  sector: banking
+  unit: tỷ đồng
+  frequency: monthly
+  measure_type: level
+  definition_vi: Dư nợ tín dụng đối với nền kinh tế. Số dư cuối kỳ phân theo ngành.
+  note_vi: Số dư cuối kỳ phân theo ngành.
+  source_id: sbv
+  higher_is_better: true
+- id: deposit_ytd
+  name_vi: Tăng trưởng huy động tiền gửi từ đầu năm
+  sector: banking
+  unit: '%'
+  frequency: monthly
+  measure_type: ytd
+  definition_vi: Tăng trưởng huy động tiền gửi từ đầu năm. Đối chiếu với tín dụng
+    cùng phạm vi và kỳ.
+  note_vi: Đối chiếu với tín dụng cùng phạm vi và kỳ.
+  source_id: press
+  higher_is_better: true
+- id: bank_npl
+  name_vi: Tỷ lệ nợ xấu
+  sector: banking
+  unit: '%'
+  frequency: quarterly
+  measure_type: ratio
+  definition_vi: Tỷ lệ nợ xấu. Theo phạm vi báo cáo hợp nhất của từng ngân hàng.
+  note_vi: Theo phạm vi báo cáo hợp nhất của từng ngân hàng.
+  source_id: tcbs
+  higher_is_better: false
+- id: bank_group2
+  name_vi: Tỷ lệ nợ nhóm 2
+  sector: banking
+  unit: '%'
+  frequency: quarterly
+  measure_type: ratio
+  definition_vi: Tỷ lệ nợ nhóm 2. Tỷ lệ nợ cần chú ý trên dư nợ.
+  note_vi: Tỷ lệ nợ cần chú ý trên dư nợ.
+  source_id: tcbs
+  higher_is_better: false
+- id: bank_coverage
+  name_vi: Tỷ lệ bao phủ nợ xấu
+  sector: banking
+  unit: '%'
+  frequency: quarterly
+  measure_type: ratio
+  definition_vi: Tỷ lệ bao phủ nợ xấu. Dự phòng trên số dư nợ xấu, tỷ lệ có thể vượt
+    100%.
+  note_vi: Dự phòng trên số dư nợ xấu, tỷ lệ có thể vượt 100%.
+  source_id: tcbs
+  higher_is_better: true
+- id: margin_debt
+  name_vi: Dư nợ cho vay ký quỹ
+  sector: capital_market
+  unit: tỷ đồng
+  frequency: quarterly
+  measure_type: level
+  definition_vi: Dư nợ cho vay ký quỹ. Đối chiếu cùng nhóm công ty chứng khoán qua
+    các kỳ.
+  note_vi: Đối chiếu cùng nhóm công ty chứng khoán qua các kỳ.
+  source_id: press
+  higher_is_better: false
+- id: re_absorption
+  name_vi: Tỷ lệ hấp thụ căn hộ
+  sector: real_estate
+  unit: '%'
+  frequency: quarterly
+  measure_type: level
+  definition_vi: Tỷ lệ hấp thụ căn hộ. Giữ cùng rổ địa lý, phân khúc và cách tính
+    qua các kỳ.
+  note_vi: Giữ cùng rổ địa lý, phân khúc và cách tính qua các kỳ.
+  source_id: press
+  higher_is_better: true
+- id: re_new_supply
+  name_vi: Nguồn cung căn hộ mới
+  sector: real_estate
+  unit: căn
+  frequency: quarterly
+  measure_type: level
+  definition_vi: Nguồn cung căn hộ mới. Rổ địa lý có thể thay đổi sau sáp nhập.
+  note_vi: Rổ địa lý có thể thay đổi sau sáp nhập.
+  source_id: press
+  higher_is_better: true
+- id: mortgage_rate
+  name_vi: Lãi suất vay mua nhà
+  sector: real_estate
+  unit: '%'
+  frequency: quarterly
+  measure_type: level
+  definition_vi: Lãi suất vay mua nhà. Đối chiếu cùng thời hạn ưu đãi và cùng kỳ.
+  note_vi: Đối chiếu cùng thời hạn ưu đãi và cùng kỳ.
+  source_id: press
+  higher_is_better: false
+- id: vnindex_close
+  name_vi: Điểm đóng cửa VN-Index
+  sector: capital_market
+  unit: điểm
+  frequency: daily
+  measure_type: index
+  definition_vi: Điểm đóng cửa VN-Index. Phiên giao dịch có giá đóng cửa trong dữ
+    liệu ngày.
+  note_vi: Phiên giao dịch có giá đóng cửa trong dữ liệu ngày.
+  source_id: fiinquant
+  higher_is_better: true
+- id: vnindex_pe
+  name_vi: P/E VN-Index
+  sector: capital_market
+  unit: lần
+  frequency: daily
+  measure_type: ratio
+  definition_vi: P/E VN-Index. Chỉ số định giá do FiinGroup cung cấp.
+  note_vi: Chỉ số định giá do FiinGroup cung cấp.
+  source_id: fiinquant
+  higher_is_better: true
+- id: vnindex_pb
+  name_vi: P/B VN-Index
+  sector: capital_market
+  unit: lần
+  frequency: daily
+  measure_type: ratio
+  definition_vi: P/B VN-Index. Chỉ số định giá do FiinGroup cung cấp.
+  note_vi: Chỉ số định giá do FiinGroup cung cấp.
+  source_id: fiinquant
+  higher_is_better: true
+- id: market_liquidity_20d
+  name_vi: Giá trị giao dịch bình quân 20 phiên
+  sector: capital_market
+  unit: tỷ đồng
+  frequency: daily
+  measure_type: level
+  definition_vi: Giá trị giao dịch bình quân 20 phiên. Bình quân giá trị giao dịch
+    của các mã theo dõi trong 20 phiên.
+  note_vi: Bình quân giá trị giao dịch của các mã theo dõi trong 20 phiên.
+  source_id: fiinquant
+  higher_is_better: true
+- id: market_liquidity_pctile
+  name_vi: Phân vị thanh khoản bình quân 20 phiên
+  sector: capital_market
+  unit: '%'
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Phân vị thanh khoản bình quân 20 phiên. So với phân bố của chỉ tiêu
+    trong một năm giao dịch.
+  note_vi: So với phân bố của chỉ tiêu trong một năm giao dịch.
+  source_id: fiinquant
+  higher_is_better: true
+- id: market_breadth
+  name_vi: Tỷ trọng mã tăng giá
+  sector: capital_market
+  unit: '%'
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Tỷ trọng mã tăng giá. Đếm các cổ phiếu HOSE có giá trong cả hai phiên
+    so sánh.
+  note_vi: Đếm các cổ phiếu HOSE có giá trong cả hai phiên so sánh.
+  source_id: fiinquant
+  higher_is_better: true
+- id: foreign_net_20d
+  name_vi: Giá trị mua ròng khối ngoại 20 phiên
+  sector: capital_market
+  unit: tỷ đồng
+  frequency: daily
+  measure_type: level
+  definition_vi: Giá trị mua ròng khối ngoại 20 phiên. Tổng giá trị mua trừ bán trên
+    các mã có dữ liệu.
+  note_vi: Tổng giá trị mua trừ bán trên các mã có dữ liệu.
+  source_id: fiinquant
+  higher_is_better: true
+- id: foreign_net_60d
+  name_vi: Giá trị mua ròng khối ngoại 60 phiên
+  sector: capital_market
+  unit: tỷ đồng
+  frequency: daily
+  measure_type: level
+  definition_vi: Giá trị mua ròng khối ngoại 60 phiên. Tổng giá trị mua trừ bán trên
+    các mã có dữ liệu.
+  note_vi: Tổng giá trị mua trừ bán trên các mã có dữ liệu.
+  source_id: fiinquant
+  higher_is_better: true
+- id: vnindex_drawdown
+  name_vi: Mức giảm của VN-Index từ đỉnh
+  sector: capital_market
+  unit: '%'
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Chênh lệch tương đối giữa mức đóng cửa và đỉnh đóng cửa trong 52 tuần gần nhất.
+  note_vi: Cửa sổ 52 tuần tính đến phiên quan sát.
+  source_id: fiinquant
+  higher_is_better: true
+- id: vnindex_pe_pctile
+  name_vi: Phân vị P/E của VN-Index
+  sector: capital_market
+  unit: '%'
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Phân vị P/E của VN-Index. Phân vị thực nghiệm trong lịch sử tối đa
+    5 năm.
+  note_vi: Phân vị thực nghiệm trong lịch sử tối đa 5 năm.
+  source_id: fiinquant
+  higher_is_better: true
+- id: vnindex_pb_pctile
+  name_vi: Phân vị P/B của VN-Index
+  sector: capital_market
+  unit: '%'
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Phân vị P/B của VN-Index. Phân vị thực nghiệm trong lịch sử tối đa
+    5 năm.
+  note_vi: Phân vị thực nghiệm trong lịch sử tối đa 5 năm.
+  source_id: fiinquant
+  higher_is_better: true
+- id: bank_pb_pctile
+  name_vi: Phân vị P/B ngành ngân hàng
+  sector: banking
+  unit: '%'
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Phân vị P/B ngành ngân hàng. Phân vị của P/B ngành trong lịch sử
+    tối đa 5 năm.
+  note_vi: Phân vị của P/B ngành trong lịch sử tối đa 5 năm.
+  source_id: fiinquant
+  higher_is_better: true
+
+- id: budget_time_pace
+  name_vi: Mốc tiến độ theo tháng
+  sector: public_finance
+  unit: '%'
+  frequency: monthly
+  measure_type: pct_plan
+  definition_vi: Số tháng đã qua chia cho số tháng trong năm.
+  note_vi: Mốc tham chiếu theo thời gian, độc lập với lịch thanh toán.
+  source_id: nso
+  higher_is_better: true
+
+- id: bank_sector_pb
+  name_vi: P/B ngành ngân hàng
+  sector: banking
+  unit: lần
+  frequency: daily
+  measure_type: ratio
+  definition_vi: Giá thị trường chia giá trị sổ sách theo rổ ngành ngân hàng.
+  note_vi: Dùng rổ ngành do FiinQuant công bố.
+  source_id: fiinquant
+  higher_is_better: true
+
+- id: bank_nim_median
+  name_vi: Biên lãi ròng trung vị
+  sector: banking
+  unit: '%'
+  frequency: quarterly
+  measure_type: ratio
+  definition_vi: Trung vị biên lãi ròng của các ngân hàng có số liệu trong cùng quý.
+  note_vi: Cỡ nhóm là số ngân hàng có chỉ tiêu trong bảng so sánh.
+  source_id: fiinquant
+  higher_is_better: true

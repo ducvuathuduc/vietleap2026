@@ -48,7 +48,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     res = await fetch(`${BASE}${path}`, { ...init, cache: "no-store" })
   } catch (e) {
-    throw new ApiError(0, `Cannot reach the analysis API (${(e as Error).message}). Is the backend running on port 8000?`)
+    throw new ApiError(0, `Không kết nối được API phân tích (${(e as Error).message}). Backend đã chạy ở cổng 8000 chưa?`)
   }
   if (!res.ok) {
     let detail = res.statusText

@@ -129,7 +129,7 @@ type InsightRow = z.infer<typeof schema> & { insight: Insight }
 export function toRows(insights: Insight[]): InsightRow[] {
   return insights.map((i) => ({
     id: i.rank,
-    header: i.title_en,
+    header: i.title_vi,
     type: i.type.replace("_", " "),
     status: i.p_value === null ? "Descriptive" : i.p_value < 0.05 ? "Significant" : "Not significant",
     target: i.effect === null ? "–" : i.effect.toFixed(2),
@@ -153,7 +153,7 @@ function DragHandle({ id }: { id: number }) {
       className="size-7 text-muted-foreground hover:bg-transparent"
     >
       <GripVerticalIcon className="size-3 text-muted-foreground" />
-      <span className="sr-only">Drag to reorder</span>
+      <span className="sr-only">Kéo để sắp xếp lại</span>
     </Button>
   )
 }
@@ -191,7 +191,7 @@ const columns = columnHelper.columns([
     enableHiding: false,
   }),
   columnHelper.accessor("header", {
-    header: "Insight",
+    header: "Nhận định",
     cell: ({ row }) => {
       return <TableCellViewer item={row.original} />
     },
@@ -212,7 +212,7 @@ const columns = columnHelper.columns([
     cell: ({ row }) => (
       <Badge variant="outline" className="px-1.5 text-muted-foreground">
         {row.original.status === "Significant" ? (
-          <CircleCheckIcon className="fill-green-500 dark:fill-green-400" />
+          <CircleCheckIcon className="fill-primary" />
         ) : (
           <LoaderIcon
           />
@@ -256,24 +256,16 @@ const columns = columnHelper.columns([
         >
           <EllipsisVerticalIcon
           />
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">Mở menu</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem
-            onClick={() => {
-              void navigator.clipboard.writeText(row.original.insight.sentence_en)
-              toast.success("Copied English sentence")
-            }}
-          >
-            Copy sentence (EN)
-          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
               void navigator.clipboard.writeText(row.original.insight.sentence_vi)
               toast.success("Đã sao chép câu tiếng Việt")
             }}
           >
-            Copy sentence (VI)
+            Sao chép câu
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem render={<a href={`/analyst?q=${encodeURIComponent(`Explain and verify: ${row.original.insight.title_en}`)}`} />}>
@@ -569,7 +561,7 @@ export function DataTable({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to first page</span>
+                <span className="sr-only">Tới trang đầu</span>
                 <ChevronsLeftIcon
                 />
               </Button>
@@ -580,7 +572,7 @@ export function DataTable({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to previous page</span>
+                <span className="sr-only">Tới trang trước</span>
                 <ChevronLeftIcon
                 />
               </Button>
@@ -591,7 +583,7 @@ export function DataTable({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to next page</span>
+                <span className="sr-only">Tới trang sau</span>
                 <ChevronRightIcon
                 />
               </Button>
@@ -602,7 +594,7 @@ export function DataTable({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to last page</span>
+                <span className="sr-only">Tới trang cuối</span>
                 <ChevronsRightIcon
                 />
               </Button>
@@ -658,9 +650,9 @@ function TableCellViewer({ item }: { item: InsightRow }) {
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
-          <DrawerTitle>{ins.title_en}</DrawerTitle>
+          <DrawerTitle>{ins.title_vi}</DrawerTitle>
           <DrawerDescription>
-            {ins.test} · {fmtP(ins.p_value)} · score {ins.score.toFixed(2)}
+            {ins.test} · {fmtP(ins.p_value)} · điểm {ins.score.toFixed(2)}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
@@ -681,16 +673,16 @@ function TableCellViewer({ item }: { item: InsightRow }) {
           <Separator />
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <Label>Effect size (0–1)</Label>
+              <Label>Cỡ hiệu ứng (0–1)</Label>
               <span className="font-mono tabular-nums">{item.target}</span>
             </div>
             <div className="flex flex-col gap-1">
-              <Label>Significance</Label>
+              <Label>Ý nghĩa</Label>
               <span>{item.status}</span>
             </div>
           </div>
           {ins.caveat && (
-            <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">Caveat: {ins.caveat}</div>
+            <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">Lưu ý: {ins.caveat}</div>
           )}
         </div>
         <DrawerFooter>
@@ -800,19 +792,19 @@ function DataRowsTable({ datasetId }: { datasetId: string }) {
           </div>
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => setPage(1)} disabled={page <= 1}>
-              <span className="sr-only">Go to first page</span>
+              <span className="sr-only">Tới trang đầu</span>
               <ChevronsLeftIcon />
             </Button>
             <Button variant="outline" className="size-8" size="icon" onClick={() => setPage((p) => p - 1)} disabled={page <= 1}>
-              <span className="sr-only">Go to previous page</span>
+              <span className="sr-only">Tới trang trước</span>
               <ChevronLeftIcon />
             </Button>
             <Button variant="outline" className="size-8" size="icon" onClick={() => setPage((p) => p + 1)} disabled={page >= pages}>
-              <span className="sr-only">Go to next page</span>
+              <span className="sr-only">Tới trang sau</span>
               <ChevronRightIcon />
             </Button>
             <Button variant="outline" className="hidden size-8 lg:flex" size="icon" onClick={() => setPage(pages)} disabled={page >= pages}>
-              <span className="sr-only">Go to last page</span>
+              <span className="sr-only">Tới trang cuối</span>
               <ChevronsRightIcon />
             </Button>
           </div>

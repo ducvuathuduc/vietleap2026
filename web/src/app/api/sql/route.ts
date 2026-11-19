@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server"
+import { guardApi } from "@/lib/api-guard"
 import { executeReadOnlySql } from "@/lib/engine/sql"
 import { getAllDatasets } from "@/lib/engine/store"
 
 export async function POST(req: Request) {
+  const denied = guardApi(req)
+  if (denied) return denied
   try {
     const body = (await req.json()) as { query?: string; limit?: number }
     const query = String(body.query ?? "")

@@ -1,0 +1,2485 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "generated_at": "2026-11-19T23:35:20+07:00",
+    "title_vi": "Thu ngân sách vượt chi 29,6 điểm % dự toán trong tháng 10/2026",
+    "question_vi": "Vốn của nền kinh tế đang kẹt ở đâu trên đường từ nguồn thu đến chi tiêu, đầu tư và tăng trưởng?",
+    "lead_vi": [
+      "Thu ngân sách vượt chi 29,6 điểm % dự toán trong tháng 10/2026, khi tỷ lệ chi đạt 66,8% và thấp hơn mốc tiến độ 83,3%.",
+      "Vốn FDI thực hiện bằng 43,9% vốn đăng ký trong 10 tháng 2026, khi đăng ký tăng 74,0% và thực hiện tăng 13,1% cùng kỳ.",
+      "Thanh khoản 20 phiên đạt 13.042,5 tỷ đồng mỗi phiên đến 18/11/2026, thuộc nhóm thấp nhất trong 1 năm so với các cửa sổ giao dịch cùng độ dài. P/B ngành ngân hàng đạt 1,25 lần ngày 18/11/2026, thuộc nhóm thấp nhất trong 5 năm."
+    ],
+    "kpi_ids": [
+      "nsnn_chi_pct_plan",
+      "fdi_thuc_hien_ytd",
+      "bank_sector_pb",
+      "market_liquidity_20d",
+      "vnindex_drawdown",
+      "dtc_giai_ngan_pct_plan"
+    ],
+    "watch_vi": [
+      "Chi ngân sách chậm nếu tỷ lệ chi thấp hơn mốc tiến độ trên 10 điểm %.",
+      "Rà soát giải ngân khi tỷ lệ thực hiện thấp hơn số tháng đã qua chia cho 12.",
+      "Tách hai dòng vốn nếu tăng trưởng FDI đăng ký vượt FDI thực hiện trên 30 điểm %.",
+      "Cảnh báo trên 1 điểm % để theo dõi tín dụng tăng nhanh hơn nguồn tiền gửi."
+    ]
+  },
+  "sources": [
+    {
+      "publisher": "FiinGroup",
+      "title_vi": "Dữ liệu giao dịch và định giá FiinQuant",
+      "url": "https://docs.fiinquant.vn/",
+      "method": "api",
+      "license": "Điều khoản FiinGroup. Sản phẩm phái sinh cần ghi nguồn.",
+      "robots": "Thu thập qua SDK được cấp quyền.",
+      "id": "fiinquant",
+      "fetched_at": "2026-11-19T14:43:22.039275+07:00",
+      "data_cutoff": "2026-11-19",
+      "rows": 1968368
+    },
+    {
+      "publisher": "World Bank",
+      "title_vi": "Chỉ số phát triển thế giới",
+      "url": "https://databank.worldbank.org/source/world-development-indicators",
+      "method": "api",
+      "license": "World Development Indicators, CC BY 4.0 trừ ngoại lệ của chỉ tiêu.",
+      "robots": "API World Bank, phiên bản panel đã lưu.",
+      "id": "wdi",
+      "fetched_at": "2026-11-17T23:05:32+07:00",
+      "data_cutoff": "2024",
+      "rows": 3000
+    },
+    {
+      "publisher": "Cục Thống kê",
+      "title_vi": "Báo cáo tình hình kinh tế – xã hội hằng tháng",
+      "url": "https://www.nso.gov.vn/bao-cao-tinh-hinh-kinh-te-xa-hoi-hang-thang/",
+      "method": "scrape",
+      "license": "Công bố thống kê chính thức. Trích dẫn cơ quan và kỳ công bố.",
+      "robots": "Robot được phép theo hồ sơ thu thập NSO.",
+      "id": "nso",
+      "fetched_at": "2026-11-19T14:50:10+07:00",
+      "data_cutoff": "2026-10",
+      "rows": 948
+    },
+    {
+      "publisher": "Ngân hàng Nhà nước Việt Nam",
+      "title_vi": "Dư nợ tín dụng theo ngành kinh tế",
+      "url": "https://sbv.gov.vn/du-no-tin-dung-doi-voi-nen-kt-dttktt",
+      "method": "scrape",
+      "license": "Công bố thống kê chính thức. Trích dẫn Ngân hàng Nhà nước và cơ sở so sánh.",
+      "robots": "Robot được phép theo hồ sơ thu thập SBV.",
+      "id": "sbv",
+      "fetched_at": "2026-11-19T14:50:14+07:00",
+      "data_cutoff": "2026-08",
+      "rows": 36
+    },
+    {
+      "publisher": "Bộ Tài chính / Báo Điện tử Chính phủ",
+      "title_vi": "Báo cáo 908/BC-BTC, Phụ lục Ia, giải ngân đầu tư công đến 31/10/2026",
+      "url": "https://bcp.cdnchinhphu.vn/334894974524682240/2026/11/3/908-261103-181630-1-17937095250521778197996.pdf",
+      "method": "pdf",
+      "license": "Báo cáo công khai của Bộ Tài chính; trích dẫn Phụ lục Ia, trang PDF 35–36",
+      "robots": "no robots.txt (allow)",
+      "id": "bcp_mof_dtc_2026_10",
+      "fetched_at": "2026-11-19T16:32:13+07:00",
+      "data_cutoff": "2026-10",
+      "rows": 133
+    },
+    {
+      "publisher": "Cổng thông tin đầu tư công",
+      "title_vi": "10 tháng giải ngân vốn đầu tư công cả nước đạt 74,1% kế hoạch",
+      "url": "https://caa.gov.vn/hoat-dong-nganh/10-thang-giai-ngan-von-dau-tu-cong-cua-ca-nuoc-dat-741-ke-hoach-20261105113658123.htm",
+      "method": "tinyfish",
+      "license": "Cổng thông tin đầu tư công; trích dẫn số liệu, ghi nguồn",
+      "robots": "http 200 (unknown, allowed)",
+      "id": "caa_dtc_10m_2026",
+      "fetched_at": "2026-11-19T16:32:11+07:00",
+      "data_cutoff": "2026-10",
+      "rows": 22
+    },
+    {
+      "publisher": "Nhà Đầu Tư",
+      "title_vi": "Vốn FDI đăng ký 10 tháng/2026 cao nhất 17 năm",
+      "url": "https://nhadautu.vn/von-fdi-dang-ky-cao-nhat-17-nam-d108659.html",
+      "method": "tinyfish",
+      "license": "Báo Nhà Đầu Tư; trích dẫn số liệu, ghi nguồn",
+      "robots": "allow",
+      "id": "nhadautu_fdi_10m_2026",
+      "fetched_at": "2026-11-19T16:32:11+07:00",
+      "data_cutoff": "2026-10",
+      "rows": 22
+    },
+    {
+      "publisher": "Realtique (tổng hợp CBRE)",
+      "title_vi": "Giá căn hộ TP.HCM quý 3/2026",
+      "url": "https://www.realtique.net/vi/tin-tuc-vi/cap-nhat-thi-truong-vi/45638/gia-can-ho-tphcm-quy-3-2026/",
+      "method": "tinyfish",
+      "license": "Realtique tổng hợp CBRE; dùng cho nghiên cứu, ghi nguồn",
+      "robots": "allow",
+      "id": "realtique_cbre_hcm_q3_2026",
+      "fetched_at": "2026-11-19T16:32:10+07:00",
+      "data_cutoff": "2026-Q3",
+      "rows": 34
+    },
+    {
+      "publisher": "TCBS Research",
+      "title_vi": "Cập nhật KQKD ngành ngân hàng Q3/2026 (TCBS)",
+      "url": "https://www.tcbs.com.vn/wp-content/uploads/2026/11/20261116_Banking_Sector_Earnings_Update_Q3_2026.pdf",
+      "method": "pdf",
+      "license": "TCBS Research, báo cáo công khai; dùng cho nghiên cứu cá nhân, ghi nguồn tcbs.com.vn",
+      "robots": "allow",
+      "id": "tcbs_banking_q3_2026",
+      "fetched_at": "2026-11-19T16:32:10+07:00",
+      "data_cutoff": "2026-Q3",
+      "rows": 359
+    },
+    {
+      "publisher": "The Investor",
+      "title_vi": "Tăng trưởng tín dụng chậm lại nửa đầu tháng 10/2026",
+      "url": "https://theinvestor.vn/credit-growth-slows-slips-in-first-half-of-october-d20264.html",
+      "method": "tinyfish",
+      "license": "Báo điện tử The Investor; trích dẫn số liệu, ghi nguồn",
+      "robots": "allow",
+      "id": "theinvestor_credit_oct_2026",
+      "fetched_at": "2026-11-19T16:32:10+07:00",
+      "data_cutoff": "2026-10",
+      "rows": 3
+    },
+    {
+      "publisher": "VnEconomy",
+      "title_vi": "Dư nợ margin giảm tốc trong quý 3, đạt kỷ lục 457,5 nghìn tỷ đồng",
+      "url": "https://vneconomy.vn/du-no-margin-giam-toc-trong-quy-3-dat-ky-luc-4575-nghin-ty-dong.htm",
+      "method": "tinyfish",
+      "license": "VnEconomy (FiinTrade); trích dẫn số liệu, ghi nguồn",
+      "robots": "allow",
+      "id": "vneconomy_margin_q3_2026",
+      "fetched_at": "2026-11-19T16:32:10+07:00",
+      "data_cutoff": "2026-Q3",
+      "rows": 6
+    },
+    {
+      "publisher": "VnEconomy",
+      "title_vi": "Khối ngoại bán ròng gần 1 tỷ USD trong tháng 10 (đối chiếu)",
+      "url": "https://vneconomy.vn/khoi-ngoai-ban-rong-gan-1-ty-usd-trong-thang-10.htm",
+      "method": "tinyfish",
+      "license": "VnEconomy; dòng đối chiếu, nguồn chính là FiinQuant",
+      "robots": "allow",
+      "id": "vneconomy_oct_crosscheck",
+      "fetched_at": "2026-11-19T16:32:10+07:00",
+      "data_cutoff": "2026-10",
+      "rows": 2
+    },
+    {
+      "publisher": "Quốc hội Việt Nam",
+      "title_vi": "Dự toán bổ sung có mục tiêu từ ngân sách trung ương",
+      "url": "https://vanban.chinhphu.vn/?docid=211922&pageid=27160",
+      "method": "file",
+      "license": "Phụ lục số liệu của Nghị quyết 105/2023/QH15 và 160/2024/QH15.",
+      "robots": "Tệp chụp phụ lục nghị quyết.",
+      "id": "transfers",
+      "fetched_at": "2026-11-17T23:29:02+07:00",
+      "data_cutoff": "2025",
+      "rows": 504
+    },
+    {
+      "id": "vnexpress_kinh_doanh",
+      "publisher": "VnExpress",
+      "title_vi": "Tin kinh doanh · VnExpress",
+      "url": "https://vnexpress.net/rss/kinh-doanh.rss",
+      "method": "social",
+      "license": "RSS công khai, chỉ dùng tiêu đề và tóm tắt.",
+      "fetched_at": "2026-11-19T16:32:14+07:00",
+      "data_cutoff": "2026-11-19",
+      "rows": 60
+    },
+    {
+      "id": "cafef_thi_truong",
+      "publisher": "CafeF",
+      "title_vi": "Tin kinh doanh · CafeF",
+      "url": "https://cafef.vn/thi-truong-chung-khoan.rss",
+      "method": "social",
+      "license": "RSS công khai, chỉ dùng tiêu đề và tóm tắt.",
+      "fetched_at": "2026-11-19T16:32:14+07:00",
+      "data_cutoff": "2026-11-19",
+      "rows": 50
+    }
+  ],
+  "indicators": [
+    {
+      "id": "nsnn_thu_level",
+      "name_vi": "Thu ngân sách nhà nước trong tháng",
+      "sector": "public_finance",
+      "unit": "nghìn tỷ đồng",
+      "frequency": "monthly",
+      "measure_type": "level",
+      "definition_vi": "Thu ngân sách nhà nước trong tháng. Số phát sinh riêng trong tháng.",
+      "note_vi": "Số phát sinh riêng trong tháng.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 251.5
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 150.4
+        },
+        {
+          "period": "2026-09",
+          "value": 162.7
+        },
+        {
+          "period": "2026-10",
+          "value": 251.5
+        }
+      ],
+      "pctile_12m": 70.83333333333333
+    },
+    {
+      "id": "nsnn_thu_ytd",
+      "name_vi": "Thu ngân sách nhà nước lũy kế",
+      "sector": "public_finance",
+      "unit": "nghìn tỷ đồng",
+      "frequency": "monthly",
+      "measure_type": "ytd",
+      "definition_vi": "Thu ngân sách nhà nước lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.",
+      "note_vi": "Cộng dồn từ đầu năm đến hết kỳ báo cáo.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 2438.9
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 2023.8
+        },
+        {
+          "period": "2026-09",
+          "value": 2187.3
+        },
+        {
+          "period": "2026-10",
+          "value": 2438.9
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "nsnn_thu_pct_plan",
+      "name_vi": "Thu ngân sách nhà nước so với dự toán hoặc kế hoạch",
+      "sector": "public_finance",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "pct_plan",
+      "definition_vi": "Thu ngân sách nhà nước so với dự toán hoặc kế hoạch. Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.",
+      "note_vi": "Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 96.4
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 80.0
+        },
+        {
+          "period": "2026-09",
+          "value": 86.5
+        },
+        {
+          "period": "2026-10",
+          "value": 96.4
+        }
+      ],
+      "pctile_12m": 79.16666666666667
+    },
+    {
+      "id": "nsnn_thu_yoy",
+      "name_vi": "Thu ngân sách nhà nước so với cùng kỳ",
+      "sector": "public_finance",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "yoy",
+      "definition_vi": "Thu ngân sách nhà nước so với cùng kỳ. Tăng hoặc giảm so với cùng kỳ năm trước.",
+      "note_vi": "Tăng hoặc giảm so với cùng kỳ năm trước.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 11.0
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 16.0
+        },
+        {
+          "period": "2026-09",
+          "value": 12.1
+        },
+        {
+          "period": "2026-10",
+          "value": 11.0
+        }
+      ],
+      "pctile_12m": 4.166666666666667
+    },
+    {
+      "id": "nsnn_chi_pct_plan",
+      "name_vi": "Chi ngân sách nhà nước so với dự toán hoặc kế hoạch",
+      "sector": "public_finance",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "pct_plan",
+      "definition_vi": "Chi ngân sách nhà nước so với dự toán hoặc kế hoạch. Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.",
+      "note_vi": "Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 66.8
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 50.9
+        },
+        {
+          "period": "2026-09",
+          "value": 59.3
+        },
+        {
+          "period": "2026-10",
+          "value": 66.8
+        }
+      ],
+      "pctile_12m": 79.16666666666667
+    },
+    {
+      "id": "dtc_giai_ngan_pct_plan",
+      "name_vi": "Giải ngân đầu tư công so với dự toán hoặc kế hoạch",
+      "sector": "public_finance",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "pct_plan",
+      "definition_vi": "Giải ngân đầu tư công so với dự toán hoặc kế hoạch. Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.",
+      "note_vi": "Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 69.0
+      },
+      "sparkline": [
+        {
+          "period": "2026-07",
+          "value": 39.0
+        },
+        {
+          "period": "2026-08",
+          "value": 50.5
+        },
+        {
+          "period": "2026-10",
+          "value": 69.0
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "fdi_dang_ky_ytd",
+      "name_vi": "Vốn FDI đăng ký lũy kế",
+      "sector": "fdi",
+      "unit": "tỷ USD",
+      "frequency": "monthly",
+      "measure_type": "ytd",
+      "definition_vi": "Vốn FDI đăng ký lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.",
+      "note_vi": "Cộng dồn từ đầu năm đến hết kỳ báo cáo.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 54.85
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 40.63
+        },
+        {
+          "period": "2026-09",
+          "value": 50.36
+        },
+        {
+          "period": "2026-10",
+          "value": 54.85
+        }
+      ],
+      "pctile_12m": 95.83333333333333
+    },
+    {
+      "id": "fdi_dang_ky_yoy",
+      "name_vi": "Vốn FDI đăng ký so với cùng kỳ",
+      "sector": "fdi",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "yoy",
+      "definition_vi": "Vốn FDI đăng ký so với cùng kỳ. Tăng hoặc giảm so với cùng kỳ năm trước.",
+      "note_vi": "Tăng hoặc giảm so với cùng kỳ năm trước.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 74.0
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 55.4
+        },
+        {
+          "period": "2026-09",
+          "value": 76.4
+        },
+        {
+          "period": "2026-10",
+          "value": 74.0
+        }
+      ],
+      "pctile_12m": 87.5
+    },
+    {
+      "id": "fdi_thuc_hien_ytd",
+      "name_vi": "Vốn FDI thực hiện lũy kế",
+      "sector": "fdi",
+      "unit": "tỷ USD",
+      "frequency": "monthly",
+      "measure_type": "ytd",
+      "definition_vi": "Vốn FDI thực hiện lũy kế. Cộng dồn từ đầu năm đến hết kỳ báo cáo.",
+      "note_vi": "Cộng dồn từ đầu năm đến hết kỳ báo cáo.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 24.08
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 17.25
+        },
+        {
+          "period": "2026-09",
+          "value": 21.07
+        },
+        {
+          "period": "2026-10",
+          "value": 24.08
+        }
+      ],
+      "pctile_12m": 87.5
+    },
+    {
+      "id": "fdi_thuc_hien_yoy",
+      "name_vi": "Vốn FDI thực hiện so với cùng kỳ",
+      "sector": "fdi",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "yoy",
+      "definition_vi": "Vốn FDI thực hiện so với cùng kỳ. Tăng hoặc giảm so với cùng kỳ năm trước.",
+      "note_vi": "Tăng hoặc giảm so với cùng kỳ năm trước.",
+      "source_id": "nso",
+      "last_updated": "2026-11-03",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 13.1
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 12.0
+        },
+        {
+          "period": "2026-09",
+          "value": 12.1
+        },
+        {
+          "period": "2026-10",
+          "value": 13.1
+        }
+      ],
+      "pctile_12m": 95.83333333333333
+    },
+    {
+      "id": "credit_ytd",
+      "name_vi": "Tăng trưởng dư nợ tín dụng từ đầu năm",
+      "sector": "banking",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "ytd",
+      "definition_vi": "Tăng trưởng dư nợ tín dụng từ đầu năm. Mốc so sánh là cuối năm trước.",
+      "note_vi": "Mốc so sánh là cuối năm trước.",
+      "source_id": "sbv",
+      "last_updated": "2026-11-19T14:50:14+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-08",
+        "value": 10.19
+      },
+      "sparkline": [
+        {
+          "period": "2025-10",
+          "value": 15.31
+        },
+        {
+          "period": "2026-08",
+          "value": 10.19
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "sbv_credit_balance",
+      "name_vi": "Dư nợ tín dụng đối với nền kinh tế",
+      "sector": "banking",
+      "unit": "tỷ đồng",
+      "frequency": "monthly",
+      "measure_type": "level",
+      "definition_vi": "Dư nợ tín dụng đối với nền kinh tế. Số dư cuối kỳ phân theo ngành.",
+      "note_vi": "Số dư cuối kỳ phân theo ngành.",
+      "source_id": "sbv",
+      "last_updated": "2026-11-19T14:50:14+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-08",
+        "value": 20489434.0
+      },
+      "sparkline": [
+        {
+          "period": "2025-10",
+          "value": 18007536.76
+        },
+        {
+          "period": "2026-08",
+          "value": 20489434.0
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "deposit_ytd",
+      "name_vi": "Tăng trưởng huy động tiền gửi từ đầu năm",
+      "sector": "banking",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "ytd",
+      "definition_vi": "Tăng trưởng huy động tiền gửi từ đầu năm. Đối chiếu với tín dụng cùng phạm vi và kỳ.",
+      "note_vi": "Đối chiếu với tín dụng cùng phạm vi và kỳ.",
+      "source_id": "tcbs_banking_q3_2026",
+      "last_updated": "2026-11-16",
+      "next_release": null,
+      "latest": {
+        "period": "2026-09",
+        "value": 10.7
+      },
+      "sparkline": [
+        {
+          "period": "2026-09",
+          "value": 10.7
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "bank_npl",
+      "name_vi": "Tỷ lệ nợ xấu",
+      "sector": "banking",
+      "unit": "%",
+      "frequency": "quarterly",
+      "measure_type": "ratio",
+      "definition_vi": "Tỷ lệ nợ xấu. Theo phạm vi báo cáo hợp nhất của từng ngân hàng.",
+      "note_vi": "Theo phạm vi báo cáo hợp nhất của từng ngân hàng.",
+      "source_id": "tcbs_banking_q3_2026",
+      "last_updated": "2026-11-16",
+      "next_release": null,
+      "latest": {
+        "period": "2026-Q3",
+        "value": null
+      },
+      "sparkline": [],
+      "pctile_12m": null
+    },
+    {
+      "id": "margin_debt",
+      "name_vi": "Dư nợ cho vay ký quỹ",
+      "sector": "capital_market",
+      "unit": "tỷ đồng",
+      "frequency": "quarterly",
+      "measure_type": "level",
+      "definition_vi": "Dư nợ cho vay ký quỹ. Đối chiếu cùng nhóm công ty chứng khoán qua các kỳ.",
+      "note_vi": "Đối chiếu cùng nhóm công ty chứng khoán qua các kỳ.",
+      "source_id": "vneconomy_margin_q3_2026",
+      "last_updated": "2026-10-22",
+      "next_release": null,
+      "latest": {
+        "period": "2026-Q3",
+        "value": 457500.0
+      },
+      "sparkline": [
+        {
+          "period": "2026-Q3",
+          "value": 457500.0
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "re_absorption",
+      "name_vi": "Tỷ lệ hấp thụ căn hộ",
+      "sector": "real_estate",
+      "unit": "%",
+      "frequency": "quarterly",
+      "measure_type": "level",
+      "definition_vi": "Tỷ lệ hấp thụ căn hộ. Giữ cùng rổ địa lý, phân khúc và cách tính qua các kỳ.",
+      "note_vi": "Giữ cùng rổ địa lý, phân khúc và cách tính qua các kỳ.",
+      "source_id": "realtique_cbre_hcm_q3_2026",
+      "last_updated": "2026-10-28",
+      "next_release": null,
+      "latest": {
+        "period": "2026-Q3",
+        "value": 55.37190082644628,
+        "geo": "TP.HCM"
+      },
+      "sparkline": [
+        {
+          "period": "2026-Q3",
+          "value": 55.37190082644628,
+          "geo": "TP.HCM"
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "re_new_supply",
+      "name_vi": "Nguồn cung căn hộ mới",
+      "sector": "real_estate",
+      "unit": "căn",
+      "frequency": "quarterly",
+      "measure_type": "level",
+      "definition_vi": "Nguồn cung căn hộ mới. Rổ địa lý có thể thay đổi sau sáp nhập.",
+      "note_vi": "Rổ địa lý có thể thay đổi sau sáp nhập.",
+      "source_id": "realtique_cbre_hcm_q3_2026",
+      "last_updated": "2026-10-28",
+      "next_release": null,
+      "latest": {
+        "period": "2026-Q3",
+        "value": null
+      },
+      "sparkline": [],
+      "pctile_12m": null
+    },
+    {
+      "id": "mortgage_rate",
+      "name_vi": "Lãi suất vay mua nhà",
+      "sector": "real_estate",
+      "unit": "%",
+      "frequency": "quarterly",
+      "measure_type": "level",
+      "definition_vi": "Lãi suất vay mua nhà. Đối chiếu cùng thời hạn ưu đãi và cùng kỳ.",
+      "note_vi": "Đối chiếu cùng thời hạn ưu đãi và cùng kỳ.",
+      "source_id": "realtique_cbre_hcm_q3_2026",
+      "last_updated": "2026-10-28",
+      "next_release": null,
+      "latest": {
+        "period": "2026-Q3",
+        "value": 10.6
+      },
+      "sparkline": [
+        {
+          "period": "2026-Q3",
+          "value": 10.6
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "vnindex_close",
+      "name_vi": "Điểm đóng cửa VN-Index",
+      "sector": "capital_market",
+      "unit": "điểm",
+      "frequency": "daily",
+      "measure_type": "index",
+      "definition_vi": "Điểm đóng cửa VN-Index. Phiên giao dịch có giá đóng cửa trong dữ liệu ngày.",
+      "note_vi": "Phiên giao dịch có giá đóng cửa trong dữ liệu ngày.",
+      "source_id": "fiinquant",
+      "last_updated": "2026-11-19T14:43:22.039275+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-11-18",
+        "value": 1703.01
+      },
+      "sparkline": [
+        {
+          "period": "2026-11-16",
+          "value": 1736.89
+        },
+        {
+          "period": "2026-11-17",
+          "value": 1726.72
+        },
+        {
+          "period": "2026-11-18",
+          "value": 1703.01
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "vnindex_pe",
+      "name_vi": "P/E VN-Index",
+      "sector": "capital_market",
+      "unit": "lần",
+      "frequency": "daily",
+      "measure_type": "ratio",
+      "definition_vi": "P/E VN-Index. Chỉ số định giá do FiinGroup cung cấp.",
+      "note_vi": "Chỉ số định giá do FiinGroup cung cấp.",
+      "source_id": "fiinquant",
+      "last_updated": "2026-11-19T14:43:22.039275+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-11-18",
+        "value": 10.56168564
+      },
+      "sparkline": [
+        {
+          "period": "2026-11-16",
+          "value": 10.80737599
+        },
+        {
+          "period": "2026-11-17",
+          "value": 10.74462192
+        },
+        {
+          "period": "2026-11-18",
+          "value": 10.56168564
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "market_liquidity_20d",
+      "name_vi": "Giá trị giao dịch bình quân 20 phiên",
+      "sector": "capital_market",
+      "unit": "tỷ đồng",
+      "frequency": "daily",
+      "measure_type": "level",
+      "definition_vi": "Giá trị giao dịch bình quân 20 phiên. Bình quân giá trị giao dịch của các mã theo dõi trong 20 phiên.",
+      "note_vi": "Bình quân giá trị giao dịch của các mã theo dõi trong 20 phiên.",
+      "source_id": "fiinquant",
+      "last_updated": "2026-11-19T14:43:22.039275+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-11-18",
+        "value": 13042.457183652501,
+        "geo": "VNM"
+      },
+      "sparkline": [
+        {
+          "period": "2026-11-16",
+          "value": 13450.182747786,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-17",
+          "value": 13375.010884582498,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-18",
+          "value": 13042.457183652501,
+          "geo": "VNM"
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "foreign_net_20d",
+      "name_vi": "Giá trị mua ròng khối ngoại 20 phiên",
+      "sector": "capital_market",
+      "unit": "tỷ đồng",
+      "frequency": "daily",
+      "measure_type": "level",
+      "definition_vi": "Giá trị mua ròng khối ngoại 20 phiên. Tổng giá trị mua trừ bán trên các mã có dữ liệu.",
+      "note_vi": "Tổng giá trị mua trừ bán trên các mã có dữ liệu.",
+      "source_id": "fiinquant",
+      "last_updated": "2026-11-19T14:43:22.039275+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-11-18",
+        "value": -5859.261261666002,
+        "geo": "VNM"
+      },
+      "sparkline": [
+        {
+          "period": "2026-11-16",
+          "value": -4453.127004950002,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-17",
+          "value": -4541.676426666002,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-18",
+          "value": -5859.261261666002,
+          "geo": "VNM"
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "vnindex_drawdown",
+      "name_vi": "Mức giảm của VN-Index từ đỉnh",
+      "sector": "capital_market",
+      "unit": "%",
+      "frequency": "daily",
+      "measure_type": "ratio",
+      "definition_vi": "Chênh lệch tương đối giữa mức đóng cửa và đỉnh đóng cửa trong 52 tuần gần nhất.",
+      "note_vi": "Cửa sổ 52 tuần tính đến phiên quan sát.",
+      "source_id": "fiinquant",
+      "last_updated": "2026-11-19T14:43:22.039275+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-11-18",
+        "value": -11.666856852391671,
+        "geo": "VNM"
+      },
+      "sparkline": [
+        {
+          "period": "2026-11-16",
+          "value": -9.909540753342949,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-17",
+          "value": -10.437046796062122,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-18",
+          "value": -11.666856852391671,
+          "geo": "VNM"
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "bank_pb_pctile",
+      "name_vi": "Phân vị P/B ngành ngân hàng",
+      "sector": "banking",
+      "unit": "%",
+      "frequency": "daily",
+      "measure_type": "ratio",
+      "definition_vi": "Phân vị P/B ngành ngân hàng. Phân vị của P/B ngành trong lịch sử tối đa 5 năm.",
+      "note_vi": "Phân vị của P/B ngành trong lịch sử tối đa 5 năm.",
+      "source_id": "fiinquant",
+      "last_updated": "2026-11-19T14:43:22.039275+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-11-18",
+        "value": 0.08045052292839903,
+        "geo": "VNM"
+      },
+      "sparkline": [
+        {
+          "period": "2026-11-16",
+          "value": 0.40290088638195004,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-17",
+          "value": 0.322061191626409,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-18",
+          "value": 0.08045052292839903,
+          "geo": "VNM"
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "budget_time_pace",
+      "name_vi": "Mốc tiến độ theo tháng",
+      "sector": "public_finance",
+      "unit": "%",
+      "frequency": "monthly",
+      "measure_type": "pct_plan",
+      "definition_vi": "Số tháng đã qua chia cho số tháng trong năm.",
+      "note_vi": "Mốc tham chiếu theo thời gian, độc lập với lịch thanh toán.",
+      "source_id": "nso",
+      "last_updated": "2026-11-19T14:50:10+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-10",
+        "value": 83.33333333333334,
+        "geo": "VNM"
+      },
+      "sparkline": [
+        {
+          "period": "2026-08",
+          "value": 66.66666666666666,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-09",
+          "value": 75.0,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-10",
+          "value": 83.33333333333334,
+          "geo": "VNM"
+        }
+      ],
+      "pctile_12m": null
+    },
+    {
+      "id": "bank_sector_pb",
+      "name_vi": "P/B ngành ngân hàng",
+      "sector": "banking",
+      "unit": "lần",
+      "frequency": "daily",
+      "measure_type": "ratio",
+      "definition_vi": "Giá thị trường chia giá trị sổ sách theo rổ ngành ngân hàng.",
+      "note_vi": "Dùng rổ ngành do FiinQuant công bố.",
+      "source_id": "fiinquant",
+      "last_updated": "2026-11-19T14:43:22.039275+07:00",
+      "next_release": null,
+      "latest": {
+        "period": "2026-11-18",
+        "value": 1.25427749,
+        "geo": "VNM"
+      },
+      "sparkline": [
+        {
+          "period": "2026-11-16",
+          "value": 1.28890535,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-17",
+          "value": 1.27751131,
+          "geo": "VNM"
+        },
+        {
+          "period": "2026-11-18",
+          "value": 1.25427749,
+          "geo": "VNM"
+        }
+      ],
+      "pctile_12m": null
+    }
+  ],
+  "series": {
+    "nsnn_thu_level": [
+      {
+        "period": "2026-06",
+        "value": 205.0
+      },
+      {
+        "period": "2026-07",
+        "value": 259.7
+      },
+      {
+        "period": "2026-08",
+        "value": 150.4
+      },
+      {
+        "period": "2026-09",
+        "value": 162.7
+      },
+      {
+        "period": "2026-10",
+        "value": 251.5
+      }
+    ],
+    "nsnn_thu_ytd": [
+      {
+        "period": "2026-06",
+        "value": 1568.2
+      },
+      {
+        "period": "2026-07",
+        "value": 1834.6
+      },
+      {
+        "period": "2026-08",
+        "value": 2023.8
+      },
+      {
+        "period": "2026-09",
+        "value": 2187.3
+      },
+      {
+        "period": "2026-10",
+        "value": 2438.9
+      }
+    ],
+    "nsnn_thu_pct_plan": [
+      {
+        "period": "2026-06",
+        "value": 62.0
+      },
+      {
+        "period": "2026-07",
+        "value": 72.5
+      },
+      {
+        "period": "2026-08",
+        "value": 80.0
+      },
+      {
+        "period": "2026-09",
+        "value": 86.5
+      },
+      {
+        "period": "2026-10",
+        "value": 96.4
+      }
+    ],
+    "nsnn_thu_yoy": [
+      {
+        "period": "2026-06",
+        "value": 17.4
+      },
+      {
+        "period": "2026-07",
+        "value": 16.0
+      },
+      {
+        "period": "2026-08",
+        "value": 16.0
+      },
+      {
+        "period": "2026-09",
+        "value": 12.1
+      },
+      {
+        "period": "2026-10",
+        "value": 11.0
+      }
+    ],
+    "nsnn_chi_pct_plan": [
+      {
+        "period": "2026-06",
+        "value": 36.4
+      },
+      {
+        "period": "2026-07",
+        "value": 43.2
+      },
+      {
+        "period": "2026-08",
+        "value": 50.9
+      },
+      {
+        "period": "2026-09",
+        "value": 59.3
+      },
+      {
+        "period": "2026-10",
+        "value": 66.8
+      }
+    ],
+    "dtc_giai_ngan_pct_plan": [
+      {
+        "period": "2026-04",
+        "value": 19.7
+      },
+      {
+        "period": "2026-05",
+        "value": 24.0
+      },
+      {
+        "period": "2026-07",
+        "value": 39.0
+      },
+      {
+        "period": "2026-08",
+        "value": 50.5
+      },
+      {
+        "period": "2026-10",
+        "value": 69.0
+      }
+    ],
+    "fdi_dang_ky_ytd": [
+      {
+        "period": "2026-06",
+        "value": 34.65
+      },
+      {
+        "period": "2026-07",
+        "value": 38.06
+      },
+      {
+        "period": "2026-08",
+        "value": 40.63
+      },
+      {
+        "period": "2026-09",
+        "value": 50.36
+      },
+      {
+        "period": "2026-10",
+        "value": 54.85
+      }
+    ],
+    "fdi_dang_ky_yoy": [
+      {
+        "period": "2026-06",
+        "value": 61.0
+      },
+      {
+        "period": "2026-07",
+        "value": 58.0
+      },
+      {
+        "period": "2026-08",
+        "value": 55.4
+      },
+      {
+        "period": "2026-09",
+        "value": 76.4
+      },
+      {
+        "period": "2026-10",
+        "value": 74.0
+      }
+    ],
+    "fdi_thuc_hien_ytd": [
+      {
+        "period": "2026-06",
+        "value": 13.03
+      },
+      {
+        "period": "2026-07",
+        "value": 15.2
+      },
+      {
+        "period": "2026-08",
+        "value": 17.25
+      },
+      {
+        "period": "2026-09",
+        "value": 21.07
+      },
+      {
+        "period": "2026-10",
+        "value": 24.08
+      }
+    ],
+    "fdi_thuc_hien_yoy": [
+      {
+        "period": "2026-06",
+        "value": 11.2
+      },
+      {
+        "period": "2026-07",
+        "value": 11.8
+      },
+      {
+        "period": "2026-08",
+        "value": 12.0
+      },
+      {
+        "period": "2026-09",
+        "value": 12.1
+      },
+      {
+        "period": "2026-10",
+        "value": 13.1
+      }
+    ],
+    "credit_ytd": [
+      {
+        "period": "2026-08",
+        "value": 4.89,
+        "geo": "HOAT_DONG_THUONG_MAI_VAN_TAI_VA_VIEN_THONG"
+      },
+      {
+        "period": "2026-08",
+        "value": 9.77,
+        "geo": "NONG_NGHIEP_LAM_NGHIEP_VA_THUY_SAN"
+      },
+      {
+        "period": "2026-08",
+        "value": 3.53,
+        "geo": "THUONG_MAI"
+      },
+      {
+        "period": "2026-08",
+        "value": 17.5,
+        "geo": "VAN_TAI_VA_VIEN_THONG"
+      },
+      {
+        "period": "2026-08",
+        "value": 13.95,
+        "geo": "XAY_DUNG"
+      }
+    ],
+    "sbv_credit_balance": [
+      {
+        "period": "2026-08",
+        "value": 5126749.0,
+        "geo": "HOAT_DONG_THUONG_MAI_VAN_TAI_VA_VIEN_THONG"
+      },
+      {
+        "period": "2026-08",
+        "value": 1245854.0,
+        "geo": "NONG_NGHIEP_LAM_NGHIEP_VA_THUY_SAN"
+      },
+      {
+        "period": "2026-08",
+        "value": 4567396.0,
+        "geo": "THUONG_MAI"
+      },
+      {
+        "period": "2026-08",
+        "value": 559352.0,
+        "geo": "VAN_TAI_VA_VIEN_THONG"
+      },
+      {
+        "period": "2026-08",
+        "value": 1601783.0,
+        "geo": "XAY_DUNG"
+      }
+    ],
+    "deposit_ytd": [
+      {
+        "period": "2026-09",
+        "value": 10.7
+      }
+    ],
+    "bank_npl": [
+      {
+        "period": "2026-Q3",
+        "value": 2.1,
+        "geo": "TPB"
+      },
+      {
+        "period": "2026-Q3",
+        "value": 1.38,
+        "geo": "VAB"
+      },
+      {
+        "period": "2026-Q3",
+        "value": 0.71,
+        "geo": "VCB"
+      },
+      {
+        "period": "2026-Q3",
+        "value": 3.2,
+        "geo": "VIB"
+      },
+      {
+        "period": "2026-Q3",
+        "value": 3.12,
+        "geo": "VPB"
+      }
+    ],
+    "margin_debt": [
+      {
+        "period": "2026-Q3",
+        "value": 457500.0
+      }
+    ],
+    "re_absorption": [
+      {
+        "period": "2026-Q3",
+        "value": 55.37190082644628,
+        "geo": "TP.HCM"
+      }
+    ],
+    "re_new_supply": [
+      {
+        "period": "2026-Q3",
+        "value": 6187.0,
+        "geo": "HÀ NỘI"
+      },
+      {
+        "period": "2026-Q3",
+        "value": 3267.0,
+        "geo": "TP.HCM"
+      }
+    ],
+    "mortgage_rate": [
+      {
+        "period": "2026-Q3",
+        "value": 10.6
+      }
+    ],
+    "vnindex_close": [
+      {
+        "period": "2026-11-12",
+        "value": 1734.75
+      },
+      {
+        "period": "2026-11-13",
+        "value": 1734.93
+      },
+      {
+        "period": "2026-11-16",
+        "value": 1736.89
+      },
+      {
+        "period": "2026-11-17",
+        "value": 1726.72
+      },
+      {
+        "period": "2026-11-18",
+        "value": 1703.01
+      }
+    ],
+    "vnindex_pe": [
+      {
+        "period": "2026-11-12",
+        "value": 10.79453103
+      },
+      {
+        "period": "2026-11-13",
+        "value": 10.79592948
+      },
+      {
+        "period": "2026-11-16",
+        "value": 10.80737599
+      },
+      {
+        "period": "2026-11-17",
+        "value": 10.74462192
+      },
+      {
+        "period": "2026-11-18",
+        "value": 10.56168564
+      }
+    ],
+    "market_liquidity_20d": [
+      {
+        "period": "2026-11-12",
+        "value": 13619.1158235535,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-13",
+        "value": 13611.782301766001,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-16",
+        "value": 13450.182747786,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-17",
+        "value": 13375.010884582498,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-18",
+        "value": 13042.457183652501,
+        "geo": "VNM"
+      }
+    ],
+    "foreign_net_20d": [
+      {
+        "period": "2026-11-12",
+        "value": -6171.593950720002,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-13",
+        "value": -5300.736264760002,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-16",
+        "value": -4453.127004950002,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-17",
+        "value": -4541.676426666002,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-18",
+        "value": -5859.261261666002,
+        "geo": "VNM"
+      }
+    ],
+    "vnindex_drawdown": [
+      {
+        "period": "2026-11-12",
+        "value": -10.020540058300575,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-13",
+        "value": -10.011203668163947,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-16",
+        "value": -9.909540753342949,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-17",
+        "value": -10.437046796062122,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-18",
+        "value": -11.666856852391671,
+        "geo": "VNM"
+      }
+    ],
+    "bank_pb_pctile": [
+      {
+        "period": "2026-11-12",
+        "value": 0.7263922518159807,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-13",
+        "value": 0.8870967741935484,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-16",
+        "value": 0.40290088638195004,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-17",
+        "value": 0.322061191626409,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-18",
+        "value": 0.08045052292839903,
+        "geo": "VNM"
+      }
+    ],
+    "budget_time_pace": [
+      {
+        "period": "2026-06",
+        "value": 50.0,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-07",
+        "value": 58.333333333333336,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-08",
+        "value": 66.66666666666666,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-09",
+        "value": 75.0,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-10",
+        "value": 83.33333333333334,
+        "geo": "VNM"
+      }
+    ],
+    "bank_sector_pb": [
+      {
+        "period": "2026-11-12",
+        "value": 1.29771853,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-13",
+        "value": 1.30034906,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-16",
+        "value": 1.28890535,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-17",
+        "value": 1.27751131,
+        "geo": "VNM"
+      },
+      {
+        "period": "2026-11-18",
+        "value": 1.25427749,
+        "geo": "VNM"
+      }
+    ]
+  },
+  "sectors": {
+    "public_finance": {
+      "question_vi": "Khâu nào đang chậm trong quá trình thu, chi và giải ngân?",
+      "headline_vi": "Thu ngân sách vượt chi 29,6 điểm % dự toán trong tháng 10/2026",
+      "cards": [
+        {
+          "action_vi": "Rà soát lịch thanh toán từng khoản chi để xác định phần chi chậm so với dự toán trước 31/03/2027.",
+          "value": 29.60000000000001,
+          "unit": "điểm %",
+          "period": "2026-10",
+          "source_id": "nso",
+          "sentence_vi": "Thu ngân sách vượt chi 29,6 điểm % dự toán trong tháng 10/2026, khi tỷ lệ chi đạt 66,8% và thấp hơn mốc tiến độ 83,3%.",
+          "severity": "alert",
+          "indicator_id": "nsnn_chi_pct_plan",
+          "rule_id": "BR-PF1"
+        },
+        {
+          "action_vi": "Rà soát các dự án giải ngân dưới mốc tiến độ và thống kê số hồ sơ chậm nghiệm thu trước 31/03/2027.",
+          "value": -14.333333333333343,
+          "unit": "điểm %",
+          "period": "2026-10",
+          "source_id": "nso",
+          "sentence_vi": "Giải ngân đầu tư công chậm 14,3 điểm % so với tiến độ tháng 10/2026, khi cả nước giải ngân 69,0% kế hoạch so với mốc 83,3%.",
+          "severity": "alert",
+          "indicator_id": "dtc_giai_ngan_pct_plan",
+          "rule_id": "BR-PF2"
+        }
+      ],
+      "watch": [],
+      "kpi_ids": [
+        "nsnn_chi_pct_plan",
+        "dtc_giai_ngan_pct_plan",
+        "nsnn_thu_level",
+        "nsnn_thu_ytd",
+        "nsnn_thu_pct_plan",
+        "nsnn_thu_yoy"
+      ],
+      "charts": [
+        {
+          "id": "budget_execution",
+          "title_vi": "Thu ngân sách vượt chi 29,6 điểm % dự toán trong tháng 10/2026",
+          "kind": "line",
+          "indicator_ids": [
+            "nsnn_chi_pct_plan",
+            "nsnn_thu_pct_plan",
+            "budget_time_pace"
+          ],
+          "level": "overview",
+          "source_ids": [
+            "nso"
+          ],
+          "note_vi": "Tỷ lệ trên dự toán hoặc kế hoạch năm của phạm vi báo cáo. Mốc tham chiếu theo thời gian, độc lập với lịch thanh toán."
+        }
+      ],
+      "tables": [
+        {
+          "id": "province_disbursement",
+          "title_vi": "Giải ngân theo địa phương · tháng 10/2026",
+          "columns": [
+            {
+              "key": "min",
+              "label_vi": "Thấp nhất",
+              "kind": "percent",
+              "unit": "%"
+            },
+            {
+              "key": "max",
+              "label_vi": "Cao nhất",
+              "kind": "percent",
+              "unit": "%"
+            },
+            {
+              "key": "count",
+              "label_vi": "Số tỉnh, thành phố",
+              "kind": "number",
+              "unit": ""
+            }
+          ],
+          "rows": [
+            {
+              "min": 25.81,
+              "max": 61.94,
+              "count": 7,
+              "period": "2026-10"
+            },
+            {
+              "min": 63.31,
+              "max": 66.67,
+              "count": 7,
+              "period": "2026-10"
+            },
+            {
+              "min": 71.5,
+              "max": 74.83,
+              "count": 6,
+              "period": "2026-10"
+            },
+            {
+              "min": 75.22,
+              "max": 82.49,
+              "count": 7,
+              "period": "2026-10"
+            },
+            {
+              "min": 84.08,
+              "max": 107.33,
+              "count": 7,
+              "period": "2026-10"
+            }
+          ],
+          "source_ids": [
+            "bcp_mof_dtc_2026_10"
+          ]
+        }
+      ],
+      "heatmap": []
+    },
+    "fdi": {
+      "question_vi": "Vốn đăng ký chuyển thành vốn thực hiện đến đâu và tập trung ở đâu?",
+      "headline_vi": "Vốn FDI thực hiện bằng 43,9% vốn đăng ký trong 10 tháng 2026",
+      "cards": [
+        {
+          "action_vi": "Đối chiếu vốn đăng ký với vốn thực hiện theo dự án và thống kê các mốc thủ tục còn thiếu trước 31/03/2027.",
+          "value": 43.90154968094804,
+          "unit": "%",
+          "period": "2026-10",
+          "source_id": "nso",
+          "sentence_vi": "Vốn FDI thực hiện bằng 43,9% vốn đăng ký trong 10 tháng 2026, khi đăng ký tăng 74,0% và thực hiện tăng 13,1% cùng kỳ.",
+          "severity": "alert",
+          "indicator_id": "fdi_thuc_hien_ytd",
+          "rule_id": "BR-FDI1"
+        },
+        {
+          "action_vi": "Theo dõi tỷ trọng các địa bàn và đối tác qua các kỳ có cùng phạm vi thống kê trước 31/03/2027.",
+          "value": 75.56581986143186,
+          "unit": "%",
+          "period": "2026-10",
+          "source_id": "nhadautu_fdi_10m_2026",
+          "sentence_vi": "Ba tỉnh đứng đầu chiếm 75,6% vốn FDI đăng ký của các tỉnh có số liệu trong 10 tháng 2026, tính trên tổng vốn đăng ký của nhóm quan sát.",
+          "severity": "info",
+          "rule_id": "BR-FDI2"
+        }
+      ],
+      "watch": [],
+      "kpi_ids": [
+        "fdi_thuc_hien_ytd",
+        "fdi_dang_ky_ytd",
+        "fdi_dang_ky_yoy",
+        "fdi_thuc_hien_yoy"
+      ],
+      "charts": [
+        {
+          "id": "fdi_realisation",
+          "title_vi": "Vốn FDI thực hiện bằng 43,9% vốn đăng ký trong 10 tháng 2026",
+          "kind": "line",
+          "indicator_ids": [
+            "fdi_thuc_hien_ytd",
+            "fdi_dang_ky_ytd"
+          ],
+          "level": "overview",
+          "source_ids": [
+            "nso"
+          ],
+          "note_vi": "Cộng dồn từ đầu năm đến hết kỳ báo cáo."
+        }
+      ],
+      "tables": [],
+      "heatmap": []
+    },
+    "banking": {
+      "question_vi": "Tín dụng tăng nhanh hơn huy động đến đâu và ngân hàng nào có bộ đệm mỏng?",
+      "headline_vi": "Tăng trưởng tín dụng chênh 2,0 điểm % so với tiền gửi trong 9 tháng 2026",
+      "cards": [
+        {
+          "action_vi": "Đối chiếu kỳ hạn tín dụng và tiền gửi để đo chênh lệch tăng trưởng trước 31/03/2027.",
+          "value": 2.0,
+          "unit": "điểm %",
+          "period": "2026-09",
+          "source_id": "tcbs_banking_q3_2026",
+          "sentence_vi": "Tăng trưởng tín dụng chênh 2,0 điểm % so với tiền gửi trong 9 tháng 2026, tính mức tăng của mỗi dòng vốn so với cuối năm trước.",
+          "severity": "alert",
+          "indicator_id": "credit_ytd",
+          "rule_id": "BR-BK1"
+        },
+        {
+          "action_vi": "Rà soát nợ xấu và đo tỷ lệ dự phòng bao phủ tại các ngân hàng vượt ngưỡng trước 31/03/2027.",
+          "value": 7.33,
+          "unit": "%",
+          "period": "2026-Q3",
+          "source_id": "tcbs_banking_q3_2026",
+          "sentence_vi": "Nợ xấu công bố của STB đạt 7,3% trong quý III/2026, với tỷ lệ dự phòng bao phủ nợ xấu 35,0% theo số liệu của cùng quý.",
+          "severity": "alert",
+          "indicator_id": "bank_npl",
+          "rule_id": "BR-BK2"
+        },
+        {
+          "action_vi": "Đối chiếu biến động định giá với cập nhật lợi nhuận và cấu phần vốn chủ sở hữu trước 31/03/2027.",
+          "value": 1.25427749,
+          "unit": "lần",
+          "period": "2026-11-18",
+          "source_id": "fiinquant",
+          "sentence_vi": "P/B ngành ngân hàng đạt 1,25 lần ngày 18/11/2026, thuộc nhóm thấp nhất trong 5 năm theo dữ liệu định giá của các phiên quan sát.",
+          "severity": "info",
+          "indicator_id": "bank_sector_pb",
+          "rule_id": "BR-BK3"
+        }
+      ],
+      "watch": [],
+      "kpi_ids": [
+        "credit_ytd",
+        "bank_npl",
+        "bank_sector_pb",
+        "sbv_credit_balance",
+        "deposit_ytd",
+        "bank_pb_pctile"
+      ],
+      "charts": [
+        {
+          "id": "credit_deposit",
+          "title_vi": "Tăng trưởng tín dụng chênh 2,0 điểm % so với tiền gửi trong 9 tháng 2026",
+          "kind": "line",
+          "indicator_ids": [
+            "credit_ytd",
+            "deposit_ytd"
+          ],
+          "level": "overview",
+          "source_ids": [
+            "tcbs_banking_q3_2026",
+            "sbv"
+          ],
+          "note_vi": "Mốc so sánh là cuối năm trước. Đối chiếu với tín dụng cùng phạm vi và kỳ."
+        }
+      ],
+      "tables": [],
+      "heatmap": []
+    },
+    "capital_market": {
+      "question_vi": "Thanh khoản, khối ngoại, định giá và dư nợ ký quỹ đang thay đổi ra sao?",
+      "headline_vi": "Thanh khoản 20 phiên đạt 13.042,5 tỷ đồng mỗi phiên đến 18/11/2026",
+      "cards": [
+        {
+          "action_vi": "Theo dõi đồng thời độ rộng thị trường và giá trị giao dịch bình quân trước 31/03/2027.",
+          "value": 13042.457183652501,
+          "unit": "tỷ đồng",
+          "period": "2026-11-18",
+          "source_id": "fiinquant",
+          "sentence_vi": "Thanh khoản 20 phiên đạt 13.042,5 tỷ đồng mỗi phiên đến 18/11/2026, thuộc nhóm thấp nhất trong 1 năm so với các cửa sổ giao dịch cùng độ dài.",
+          "severity": "info",
+          "indicator_id": "market_liquidity_20d",
+          "rule_id": "BR-CM1"
+        },
+        {
+          "action_vi": "Theo dõi liệu dòng vốn có tiếp tục tập trung ở các ngành bán ròng lớn trước 31/03/2027.",
+          "value": -5859.261261666002,
+          "unit": "tỷ đồng",
+          "period": "2026-11-18",
+          "source_id": "fiinquant",
+          "sentence_vi": "Khối ngoại bán ròng 5.859,3 tỷ đồng trong 20 phiên đến 18/11/2026, trong khi tổng bán ròng trong 60 phiên cùng kết thúc ngày này là 27.175,2 tỷ đồng.",
+          "severity": "info",
+          "indicator_id": "foreign_net_20d",
+          "rule_id": "BR-CM2"
+        },
+        {
+          "action_vi": "Đối chiếu mức cách đỉnh, P/E và giá trị giao dịch theo phiên trước 31/03/2027.",
+          "value": -11.666856852391671,
+          "unit": "%",
+          "period": "2026-11-18",
+          "source_id": "fiinquant",
+          "sentence_vi": "VN-Index cách đỉnh 52 tuần 11,7% tại phiên 18/11/2026, với P/E của chỉ số đạt 10,6 lần và ở phân vị 2/100 so với 5 năm theo dữ liệu cùng phiên.",
+          "severity": "info",
+          "indicator_id": "vnindex_drawdown",
+          "rule_id": "BR-CM4"
+        }
+      ],
+      "watch": [
+        "Dư nợ ký quỹ và thanh khoản chưa đủ dữ liệu cùng kỳ để đánh giá."
+      ],
+      "kpi_ids": [
+        "market_liquidity_20d",
+        "foreign_net_20d",
+        "vnindex_drawdown",
+        "margin_debt",
+        "vnindex_close",
+        "vnindex_pe"
+      ],
+      "charts": [
+        {
+          "id": "market_liquidity",
+          "title_vi": "Thanh khoản 20 phiên đạt 13.042,5 tỷ đồng mỗi phiên đến 18/11/2026",
+          "kind": "line",
+          "indicator_ids": [
+            "market_liquidity_20d"
+          ],
+          "level": "overview",
+          "source_ids": [
+            "fiinquant"
+          ],
+          "note_vi": "Bình quân giá trị giao dịch của các mã theo dõi trong 20 phiên."
+        }
+      ],
+      "tables": [],
+      "heatmap": []
+    },
+    "real_estate": {
+      "question_vi": "Sức mua và nguồn cung thay đổi ra sao khi lãi suất biến động?",
+      "headline_vi": "Tỷ lệ hấp thụ nhà ở tại TP.HCM đạt 55,4% trong quý III/2026",
+      "cards": [
+        {
+          "action_vi": "Đối chiếu tỷ lệ hấp thụ theo phân khúc và điều kiện vay tại cùng thời điểm trước 31/03/2027.",
+          "value": 55.37190082644628,
+          "unit": "%",
+          "period": "2026-Q3",
+          "source_id": "realtique_cbre_hcm_q3_2026",
+          "sentence_vi": "Tỷ lệ hấp thụ nhà ở tại TP.HCM đạt 55,4% trong quý III/2026, với nguồn cung mới 3.267 căn và lãi suất vay mua nhà cùng kỳ 10,6%.",
+          "severity": "info",
+          "indicator_id": "re_absorption",
+          "rule_id": "BR-RE1"
+        }
+      ],
+      "watch": [],
+      "kpi_ids": [
+        "re_absorption",
+        "mortgage_rate"
+      ],
+      "charts": [
+        {
+          "id": "real_estate",
+          "title_vi": "Tỷ lệ hấp thụ nhà ở tại TP.HCM đạt 55,4% trong quý III/2026",
+          "kind": "line",
+          "indicator_ids": [
+            "re_absorption",
+            "re_new_supply",
+            "mortgage_rate"
+          ],
+          "level": "overview",
+          "source_ids": [
+            "realtique_cbre_hcm_q3_2026"
+          ],
+          "note_vi": "Giữ cùng rổ địa lý, phân khúc và cách tính qua các kỳ. Rổ địa lý có thể thay đổi sau sáp nhập. Đối chiếu cùng thời hạn ưu đãi và cùng kỳ."
+        }
+      ],
+      "tables": [],
+      "heatmap": []
+    }
+  },
+  "province": {
+    "metric_ids": [
+      "earmarked_transfers",
+      "earmarked_capex",
+      "earmarked_current",
+      "earmarked_programs"
+    ],
+    "primary_metric": "earmarked_transfers",
+    "rows": [
+      {
+        "code": "an_giang",
+        "name": "An Giang",
+        "region": "Đồng bằng sông Cửu Long",
+        "metrics": {
+          "earmarked_transfers": 8464.956,
+          "earmarked_capex": 6232.136,
+          "earmarked_current": 1672.983,
+          "earmarked_programs": 559.837
+        },
+        "group": 5
+      },
+      {
+        "code": "bac_ninh",
+        "name": "Bắc Ninh",
+        "region": "Đồng bằng sông Hồng",
+        "metrics": {
+          "earmarked_transfers": 1834.8290000000002,
+          "earmarked_capex": 886.058,
+          "earmarked_current": 430.343,
+          "earmarked_programs": null
+        },
+        "group": 1
+      },
+      {
+        "code": "ca_mau",
+        "name": "Cà Mau",
+        "region": "Đồng bằng sông Cửu Long",
+        "metrics": {
+          "earmarked_transfers": 5761.908,
+          "earmarked_capex": 4473.22,
+          "earmarked_current": 972.364,
+          "earmarked_programs": 316.324
+        },
+        "group": 4
+      }
+    ],
+    "groups": [
+      {
+        "group": 1,
+        "label_vi": "Nhóm 1",
+        "min": 1174.099,
+        "max": 3159.8484,
+        "count": 7
+      },
+      {
+        "group": 2,
+        "label_vi": "Nhóm 2",
+        "min": 3159.8484,
+        "max": 4193.7194,
+        "count": 7
+      },
+      {
+        "group": 3,
+        "label_vi": "Nhóm 3",
+        "min": 4193.7194,
+        "max": 5644.666200000001,
+        "count": 6
+      },
+      {
+        "group": 4,
+        "label_vi": "Nhóm 4",
+        "min": 5644.666200000001,
+        "max": 8102.390200000002,
+        "count": 7
+      },
+      {
+        "group": 5,
+        "label_vi": "Nhóm 5",
+        "min": 8102.390200000002,
+        "max": 14790.300000000001,
+        "count": 7
+      }
+    ],
+    "stats": {
+      "earmarked_capex": {
+        "median": 2177.526,
+        "min": 548.993,
+        "max": 14423.273000000001,
+        "n": 33
+      },
+      "earmarked_current": {
+        "median": 1306.8270000000002,
+        "min": 170.838,
+        "max": 4123.972,
+        "n": 34
+      },
+      "earmarked_programs": {
+        "median": 899.7180000000001,
+        "min": 232.955,
+        "max": 1940.3739999999998,
+        "n": 23
+      },
+      "earmarked_transfers": {
+        "median": 4853.9545,
+        "min": 1174.099,
+        "max": 14790.300000000001,
+        "n": 34
+      }
+    },
+    "source_ids": [
+      "transfers"
+    ],
+    "headline_vi": "Trung vị khoản bổ sung có mục tiêu năm 2025 là 4.854 tỷ đồng mỗi tỉnh có số liệu.",
+    "question_vi": "Khoản bổ sung có mục tiêu phân bố thế nào theo tỉnh, thành phố?"
+  },
+  "asean": {},
+  "recommendations": [
+    {
+      "id": "br_pf1",
+      "title_vi": "Thu ngân sách vượt chi 29,6 điểm % dự toán trong tháng 10/2026",
+      "sector": "public_finance",
+      "evidence": [
+        {
+          "rule_id": "BR-PF1",
+          "chart_id": "budget_execution",
+          "fact_vi": "Thu ngân sách vượt chi 29,6 điểm % dự toán trong tháng 10/2026, khi tỷ lệ chi đạt 66,8% và thấp hơn mốc tiến độ 83,3%."
+        }
+      ],
+      "so_what_vi": "Nếu tỷ lệ chi giữ nguyên, chi vẫn thấp hơn mốc tiến độ tháng 10/2026 16,5 điểm %.",
+      "action_vi": "Rà soát lịch thanh toán từng khoản chi để xác định phần chi chậm so với dự toán trước 31/03/2027.",
+      "agency_vi": "Bộ Tài chính",
+      "horizon_vi": "quý I/2027"
+    },
+    {
+      "id": "br_pf2",
+      "title_vi": "Giải ngân đầu tư công chậm 14,3 điểm % so với tiến độ tháng 10/2026",
+      "sector": "public_finance",
+      "evidence": [
+        {
+          "rule_id": "BR-PF2",
+          "chart_id": "public_investment",
+          "fact_vi": "Giải ngân đầu tư công chậm 14,3 điểm % so với tiến độ tháng 10/2026, khi cả nước giải ngân 69,0% kế hoạch so với mốc 83,3%."
+        }
+      ],
+      "so_what_vi": "Nếu tỷ lệ giải ngân giữ nguyên, cả nước còn thiếu 14,3 điểm % để đạt mốc tháng 10/2026.",
+      "action_vi": "Rà soát các dự án giải ngân dưới mốc tiến độ và thống kê số hồ sơ chậm nghiệm thu trước 31/03/2027.",
+      "agency_vi": "Bộ Tài chính và Ủy ban nhân dân cấp tỉnh",
+      "horizon_vi": "quý I/2027"
+    },
+    {
+      "id": "br_fdi1",
+      "title_vi": "Vốn FDI thực hiện bằng 43,9% vốn đăng ký trong 10 tháng 2026",
+      "sector": "fdi",
+      "evidence": [
+        {
+          "rule_id": "BR-FDI1",
+          "chart_id": "fdi_realisation",
+          "fact_vi": "Vốn FDI thực hiện bằng 43,9% vốn đăng ký trong 10 tháng 2026, khi đăng ký tăng 74,0% và thực hiện tăng 13,1% cùng kỳ."
+        }
+      ],
+      "so_what_vi": "Nếu hai tốc độ tăng giữ nguyên, mức tăng vốn đăng ký vẫn cao hơn thực hiện 60,9 điểm % theo kỳ so sánh 10 tháng 2026.",
+      "action_vi": "Đối chiếu vốn đăng ký với vốn thực hiện theo dự án và thống kê các mốc thủ tục còn thiếu trước 31/03/2027.",
+      "agency_vi": "Cục Đầu tư nước ngoài, Bộ Tài chính",
+      "horizon_vi": "quý I/2027"
+    },
+    {
+      "id": "br_bk1",
+      "title_vi": "Tăng trưởng tín dụng chênh 2,0 điểm % so với tiền gửi trong 9 tháng 2026",
+      "sector": "banking",
+      "evidence": [
+        {
+          "rule_id": "BR-BK1",
+          "chart_id": "credit_deposit",
+          "fact_vi": "Tăng trưởng tín dụng chênh 2,0 điểm % so với tiền gửi trong 9 tháng 2026, tính mức tăng của mỗi dòng vốn so với cuối năm trước."
+        }
+      ],
+      "so_what_vi": "Nếu hai tốc độ tăng giữ nguyên, tín dụng vẫn tăng hơn tiền gửi 1,0 điểm % ngoài ngưỡng theo dõi trong 9 tháng 2026.",
+      "action_vi": "Đối chiếu kỳ hạn tín dụng và tiền gửi để đo chênh lệch tăng trưởng trước 31/03/2027.",
+      "agency_vi": "Ngân hàng Nhà nước Việt Nam",
+      "horizon_vi": "quý I/2027"
+    }
+  ],
+  "rules": [],
+  "quality": [
+    {
+      "source_id": "bcp_mof_dtc_2026_10",
+      "rows": 133,
+      "flags": {
+        "category_normalized": 68
+      },
+      "score_before": 48.87,
+      "score_after": 100.0
+    },
+    {
+      "source_id": "caa_dtc_10m_2026",
+      "rows": 22,
+      "flags": {
+        "category_normalized": 22
+      },
+      "score_before": 0.0,
+      "score_after": 100.0
+    },
+    {
+      "source_id": "fiinquant",
+      "rows": 1968368,
+      "flags": {
+        "category_normalized": 8315,
+        "negative_trade": 2,
+        "ohlc_bounds": 202,
+        "outlier": 188877,
+        "duplicate": 46,
+        "missing": 19,
+        "unit_normalized": 614
+      },
+      "score_before": 89.95,
+      "score_after": 99.99
+    },
+    {
+      "source_id": "nhadautu_fdi_10m_2026",
+      "rows": 22,
+      "flags": {
+        "category_normalized": 22
+      },
+      "score_before": 0.0,
+      "score_after": 100.0
+    },
+    {
+      "source_id": "nso",
+      "rows": 948,
+      "flags": {
+        "outlier": 24
+      },
+      "score_before": 97.47,
+      "score_after": 100.0
+    },
+    {
+      "source_id": "realtique_cbre_hcm_q3_2026",
+      "rows": 35,
+      "flags": {
+        "category_normalized": 17
+      },
+      "score_before": 51.43,
+      "score_after": 100.0
+    },
+    {
+      "source_id": "sbv",
+      "rows": 36,
+      "flags": {
+        "category_normalized": 32
+      },
+      "score_before": 11.11,
+      "score_after": 100.0
+    },
+    {
+      "source_id": "tcbs_banking_q3_2026",
+      "rows": 359,
+      "flags": {
+        "category_normalized": 21,
+        "unit_mismatch": 1
+      },
+      "score_before": 94.15,
+      "score_after": 99.72
+    },
+    {
+      "source_id": "theinvestor_credit_oct_2026",
+      "rows": 3,
+      "flags": {
+        "category_normalized": 3
+      },
+      "score_before": 0.0,
+      "score_after": 100.0
+    },
+    {
+      "source_id": "transfers",
+      "rows": 504,
+      "flags": {
+        "category_normalized": 504,
+        "missing": 31,
+        "unit_normalized": 504
+      },
+      "score_before": 0.0,
+      "score_after": 93.85
+    },
+    {
+      "source_id": "vneconomy_margin_q3_2026",
+      "rows": 6,
+      "flags": {
+        "category_normalized": 6,
+        "measure_mismatch": 2,
+        "unit_mismatch": 2,
+        "unit_normalized": 1
+      },
+      "score_before": 0.0,
+      "score_after": 66.67
+    },
+    {
+      "source_id": "vneconomy_oct_crosscheck",
+      "rows": 2,
+      "flags": {
+        "category_normalized": 2,
+        "measure_mismatch": 1,
+        "unit_mismatch": 1
+      },
+      "score_before": 0.0,
+      "score_after": 50.0
+    },
+    {
+      "source_id": "wdi",
+      "rows": 3000,
+      "flags": {
+        "imputed": 72,
+        "missing": 614,
+        "outlier": 95
+      },
+      "score_before": 76.37,
+      "score_after": 81.93
+    }
+  ],
+  "reconciliation": [
+    {
+      "indicator_id": "apartment_absorption",
+      "period": "2026-Q3",
+      "values": {
+        "realtique_cbre_hcm_q3_2026": 3920.0
+      },
+      "diff_pct": 0.0,
+      "tolerance_pct": 1.0,
+      "verdict": "single_source",
+      "note_vi": "HÀ NỘI · level · can"
+    },
+    {
+      "indicator_id": "apartment_absorption",
+      "period": "2026-Q3",
+      "values": {
+        "realtique_cbre_hcm_q3_2026": -66.0
+      },
+      "diff_pct": 0.0,
+      "tolerance_pct": 1.0,
+      "verdict": "single_source",
+      "note_vi": "HÀ NỘI · yoy · %"
+    },
+    {
+      "indicator_id": "apartment_absorption",
+      "period": "2026-Q3",
+      "values": {
+        "realtique_cbre_hcm_q3_2026": 1809.0
+      },
+      "diff_pct": 0.0,
+      "tolerance_pct": 1.0,
+      "verdict": "single_source",
+      "note_vi": "TP.HCM · level · can"
+    },
+    {
+      "indicator_id": "apartment_absorption",
+      "period": "2026-Q3",
+      "values": {
+        "realtique_cbre_hcm_q3_2026": -71.0
+      },
+      "diff_pct": 0.0,
+      "tolerance_pct": 1.0,
+      "verdict": "single_source",
+      "note_vi": "TP.HCM · yoy · %"
+    }
+  ],
+  "model": {
+    "tables": [
+      {
+        "name": "bronze.vm_wdi",
+        "layer": "bronze",
+        "rows": 350,
+        "grain_vi": "Nền kinh tế và năm"
+      },
+      {
+        "name": "bronze.vm_nso",
+        "layer": "bronze",
+        "rows": 948,
+        "grain_vi": "Chỉ tiêu, tháng và loại thước đo"
+      },
+      {
+        "name": "bronze.vm_sbv",
+        "layer": "bronze",
+        "rows": 18,
+        "grain_vi": "Khu vực kinh tế và kỳ báo cáo dư nợ"
+      },
+      {
+        "name": "bronze.vm_press",
+        "layer": "bronze",
+        "rows": 581,
+        "grain_vi": "Chỉ tiêu, kỳ, đơn vị quan sát và nguồn"
+      },
+      {
+        "name": "bronze.vm_transfers",
+        "layer": "bronze",
+        "rows": 126,
+        "grain_vi": "Tỉnh theo địa giới trong phụ lục và năm"
+      },
+      {
+        "name": "bronze.vm_observations",
+        "layer": "bronze",
+        "rows": 5070,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "bronze.vm_fq_roster",
+        "layer": "bronze",
+        "rows": 1547,
+        "grain_vi": "Mã, sàn và ngày chụp danh mục"
+      },
+      {
+        "name": "bronze.vm_fq_bars",
+        "layer": "bronze",
+        "rows": 1830896,
+        "grain_vi": "Mã chứng khoán hoặc chỉ số theo phiên"
+      },
+      {
+        "name": "bronze.vm_fq_foreign",
+        "layer": "bronze",
+        "rows": 53049,
+        "grain_vi": "Mã và thời điểm báo cáo giao dịch khối ngoại"
+      },
+      {
+        "name": "bronze.vm_fq_valuation",
+        "layer": "bronze",
+        "rows": 81525,
+        "grain_vi": "Cấp định giá, mã và phiên"
+      },
+      {
+        "name": "bronze.vm_fq_bank_ratios",
+        "layer": "bronze",
+        "rows": 614,
+        "grain_vi": "Ngân hàng và quý tài chính"
+      },
+      {
+        "name": "bronze.vm_fq_breadth",
+        "layer": "bronze",
+        "rows": 24,
+        "grain_vi": "Chỉ số, nhóm mức đóng góp, mã và ngày"
+      },
+      {
+        "name": "bronze.vm_fq_vn30_weights",
+        "layer": "bronze",
+        "rows": 30,
+        "grain_vi": "Mã thuộc VN30 và ngày chụp"
+      },
+      {
+        "name": "bronze.vm_fq_investor_flow",
+        "layer": "bronze",
+        "rows": 683,
+        "grain_vi": "Mã và phiên theo nhóm nhà đầu tư"
+      },
+      {
+        "name": "silver.vm_observations",
+        "layer": "silver",
+        "rows": 5070,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_roster",
+        "layer": "silver",
+        "rows": 1547,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_bars",
+        "layer": "silver",
+        "rows": 1830896,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_foreign",
+        "layer": "silver",
+        "rows": 53049,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_valuation",
+        "layer": "silver",
+        "rows": 81525,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_bank_ratios",
+        "layer": "silver",
+        "rows": 614,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_breadth",
+        "layer": "silver",
+        "rows": 24,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_vn30_weights",
+        "layer": "silver",
+        "rows": 30,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "silver.vm_fq_investor_flow",
+        "layer": "silver",
+        "rows": 683,
+        "grain_vi": "Một dòng từ nguồn dữ liệu"
+      },
+      {
+        "name": "gold.dim_date",
+        "layer": "gold",
+        "rows": 9820,
+        "grain_vi": "Một ngày lịch"
+      },
+      {
+        "name": "gold.dim_period",
+        "layer": "gold",
+        "rows": 458,
+        "grain_vi": "Một kỳ báo cáo"
+      },
+      {
+        "name": "gold.dim_geo",
+        "layer": "gold",
+        "rows": 120,
+        "grain_vi": "Một đơn vị địa lý hoặc chủ thể"
+      },
+      {
+        "name": "gold.dim_indicator",
+        "layer": "gold",
+        "rows": 75,
+        "grain_vi": "Một chỉ tiêu trong danh mục"
+      },
+      {
+        "name": "gold.dim_source",
+        "layer": "gold",
+        "rows": 13,
+        "grain_vi": "Một nguồn trong danh mục"
+      },
+      {
+        "name": "gold.dim_security",
+        "layer": "gold",
+        "rows": 1571,
+        "grain_vi": "Một mã chứng khoán, ngành hoặc chỉ số"
+      },
+      {
+        "name": "gold.dim_bank",
+        "layer": "gold",
+        "rows": 28,
+        "grain_vi": "Một ngân hàng"
+      },
+      {
+        "name": "gold.fact_indicator",
+        "layer": "gold",
+        "rows": 4838,
+        "grain_vi": "Một quan sát theo chỉ tiêu, kỳ, phạm vi, nguồn và cách đo"
+      },
+      {
+        "name": "gold.fact_security_daily",
+        "layer": "gold",
+        "rows": 1830896,
+        "grain_vi": "Một mã chứng khoán hoặc chỉ số mỗi ngày"
+      },
+      {
+        "name": "gold.fact_valuation_daily",
+        "layer": "gold",
+        "rows": 81525,
+        "grain_vi": "Một mã cổ phiếu, ngành hoặc chỉ số mỗi ngày"
+      },
+      {
+        "name": "gold.fact_bank_ratio_quarter",
+        "layer": "gold",
+        "rows": 614,
+        "grain_vi": "Một ngân hàng mỗi quý"
+      },
+      {
+        "name": "gold.fact_market_breadth_daily",
+        "layer": "gold",
+        "rows": 1245,
+        "grain_vi": "Một phiên giao dịch HOSE hoặc ngày có ảnh chụp"
+      }
+    ]
+  },
+  "files": {
+    "monitor": "monitor.json",
+    "dictionary_csv": "data_dictionary.csv",
+    "dictionary_md": "data_dictionary.md",
+    "erd": "erd.mmd",
+    "eda": "eda.md",
+    "v_budget_execution": "csv/v_budget_execution.csv",
+    "v_public_investment": "csv/v_public_investment.csv",
+    "v_fdi": "csv/v_fdi.csv",
+    "v_bank_health_quarter": "csv/v_bank_health_quarter.csv",
+    "v_capital_market_daily": "csv/v_capital_market_daily.csv",
+    "v_real_estate": "csv/v_real_estate.csv",
+    "v_asean_rank": "csv/v_asean_rank.csv",
+    "v_province_scorecard": "csv/v_province_scorecard.csv"
+  }
+}

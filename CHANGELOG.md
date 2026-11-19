@@ -6,6 +6,12 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ## [Unreleased]
 
+### VN Macro-Financial Monitor · 2026-11-20
+
+- Added incremental FiinQuant landings, deterministic NSO and SBV extractors, TinyFish with spend controls, and evidence-tagged press and PDF observations.
+- Added the `vn_monitor` DuckDB star model, rule results, provenance, a validated publication manifest, and six judge sections with five sector pages. The overview, ASEAN and sector pages publish their main content in server-rendered HTML. Unknown sector routes return 404.
+- Added a bilingual 13-slide pitch and Vietnamese executive brief via `de.py monitor --deck`, plus a business-rule register and a source-by-source publication record. Hosting, mobile/A4 checks and confirmation of FiinQuant publication rights remain open.
+
 ### Added
 - Open-source README (badges, architecture, data-engineering and analysis principles), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
   (Contributor Covenant 2.1), issue and pull-request templates, this changelog; `docs/WORKFLOW.md` §0 maps the mentor's 6-step hackathon scope
