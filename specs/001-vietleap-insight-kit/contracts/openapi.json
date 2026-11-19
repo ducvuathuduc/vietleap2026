@@ -2371,7 +2371,7 @@
      "kind": {
       "type": "string",
       "title": "Kind",
-      "description": "one of ('file', 'api', 'sql', 'scrape', 'social', 'cv', 'reducto')"
+      "description": "one of ('file', 'api', 'sql', 'scrape', 'social', 'cv', 'reducto', 'tinyfish')"
      },
      "uri": {
       "type": "string",

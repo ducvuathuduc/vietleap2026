@@ -173,6 +173,10 @@ test("published file resolver stays inside the monitor directory", () => {
   assert.equal(resolvePublishedFile(root, "csv/v_fdi.csv"), path.resolve(root, "csv/v_fdi.csv"))
   assert.equal(resolvePublishedFile(root, "../secrets.env"), null)
   assert.equal(resolvePublishedFile(root, "..\\secrets.env"), null)
+  assert.equal(resolvePublishedFile(root, "..\\..\\x"), null)
+  assert.equal(resolvePublishedFile(root, "/etc/passwd"), null)
+  assert.equal(resolvePublishedFile(root, "csv\\v_fdi.csv"), null)
+  assert.equal(resolvePublishedFile(root, "C:csv/v_fdi.csv"), null)
   assert.equal(resolvePublishedFile(root, ""), null)
 })
 

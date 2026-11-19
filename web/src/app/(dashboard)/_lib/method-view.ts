@@ -244,7 +244,16 @@ export function publishedFile(
 /** Resolve a files{} value and refuse anything that leaves the monitor directory. */
 export function resolvePublishedFile(root: string, relative: string): string | null {
   const trimmed = relative.trim()
-  if (!trimmed || trimmed.includes("\0") || path.isAbsolute(trimmed)) return null
+  if (
+    !trimmed ||
+    trimmed.includes("\0") ||
+    trimmed.includes("\\") ||
+    /^[a-z]:/i.test(trimmed) ||
+    path.win32.isAbsolute(trimmed) ||
+    path.posix.isAbsolute(trimmed)
+  ) {
+    return null
+  }
   const full = path.resolve(root, trimmed)
   const rel = path.relative(path.resolve(root), full)
   if (!rel || rel === "." || rel.startsWith("..") || path.isAbsolute(rel)) return null
