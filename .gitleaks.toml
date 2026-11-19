@@ -1,8 +1,9 @@
-# gitleaks config: default rules + allowlist for placeholders in docs/examples.
+﻿# gitleaks config: default rules + allowlist for placeholders in docs/examples.
 [extend]
 useDefault = true
 
 [allowlist]
 description = "documentation placeholders"
 regexes = ['''gsk_\.\.\.''', '''GROQ_API_KEY=$''']
-paths = ['''web/package-lock\.json''']
+# tests/fixtures/nso: saved public NSO pages; the only hit is the site's public reCAPTCHA sitekey.
+paths = ['''web/package-lock\.json''', '''tests/fixtures/nso/.*\.html''']
