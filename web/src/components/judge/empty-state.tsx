@@ -6,7 +6,7 @@ export interface EmptyStateProps {
   link?: { label: string; href: string }
 }
 
-/** §3.5: one factual sentence plus the source link, never a fake zero. */
+/** One factual sentence plus the source link, never a fake zero. */
 export function EmptyState({ message, title = "Chưa có số liệu", link }: EmptyStateProps) {
   return (
     <Empty className="border border-dashed border-border py-8">

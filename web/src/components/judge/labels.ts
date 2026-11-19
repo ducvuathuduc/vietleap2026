@@ -1,7 +1,7 @@
 /**
  * Pure copy/format helpers for the judge component kit.
  * Number formatting stays in `@/lib/monitor/format`; this file only adds the
- * label and date rules the components need (DESIGN_SPEC §3.4, §3.5, §7.5).
+ * label and date rules the components need.
  */
 
 const SAIGON = "Asia/Saigon"
@@ -41,7 +41,7 @@ export function frequencyLabel(frequency: string | null | undefined): string {
   return FREQUENCY_LABELS[frequency] ?? ""
 }
 
-/** dd/mm/yyyy in Asia/Saigon; period strings keep their period shape (§7.5). */
+/** dd/mm/yyyy in Asia/Saigon; period strings keep their period shape. */
 export function formatDay(value: string | null | undefined): string {
   if (!value) return ""
   const quarter = /^(\d{4})-Q([1-4])$/.exec(value)

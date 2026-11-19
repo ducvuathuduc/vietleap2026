@@ -25,7 +25,7 @@ export interface HeatmapProps {
 }
 
 /**
- * Server-rendered HTML table (§3.1/§2.4): rows are indicators, columns are periods,
+ * Server-rendered HTML table: rows are indicators, columns are periods,
  * fill is `pctile_12m` on 5 grey steps. A null pctile leaves the cell blank and the
  * first column stays sticky while the periods scroll horizontally.
  */
@@ -36,7 +36,7 @@ export function Heatmap({ rows, unit, ariaLabel, highlightId }: HeatmapProps) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs text-muted-foreground">
-        {unit ? `Đơn vị: ${unit} · ` : ""}Thang xám theo phân vị 12 tháng, ô trống là chưa có phân vị.
+        {unit ? `Đơn vị: ${unit} · ` : ""}Thang xám theo phân vị 12 tháng; ô không tô là chưa có phân vị, dấu – là chưa có số liệu.
       </p>
       <div className="w-full overflow-x-auto">
         <table className="w-full border-collapse text-xs">
@@ -93,7 +93,9 @@ export function Heatmap({ rows, unit, ariaLabel, highlightId }: HeatmapProps) {
                           >
                             {shown}
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="text-muted-foreground">–</span>
+                        )}
                       </td>
                     )
                   })}

@@ -16,7 +16,7 @@ function getReduceMotion() {
 }
 
 /**
- * AMENDMENTS §3: Recharts may animate on first mount only (400 ms ease-out) and
+ * Recharts may animate on first mount only (400 ms ease-out) and
  * must be off under `prefers-reduced-motion: reduce`. Later filter changes render
  * without animation because the timer has already expired.
  */

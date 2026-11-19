@@ -6,7 +6,7 @@ export interface SparklineProps {
 }
 
 /**
- * Inline SVG sparkline: zero JS, server rendered, no grid (§3.2). Fewer than two
+ * Inline SVG sparkline: zero JS, server rendered, no grid. Fewer than two
  * finite points renders only the layout box, never a fake flat line.
  */
 export function Sparkline({ points, width = 96, height = 24, ariaLabel = "Xu hướng gần nhất" }: SparklineProps) {

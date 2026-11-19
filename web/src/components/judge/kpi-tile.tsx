@@ -11,7 +11,7 @@ export interface KpiChange {
 }
 
 export interface KpiTileProps {
-  /** Eyebrow, 11px (§2.1). */
+  /** Eyebrow, 11px. */
   name: string
   /** Formatted value from `@/lib/monitor/format`, e.g. "12,5". */
   value: string
@@ -25,14 +25,17 @@ export interface KpiTileProps {
 
 const SHELL = "flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
 
-/** One KPI tile: eyebrow, value + unit, sparkline, period · change (§6). */
+/** One KPI tile: eyebrow, value + unit, sparkline, period · change. */
 export function KpiTile({ name, value, unit, period, change, sparkline = [], href }: KpiTileProps) {
   const body = (
     <>
       <p className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">{name}</p>
       <p className="flex flex-wrap items-baseline gap-1 tabular-nums">
-        <span className="text-3xl font-semibold md:text-4xl">{value}</span>
-        {unit ? <span className="text-base font-normal text-muted-foreground">{unit}</span> : null}
+        <span className="text-3xl font-semibold md:text-4xl">
+          {value}
+          {unit === "%" ? "%" : null}
+        </span>
+        {unit && unit !== "%" ? <span className="text-base font-normal text-muted-foreground">{unit}</span> : null}
       </p>
       <Sparkline points={sparkline} ariaLabel={`Xu hướng ${name}`} />
       {period || change ? (

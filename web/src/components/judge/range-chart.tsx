@@ -11,7 +11,7 @@ export interface RangeItem {
 export interface RangeChartProps {
   items: RangeItem[]
   unit?: string
-  /** The one row to ink in (§3.1 highlight). */
+  /** The one row to ink in. */
   highlightId?: string
   /** Optional vertical benchmark, e.g. the national median. */
   reference?: number | null
@@ -27,7 +27,7 @@ const TICK_ROW = 20
 
 /**
  * Min–median–max range chart, server-rendered as inline SVG (zero JS): one row per
- * unit, dots at min/median/max, dashed benchmark, no grid (§3.1, §3.2).
+ * unit, dots at min/median/max, dashed benchmark, no grid.
  */
 export function RangeChart({ items, unit, highlightId, reference, referenceLabel, ariaLabel }: RangeChartProps) {
   if (!items.length) return null

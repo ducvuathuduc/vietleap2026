@@ -63,7 +63,7 @@ function RankTooltip({
   )
 }
 
-/** Horizontal ranking bars, sorted high to low, one row in ink (§3.1). */
+/** Horizontal ranking bars, sorted high to low, one row in ink. */
 export function BarRank({
   rows,
   unit,
@@ -82,7 +82,12 @@ export function BarRank({
   return (
     <div className="flex flex-col gap-1">
       {unit ? <p className="text-xs text-muted-foreground">Đơn vị: {unit}</p> : null}
-      <div style={{ height }} role="img" aria-label={ariaLabel}>
+      <div
+        role="img"
+        aria-label={ariaLabel}
+        className="h-[200px] md:h-(--chart-height)"
+        style={{ "--chart-height": `${height}px` } as React.CSSProperties}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart layout="vertical" data={sorted} margin={{ top: 4, right: 56, bottom: 4, left: 0 }}>
             <XAxis type="number" hide />

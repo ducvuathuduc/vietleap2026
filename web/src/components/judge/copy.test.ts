@@ -1,5 +1,5 @@
 // Run: npm test
-// Static checks from DESIGN_SPEC §9 that apply to the component kit.
+// Static copy/style checks that apply to the component kit.
 import assert from "node:assert/strict"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"

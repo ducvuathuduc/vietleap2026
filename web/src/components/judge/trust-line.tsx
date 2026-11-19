@@ -17,7 +17,7 @@ export interface TrustLineProps {
 const LINK_CLASS =
   "underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 
-/** §3.4: "Nguồn X · Cập nhật dd/mm/yyyy · Kỳ tới …" plus the three links. Server, no JS. */
+/** "Nguồn X · Cập nhật dd/mm/yyyy · Kỳ tới …" plus the three links. Server, no JS. */
 export function TrustLine({ sourceName, lastUpdated, nextRelease, links, note }: TrustLineProps) {
   const text = trustText({ sourceName, lastUpdated, nextRelease })
   if (!text) return null

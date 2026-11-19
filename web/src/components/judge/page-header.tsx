@@ -12,9 +12,9 @@ export interface PageHeaderAction {
 
 export interface PageHeaderProps {
   level: JudgeLevel
-  /** §7.2: one conclusion sentence with a number and a period, ≤120 characters. */
+  /** One conclusion sentence with a number and a period, ≤120 characters. */
   headline: string
-  /** §7.3: 1–3 lead sentences. */
+  /** 1–3 lead sentences. */
   lead?: string[]
   generatedAt?: string | null
   /** Overrides the "Cập nhật dd/mm/yyyy" badge when a page knows better. */

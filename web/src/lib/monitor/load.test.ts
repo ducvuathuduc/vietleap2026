@@ -5,7 +5,7 @@ import path from "node:path"
 import { describe, test } from "node:test"
 import { fileURLToPath } from "node:url"
 
-import { MonitorSchemaError, defaultMonitorPaths, loadMonitor, resolveMonitorPaths } from "./load.ts"
+import { MonitorSchemaError, defaultMonitorPaths, loadMonitor, loadPublishedMonitor, resolveMonitorPaths } from "./load.ts"
 
 const fixturePath = fileURLToPath(new URL("./__fixtures__/synthetic.monitor.json", import.meta.url))
 
@@ -53,5 +53,23 @@ describe("monitor file", { concurrency: false }, () => {
     assert.match(paths.seed, /[\\/]seed[\\/]vn_monitor[\\/]monitor\.json$/)
     assert.equal(resolveMonitorPaths({ MONITOR_PATH: "D:\\custom\\monitor.json" }).primary, "D:\\custom\\monitor.json")
     assert.equal(resolveMonitorPaths({}).primary, paths.primary)
+  })
+
+  test("the published loader reads the payload and returns null when nothing is published", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "vietleap-monitor-published-"))
+    const previousPath = process.env.MONITOR_PATH
+    const previousCwd = process.cwd()
+    // A temp cwd also moves the seed fallback, so "nothing published" really means nothing.
+    process.chdir(dir)
+    process.env.MONITOR_PATH = path.join(dir, "monitor.json")
+    try {
+      assert.equal(await loadPublishedMonitor(), null)
+      fs.copyFileSync(fixturePath, process.env.MONITOR_PATH)
+      assert.equal((await loadPublishedMonitor())?.meta.title_vi, "Tiêu đề tổng quan")
+    } finally {
+      process.chdir(previousCwd)
+      if (previousPath === undefined) delete process.env.MONITOR_PATH
+      else process.env.MONITOR_PATH = previousPath
+    }
   })
 })

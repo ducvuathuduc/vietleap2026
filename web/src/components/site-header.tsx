@@ -36,7 +36,7 @@ function JudgeHeader() {
       <div className="flex w-full flex-wrap items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto" />
-        <h1 className="text-[17px] font-semibold tracking-tight">{titleForPath(pathname)}</h1>
+        <p className="text-[17px] font-semibold tracking-tight">{titleForPath(pathname)}</p>
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"

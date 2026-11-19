@@ -16,10 +16,11 @@ type CacheEntry = { mtimeMs: number; payload: Monitor }
 const cache = new Map<string, CacheEntry>()
 
 export function defaultMonitorPaths(): { primary: string; seed: string } {
-  const here = import.meta.dirname
+  // The Next server bundle leaves import.meta.dirname undefined, so resolve from the app root (`web/`).
+  const here = process.cwd()
   return {
-    primary: path.resolve(here, "../../../../out/vn_monitor/monitor.json"),
-    seed: path.resolve(here, "../../../seed/vn_monitor/monitor.json"),
+    primary: path.resolve(here, "../out/vn_monitor/monitor.json"),
+    seed: path.resolve(here, "seed/vn_monitor/monitor.json"),
   }
 }
 
@@ -27,6 +28,25 @@ export function resolveMonitorPaths(env?: { MONITOR_PATH?: string }): { primary:
   const defaults = defaultMonitorPaths()
   const configured = (env ? env.MONITOR_PATH : process.env.MONITOR_PATH)?.trim()
   return { primary: configured || defaults.primary, seed: defaults.seed }
+}
+
+/**
+ * Cached read for judge pages. Cache Components prerenders the result into the
+ * static shell, so the HTML carries the content instead of a streamed-in div.
+ * The file mtime is part of the cache key, so a re-published payload is a new entry.
+ */
+export async function loadPublishedMonitor(): Promise<Monitor | null> {
+  const paths = resolveMonitorPaths()
+  const file = [paths.primary, paths.seed].find((candidate) => fs.existsSync(candidate))
+  if (!file) return null
+  return readPublished({ file, mtimeMs: fs.statSync(file).mtimeMs })
+}
+
+// `mtimeMs` is not read here: it sits in the argument object only to make a
+// re-published payload a separate cache entry.
+async function readPublished(source: { file: string; mtimeMs: number }): Promise<Monitor | null> {
+  "use cache"
+  return readCached(source.file)
 }
 
 /** Read the published payload. Null when neither the primary file nor the seed exists. */

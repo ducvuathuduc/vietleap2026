@@ -15,7 +15,7 @@ export interface RecommendationBlockProps {
   id: string
   title: string
   evidence: RecommendationEvidence[]
-  /** §7.4 "Hàm ý": the quantified consequence of not acting. */
+  /** "Hàm ý": the quantified consequence of not acting. */
   implication: string
   action: string
   agency: string
@@ -25,7 +25,7 @@ export interface RecommendationBlockProps {
 
 const LABEL = "text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
 
-/** §7.4: Bằng chứng → Hàm ý → Hành động → Cơ quan + horizon. */
+/** Bằng chứng → Hàm ý → Hành động → Cơ quan + horizon. */
 export function RecommendationBlock({
   id,
   title,

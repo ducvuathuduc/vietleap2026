@@ -20,14 +20,14 @@ export interface ChartFigureProps {
   sourceIds: string[]
   pointCount: number
   frequency?: string | null
-  /** Whole months covered when the period is not complete yet (§3.5). */
+  /** Whole months covered when the period is not complete yet. */
   partialMonths?: number | null
   /** Block name when loading failed, e.g. "biểu đồ tín dụng". */
   error?: string | null
   id?: string
 }
 
-/** §3.2 figure wrapper: numbered figcaption, aria-label, empty/partial states, TrustLine. */
+/** Figure wrapper: numbered caption, aria-label, empty/partial states and the citation line. */
 export function ChartFigure({
   number,
   title,
@@ -42,7 +42,7 @@ export function ChartFigure({
   error,
   id,
 }: ChartFigureProps) {
-  // Fail closed: a number without a source is not shown (§1.3).
+  // Fail closed: a number without a source is not shown.
   if (!sourceIds.length) return null
 
   const hasData = canRenderChart({ sourceIds, pointCount })

@@ -97,7 +97,7 @@ function geometryToPath(geometry: GeoFeature["geometry"]): string {
 }
 
 /**
- * 34-province choropleth (§3.1): 5 grey steps by group, missing data stays white,
+ * 34-province choropleth: 5 grey steps by group, missing data stays white,
  * hover changes the fill in 80 ms. Adapted from `province-map.tsx`, which stays untouched.
  */
 export function Choropleth({ rows, groups, unit, ariaLabel, geoUrl = "/geo/vn-34.geo.json" }: ChoroplethProps) {

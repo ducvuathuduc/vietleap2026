@@ -19,7 +19,7 @@ export interface SiteFooterProps {
 const LINK_CLASS =
   "underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 
-/** §8 footer: sources + licence, citation, update time, MIT attribution for the table pattern. */
+/** Footer: sources + licence, citation, update time, MIT attribution for the table pattern. */
 export function SiteFooter({
   sources,
   generatedAt,

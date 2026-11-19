@@ -29,7 +29,7 @@ export interface LineSeries {
 export interface LineChartThreshold {
   value: number
   label: string
-  /** `--destructive` only when the rule is actually breached (§2.4). */
+  /** `--destructive` only when the rule is actually breached. */
   breached?: boolean
 }
 
@@ -40,7 +40,7 @@ export interface LineChartProps {
   threshold?: LineChartThreshold | null
   sourceName?: string
   ariaLabel: string
-  /** Lines may clip the y-axis; the note below says so (§3.3). */
+  /** Lines may clip the y-axis; the note below says so. */
   zeroBased?: boolean
 }
 
@@ -138,7 +138,12 @@ export function LineChart({ series, unit, height = 240, threshold, sourceName, a
   return (
     <div className="flex flex-col gap-1">
       {unit ? <p className="text-xs text-muted-foreground">Đơn vị: {unit}</p> : null}
-      <div style={{ height }} role="img" aria-label={ariaLabel}>
+      <div
+        role="img"
+        aria-label={ariaLabel}
+        className="h-[200px] md:h-(--chart-height)"
+        style={{ "--chart-height": `${height}px` } as React.CSSProperties}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <RechartsLineChart data={plot.rows} margin={{ top: 18, right: 28, bottom: 4, left: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="2 4" />

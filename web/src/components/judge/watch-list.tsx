@@ -14,7 +14,7 @@ export interface WatchListProps {
   title?: string
 }
 
-/** §6 "Cần theo dõi": one sentence per line plus a link to the evidence. */
+/** "Cần theo dõi": one sentence per line plus a link to the evidence. */
 export function WatchList({ items, title = "Cần theo dõi" }: WatchListProps) {
   if (!items.length) return null
 
