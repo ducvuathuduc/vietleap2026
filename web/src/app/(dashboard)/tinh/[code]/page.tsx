@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Suspense } from "react"
 import { notFound } from "next/navigation"
 
 import { KnowBox } from "@/components/judge/know-box"
@@ -8,9 +7,9 @@ import { PageHeader } from "@/components/judge/page-header"
 import { SiteFooter } from "@/components/judge/site-footer"
 import { TrustLine } from "@/components/judge/trust-line"
 import { PageShell } from "@/components/state"
-import { loadMonitor } from "@/lib/monitor/load"
+import { loadPublishedMonitor } from "@/lib/monitor/load"
 
-import { JudgeEmpty, JudgePageSkeleton, readMonitor } from "../../judge-screen"
+import { JudgeEmpty, readMonitor } from "../../judge-screen"
 import { provinceDetail } from "../../_lib/province-view"
 
 const FRAME = "mx-auto w-full max-w-[1200px] space-y-6 px-4 md:space-y-8 md:px-6"
@@ -19,10 +18,20 @@ const LINK =
 
 type Params = Promise<{ code: string }>
 
+/** Every province in the published payload is prerendered; any other code falls through to 404. */
+export async function generateStaticParams() {
+  try {
+    const monitor = await loadPublishedMonitor()
+    return monitor ? monitor.province.rows.map((row) => ({ code: row.code })) : []
+  } catch {
+    return []
+  }
+}
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { code } = await params
   try {
-    const monitor = loadMonitor()
+    const monitor = await loadPublishedMonitor()
     const detail = monitor ? provinceDetail(monitor, code) : null
     return {
       title: detail?.name ?? "Tỉnh thành",
@@ -35,15 +44,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   }
 }
 
-export default function Page({ params }: { params: Params }) {
-  return (
-    <Suspense fallback={<JudgePageSkeleton kpis={0} cards={0} figures={1} />}>
-      <Province params={params} />
-    </Suspense>
-  )
-}
-
-async function Province({ params }: { params: Params }) {
+export default async function Page({ params }: { params: Params }) {
   const { code } = await params
   const monitor = await readMonitor()
   if (!monitor) return <JudgeEmpty />

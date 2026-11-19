@@ -1,11 +1,10 @@
 import type { Metadata } from "next"
-import { Suspense } from "react"
 
 import { PageHeader } from "@/components/judge/page-header"
 import { SiteFooter } from "@/components/judge/site-footer"
 import { PageShell } from "@/components/state"
 
-import { JudgeEmpty, JudgePageSkeleton, readMonitor } from "../judge-screen"
+import { JudgeEmpty, readMonitor } from "../judge-screen"
 import { methodPage, type MethodIndicatorModel, type MethodSourceModel } from "../_lib/method-view"
 
 export const metadata: Metadata = {
@@ -18,15 +17,7 @@ const LINK =
   "underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 const H2 = "text-xl font-semibold"
 
-export default function Page() {
-  return (
-    <Suspense fallback={<JudgePageSkeleton kpis={0} cards={0} figures={3} />}>
-      <Method />
-    </Suspense>
-  )
-}
-
-async function Method() {
+export default async function Page() {
   const monitor = await readMonitor()
   if (!monitor) return <JudgeEmpty />
   const model = methodPage(monitor)

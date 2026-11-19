@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Suspense } from "react"
 
 import { ChartFigure } from "@/components/judge/chart-figure"
 import { Choropleth } from "@/components/judge/choropleth"
@@ -11,7 +10,7 @@ import { TrustLine } from "@/components/judge/trust-line"
 import { cn } from "cn"
 import { PageShell } from "@/components/state"
 
-import { JudgeEmpty, JudgePageSkeleton, readMonitor } from "../judge-screen"
+import { JudgeEmpty, readMonitor } from "../judge-screen"
 import { provincePage } from "../_lib/province-view"
 import { ProvinceTable } from "./province-table"
 
@@ -26,15 +25,7 @@ const CHIP =
 
 type SearchParams = Promise<{ nhom?: string | string[]; "giai-ngan"?: string | string[] }>
 
-export default function Page({ searchParams }: { searchParams: SearchParams }) {
-  return (
-    <Suspense fallback={<JudgePageSkeleton kpis={0} cards={0} figures={2} />}>
-      <Provinces searchParams={searchParams} />
-    </Suspense>
-  )
-}
-
-async function Provinces({ searchParams }: { searchParams: SearchParams }) {
+export default async function Page({ searchParams }: { searchParams: SearchParams }) {
   const { nhom, "giai-ngan": giaiNgan } = await searchParams
   const requested = Array.isArray(nhom) ? nhom[0] : nhom
   const requestedDisbursement = Array.isArray(giaiNgan) ? giaiNgan[0] : giaiNgan

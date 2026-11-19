@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Suspense } from "react"
 
 import { PageHeader } from "@/components/judge/page-header"
 import { SiteFooter } from "@/components/judge/site-footer"
 import { PageShell } from "@/components/state"
 
-import { JudgeEmpty, JudgePageSkeleton, readMonitor } from "../../judge-screen"
+import { JudgeEmpty, readMonitor } from "../../judge-screen"
 import { askPage } from "../../_lib/method-view"
 
 export const metadata: Metadata = {
@@ -18,15 +17,7 @@ const FRAME = "mx-auto w-full max-w-[1200px] space-y-6 px-4 md:space-y-8 md:px-6
 const LINK =
   "w-fit underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 
-export default function Page() {
-  return (
-    <Suspense fallback={<JudgePageSkeleton kpis={0} cards={1} figures={0} />}>
-      <Ask />
-    </Suspense>
-  )
-}
-
-async function Ask() {
+export default async function Page() {
   const monitor = await readMonitor()
   if (!monitor) return <JudgeEmpty />
   const model = askPage(monitor, process.env.ENABLE_CHAT === "1")

@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { Suspense } from "react"
 
 import { PageHeader } from "@/components/judge/page-header"
 import { RecommendationBlock } from "@/components/judge/recommendation-block"
@@ -8,7 +7,7 @@ import { TrustLine } from "@/components/judge/trust-line"
 import { PageShell } from "@/components/state"
 
 import { JudgeTable } from "../_lib/judge-table"
-import { JudgeEmpty, JudgeFigure, JudgePageSkeleton, readMonitor } from "../judge-screen"
+import { JudgeEmpty, JudgeFigure, readMonitor } from "../judge-screen"
 import { recommendationPage } from "../_lib/recommendation-view"
 
 export const metadata: Metadata = {
@@ -19,15 +18,7 @@ export const metadata: Metadata = {
 const FRAME = "mx-auto w-full max-w-[1200px] space-y-6 px-4 md:space-y-8 md:px-6"
 const LABEL = "text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
 
-export default function Page() {
-  return (
-    <Suspense fallback={<JudgePageSkeleton kpis={0} cards={3} figures={0} />}>
-      <Recommendations />
-    </Suspense>
-  )
-}
-
-async function Recommendations() {
+export default async function Page() {
   const monitor = await readMonitor()
   if (!monitor) return <JudgeEmpty />
   const model = recommendationPage(monitor)
