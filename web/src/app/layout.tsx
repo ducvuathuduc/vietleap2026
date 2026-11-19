@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "VietLeap Insight",
-  description: "From data to decision — profile, ranked insights, drivers, what-if and an AI analyst",
+  description: "Từ dữ liệu đến quyết định — hồ sơ, nhận định đã xếp hạng, yếu tố tác động, kịch bản what-if và hỏi AI",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

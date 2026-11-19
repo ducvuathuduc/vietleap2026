@@ -22,9 +22,7 @@ export function SectionCards({ kpis }: { kpis: Kpi[] | undefined }) {
         : kpis.map((k) => {
             const up = (k.delta_pct ?? 0) >= 0
             const Icon = up ? TrendingUpIcon : TrendingDownIcon
-            const deltaClass = up
-              ? "border-emerald-600/30 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950 dark:text-emerald-300"
-              : "border-red-600/30 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-950 dark:text-red-300"
+            const deltaClass = up ? "text-primary" : "text-destructive"
             return (
               <Card key={k.label} className="@container/card" {...insightTarget("kpi", k.label, k.label_vi || k.label, k)}>
                 <CardHeader>

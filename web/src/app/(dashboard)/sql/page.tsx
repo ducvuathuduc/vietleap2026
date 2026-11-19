@@ -71,7 +71,7 @@ function SqlExplorerInner({ initialQ }: { initialQ: string }) {
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @5xl/main:grid-cols-3">
         <Card className="@5xl/main:col-span-2">
           <CardHeader>
-            <CardTitle>SQL Explorer (DuckDB, chỉ đọc)</CardTitle>
+            <CardTitle>Truy vấn SQL (DuckDB, chỉ đọc)</CardTitle>
             <CardDescription>Truy vấn trực tiếp bronze / silver / gold. DDL/DML, COPY, read_csv bị chặn ở API; tối đa 500 dòng.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">

@@ -31,8 +31,8 @@ export default function SegmentsPage() {
       <div className="grid gap-4 px-4 lg:px-6 @5xl/main:grid-cols-3">
         <Card className="@5xl/main:col-span-2" {...insightTarget("segment", data.by, `${data.metric} theo ${data.by}`, { by: data.by, metric: data.metric, groups: data.groups.slice(0, 10), test: data.test })}>
           <CardHeader>
-            <CardTitle>Median {data.metric} by {data.by}</CardTitle>
-            <CardDescription>Top {data.groups.length} of {data.groups_total} groups</CardDescription>
+            <CardTitle>Trung vị {data.metric} theo {data.by}</CardTitle>
+            <CardDescription>{data.groups.length} nhóm đầu trong {data.groups_total} nhóm</CardDescription>
             <CardAction>
               <Select value={data.by} onValueChange={(v) => v && setBy(v)} items={opts}>
                 <SelectTrigger size="sm" className="w-48"><SelectValue /></SelectTrigger>
@@ -50,17 +50,17 @@ export default function SegmentsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Is the gap real?</CardTitle>
+            <CardTitle>Khoảng cách này có thật không?</CardTitle>
             <CardDescription>Kruskal–Wallis across groups, Mann–Whitney top vs bottom</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 text-sm">
             {t.kruskal && t.top && t.bottom && t.top_vs_bottom ? (
               <>
                 <div><span className="text-muted-foreground">Kruskal–Wallis</span> H={t.kruskal.H}, {fmtP(t.kruskal.p)}, ε²={t.kruskal.epsilon2}</div>
-                <div><span className="text-muted-foreground">Highest</span> {t.top.group}: {fmtNum(t.top.median)} (n={t.top.n})</div>
-                <div><span className="text-muted-foreground">Lowest</span> {t.bottom.group}: {fmtNum(t.bottom.median)} (n={t.bottom.n})</div>
-                <div><span className="text-muted-foreground">Ratio</span> {t.top_vs_bottom.median_ratio}× · {fmtP(t.top_vs_bottom.p)} · rank-biserial {t.top_vs_bottom.rank_biserial}</div>
-                <Badge variant={t.kruskal.p < 0.05 ? "secondary" : "outline"} className="w-fit">{t.kruskal.p < 0.05 ? "significant at 5%" : "not significant"}</Badge>
+                <div><span className="text-muted-foreground">Cao nhất</span> {t.top.group}: {fmtNum(t.top.median)} (n={t.top.n})</div>
+                <div><span className="text-muted-foreground">Thấp nhất</span> {t.bottom.group}: {fmtNum(t.bottom.median)} (n={t.bottom.n})</div>
+                <div><span className="text-muted-foreground">Tỷ lệ</span> {t.top_vs_bottom.median_ratio}× · {fmtP(t.top_vs_bottom.p)} · rank-biserial {t.top_vs_bottom.rank_biserial}</div>
+                <Badge variant={t.kruskal.p < 0.05 ? "secondary" : "outline"} className="w-fit">{t.kruskal.p < 0.05 ? "có ý nghĩa ở mức 5%" : "không có ý nghĩa"}</Badge>
               </>
             ) : (
               <div className="text-muted-foreground">{String(t.error ?? "Not enough data per group for a test.")}</div>
@@ -71,7 +71,7 @@ export default function SegmentsPage() {
       <div className="px-4 lg:px-6">
         <Card>
           <CardHeader>
-            <CardTitle>Natural segments (k-means)</CardTitle>
+            <CardTitle>Phân khúc tự nhiên (k-means)</CardTitle>
             <CardDescription>
               {data.clusters ? `k=${data.clusters.k} chosen by silhouette (${data.clusters.silhouette}); features: ${data.clusters.features.join(", ")}` : "No segmentation available"}
             </CardDescription>
@@ -81,10 +81,10 @@ export default function SegmentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Segment</TableHead>
-                    <TableHead className="text-right">Size</TableHead>
-                    <TableHead className="text-right">Share</TableHead>
-                    <TableHead>What makes it different</TableHead>
+                    <TableHead>Phân khúc</TableHead>
+                    <TableHead className="text-right">Quy mô</TableHead>
+                    <TableHead className="text-right">Tỷ trọng</TableHead>
+                    <TableHead>Điểm khác biệt</TableHead>
                     {data.clusters.features.slice(0, 4).map((f) => <TableHead key={f} className="text-right">{f}</TableHead>)}
                   </TableRow>
                 </TableHeader>

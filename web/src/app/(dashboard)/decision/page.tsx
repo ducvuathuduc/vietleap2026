@@ -48,9 +48,7 @@ export default function DecisionPage() {
                   <CardAction>
                     <Badge
                       variant="outline"
-                      className={rec.confidence === "high"
-                        ? "border-emerald-600/30 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950 dark:text-emerald-300"
-                        : "border-amber-600/30 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950 dark:text-amber-300"}
+                      className={rec.confidence === "high" ? "text-primary" : "text-destructive"}
                     >
                       {rec.confidence === "high" && <CircleCheckIcon />}
                       {CONFIDENCE[rec.confidence] ?? rec.confidence}

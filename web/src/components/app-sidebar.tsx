@@ -37,7 +37,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const lang = pickLang(files, storedLang)
   const langDocuments = (lang ? exportKinds(files, lang) : []).map((kind) =>
     kind.startsWith("deck")
-      ? { name: "Pitch deck (.pptx)", url: file(kind), icon: <PresentationIcon /> }
+      ? { name: "Bài trình bày (.pptx)", url: file(kind), icon: <PresentationIcon /> }
       : { name: "Kịch bản pitch (.md)", url: file(kind), icon: <FileTextIcon /> }
   )
   const data = {

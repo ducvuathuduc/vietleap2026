@@ -14,6 +14,7 @@ import type { ColumnProfile } from "@/lib/api/types"
 import { fmtNum } from "@/lib/format"
 
 const SEV: Record<string, "destructive" | "secondary" | "outline"> = { high: "destructive", medium: "secondary", low: "outline" }
+const SEV_LABEL: Record<string, string> = { high: "cao", medium: "trung bình", low: "thấp" }
 
 export default function ProfilePage() {
   const { datasetId } = useDataset()
@@ -25,10 +26,10 @@ export default function ProfilePage() {
   if (loading || !data) return <PageShell><LoadingState /></PageShell>
   const p = data.profile
   const stats = [
-    { label: "Rows (clean)", value: p.rows.toLocaleString() },
-    { label: "Columns", value: String(p.columns) },
-    { label: "Missing cells", value: `${p.missing_overall_pct.toFixed(1)}%` },
-    { label: "Rows with extreme values", value: `${p.outlier_rows_pct.toFixed(1)}%` },
+    { label: "Dòng (đã làm sạch)", value: p.rows.toLocaleString() },
+    { label: "Cột", value: String(p.columns) },
+    { label: "Ô thiếu", value: `${p.missing_overall_pct.toFixed(1)}%` },
+    { label: "Dòng có giá trị cực trị", value: `${p.outlier_rows_pct.toFixed(1)}%` },
   ]
   return (
     <PageShell>
@@ -45,21 +46,21 @@ export default function ProfilePage() {
       <div className="grid gap-4 px-4 lg:px-6 @5xl/main:grid-cols-3">
         <Card className="@5xl/main:col-span-2">
           <CardHeader>
-            <CardTitle>Columns</CardTitle>
+            <CardTitle>Cột</CardTitle>
             <CardDescription>Inferred role, completeness and distribution. Click a numeric column to see its histogram.</CardDescription>
           </CardHeader>
           <CardContent className="overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Column</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Missing</TableHead>
-                  <TableHead className="text-right">Unique</TableHead>
-                  <TableHead className="text-right">Median</TableHead>
-                  <TableHead className="text-right">Min</TableHead>
-                  <TableHead className="text-right">Max</TableHead>
-                  <TableHead className="text-right">Outliers</TableHead>
+                  <TableHead>Cột</TableHead>
+                  <TableHead>Vai trò</TableHead>
+                  <TableHead className="text-right">Thiếu</TableHead>
+                  <TableHead className="text-right">Duy nhất</TableHead>
+                  <TableHead className="text-right">Trung vị</TableHead>
+                  <TableHead className="text-right">Nhỏ nhất</TableHead>
+                  <TableHead className="text-right">Lớn nhất</TableHead>
+                  <TableHead className="text-right">Ngoại lai</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -82,8 +83,8 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>{col ? `Distribution of ${col.name}` : "Distribution"}</CardTitle>
-              <CardDescription>1st–99th percentile, 20 bins</CardDescription>
+              <CardTitle>{col ? `Phân phối của ${col.name}` : "Phân phối"}</CardTitle>
+              <CardDescription>phân vị thứ 1–99, 20 khoảng</CardDescription>
             </CardHeader>
             <CardContent>
               {col?.hist ? (
@@ -92,19 +93,19 @@ export default function ProfilePage() {
                   height={200}
                 />
               ) : (
-                <div className="text-sm text-muted-foreground">No numeric column selected.</div>
+                <div className="text-sm text-muted-foreground">Chưa chọn cột số.</div>
               )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Data-quality flags</CardTitle>
-              <CardDescription>{p.issues.length} issue(s)</CardDescription>
+              <CardTitle>Cờ chất lượng dữ liệu</CardTitle>
+              <CardDescription>{p.issues.length} vấn đề</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-2 text-sm">
               {p.issues.map((i, k) => (
                 <div key={k} className="flex items-start gap-2">
-                  <Badge variant={SEV[i.severity]}>{i.severity}</Badge>
+                  <Badge variant={SEV[i.severity]}>{SEV_LABEL[i.severity] ?? i.severity}</Badge>
                   <span><span className="font-medium">{i.column}</span>: {i.issue}</span>
                 </div>
               ))}
@@ -115,8 +116,8 @@ export default function ProfilePage() {
       <div className="grid gap-4 px-4 lg:px-6 @5xl/main:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Cleaning log</CardTitle>
-            <CardDescription>Every transformation, nothing deleted silently</CardDescription>
+            <CardTitle>Nhật ký làm sạch</CardTitle>
+            <CardDescription>Mọi phép biến đổi, không xoá gì trong im lặng</CardDescription>
           </CardHeader>
           <CardContent>
             <ol className="list-decimal space-y-1.5 pl-5 font-mono text-xs text-muted-foreground">
@@ -126,8 +127,8 @@ export default function ProfilePage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Caveats & limitations</CardTitle>
-            <CardDescription>Say these before the judges do</CardDescription>
+            <CardTitle>Lưu ý và giới hạn</CardTitle>
+            <CardDescription>Nói những điều này trước khi giám khảo hỏi</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">

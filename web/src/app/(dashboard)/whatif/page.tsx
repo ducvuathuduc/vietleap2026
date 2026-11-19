@@ -45,7 +45,7 @@ export default function WhatIfPage() {
           title="Chưa có mô hình drivers — cần ≥ 2 biến số"
           description="Dataset cần ít nhất 2 biến số độc lập hợp lệ để ước lượng mô hình tác động đa biến."
         >
-          <Button render={<Link href="/drivers" />} variant="outline">Xem trang Drivers</Button>
+          <Button render={<Link href="/drivers" />} variant="outline">Xem trang Yếu tố</Button>
         </EmptyState>
       </PageShell>
     )
@@ -275,7 +275,7 @@ function WhatIfContent({ datasetId, data }: { datasetId: string; data: DriversRe
             <CardHeader>
               <CardTitle>Dự kiến thay đổi trên {data.target}</CardTitle>
               <CardDescription>
-                Ridge chuẩn hoá với khoảng tin cậy 90% đồng bộ theo cùng lượt bootstrap (aligned resamples).
+                Ridge chuẩn hoá với khoảng tin cậy 90% đồng bộ theo cùng lượt bootstrap (các lần lấy mẫu khớp nhau).
               </CardDescription>
               {ciUncertain && (
                 <CardAction>

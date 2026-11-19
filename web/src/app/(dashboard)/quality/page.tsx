@@ -119,7 +119,7 @@ export default function QualityPage() {
       <div className="px-4 lg:px-6">
         <Card data-tour="cleaning-log">
           <CardHeader>
-            <CardTitle>Nhật ký làm sạch (cleaning log)</CardTitle>
+            <CardTitle>Nhật ký làm sạch</CardTitle>
             <CardDescription>Mọi biến đổi bronze → silver, theo thứ tự đã chạy — để giám khảo audit.</CardDescription>
             <CardAction className="text-sm text-muted-foreground">{q.cleaning_log.length} bước</CardAction>
           </CardHeader>

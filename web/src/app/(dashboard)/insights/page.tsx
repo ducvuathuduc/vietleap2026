@@ -14,10 +14,20 @@ import { api } from "@/lib/api/client"
 import { fmtP } from "@/lib/format"
 import { insightTarget } from "@/lib/insight-target"
 
+const INSIGHT_TYPE_VI: Record<string, string> = {
+  segment_gap: "Chênh nhóm",
+  trend: "Xu hướng",
+  forecast: "Dự báo",
+  what_if: "What-if",
+  concentration: "Tập trung",
+  drivers: "Yếu tố",
+  segmentation: "Phân khúc",
+}
+
 export default function InsightsPage() {
   const { datasetId } = useDataset()
   const { data, error, loading } = useAsync(() => (datasetId ? api.insights(datasetId) : null), [datasetId])
-  const [lang, setLang] = React.useState<"en" | "vi">("en")
+  const [lang, setLang] = React.useState<"en" | "vi">("vi")
   if (error) return <PageShell><ErrorState error={error} /></PageShell>
   if (loading || !data) return <PageShell><LoadingState /></PageShell>
   const recBy = Object.fromEntries(data.recommendations.map((r) => [r.from_insight, r]))
@@ -25,10 +35,10 @@ export default function InsightsPage() {
     <PageShell>
       <div className="flex items-center justify-between px-4 lg:px-6">
         <p className="text-sm text-muted-foreground">
-          Ranked by effect size × statistical significance × business relevance. Associations, not causal effects.
+          Xếp theo cỡ hiệu ứng × ý nghĩa thống kê × mức liên quan nghiệp vụ. Quan hệ liên đới, không phải nhân quả.
         </p>
-        <ToggleGroup multiple={false} value={[lang]} onValueChange={(v) => setLang((v[0] as "en" | "vi") ?? "en")} variant="outline">
-          <ToggleGroupItem value="en">English</ToggleGroupItem>
+        <ToggleGroup multiple={false} value={[lang]} onValueChange={(v) => setLang((v[0] as "en" | "vi") ?? "vi")} variant="outline">
+          <ToggleGroupItem value="en">Tiếng Anh</ToggleGroupItem>
           <ToggleGroupItem value="vi">Tiếng Việt</ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -39,12 +49,12 @@ export default function InsightsPage() {
           return (
             <Card key={i.id} className="@container/card" {...insightTarget("insight", i.id, i.title_vi, { title: i.title_vi, finding: i.sentence_vi, test: i.test, p_value: i.p_value, effect: i.effect, columns: i.columns })}>
               <CardHeader>
-                <CardDescription>#{i.rank} · {i.type.replace("_", " ")}</CardDescription>
+                <CardDescription>#{i.rank} · {INSIGHT_TYPE_VI[i.type] ?? "Insight"}</CardDescription>
                 <CardTitle className="text-lg">{lang === "en" ? i.title_en : i.title_vi}</CardTitle>
                 <CardAction>
                   <Badge variant="outline" className="text-muted-foreground">
-                    {sig ? <CircleCheckIcon className="fill-green-500 dark:fill-green-400" /> : <LoaderIcon />}
-                    score {i.score.toFixed(2)}
+                    {sig ? <CircleCheckIcon className="fill-primary" /> : <LoaderIcon />}
+                    điểm {i.score.toFixed(2)}
                   </Badge>
                 </CardAction>
               </CardHeader>
@@ -53,15 +63,15 @@ export default function InsightsPage() {
                 {i.chart && <InsightChart spec={i.chart} />}
               </CardContent>
               <CardFooter className="flex-col items-start gap-1.5 text-sm">
-                <div className="text-muted-foreground">Evidence: {i.test}{i.p_value !== null ? ` · ${fmtP(i.p_value)}` : ""}{i.effect !== null ? ` · effect ${i.effect.toFixed(2)}` : ""}</div>
+                <div className="text-muted-foreground">Bằng chứng: {i.test}{i.p_value !== null ? ` · ${fmtP(i.p_value)}` : ""}{i.effect !== null ? ` · effect ${i.effect.toFixed(2)}` : ""}</div>
                 {rec && (
                   <div className="mt-1 rounded-lg border p-3">
-                    <div><span className="font-medium">So what → </span>{lang === "en" ? rec.so_what_en : rec.so_what_vi}</div>
-                    <div className="mt-1"><span className="font-medium">Now what → </span>{lang === "en" ? rec.now_what_en : rec.now_what_vi}</div>
+                    <div><span className="font-medium">Hàm ý → </span>{lang === "en" ? rec.so_what_en : rec.so_what_vi}</div>
+                    <div className="mt-1"><span className="font-medium">Hành động → </span>{lang === "en" ? rec.now_what_en : rec.now_what_vi}</div>
                     <div className="mt-1 text-xs text-muted-foreground">{lang === "en" ? rec.impact_en : rec.impact_vi}</div>
                   </div>
                 )}
-                {i.caveat && <div className="text-xs text-muted-foreground">Caveat: {i.caveat}</div>}
+                {i.caveat && <div className="text-xs text-muted-foreground">Lưu ý: {i.caveat}</div>}
               </CardFooter>
             </Card>
           )

@@ -67,10 +67,10 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
     <PageShell>
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
         {[
-          { label: "CV R² (Gradient Boosting)", value: d.cv_r2.gb_mean.toFixed(3), foot: `± ${d.cv_r2.gb_std.toFixed(3)} qua 5-fold` },
-          { label: "CV R² (Ridge chuẩn hoá)", value: d.cv_r2.ridge_mean.toFixed(3), foot: `± ${d.cv_r2.ridge_std.toFixed(3)} qua 5-fold` },
-          { label: "Số dòng huấn luyện", value: d.n.toLocaleString("vi-VN"), foot: `${d.features.length} biến${d.log_target ? " · log target" : ""}` },
-          { label: "Bộ lọc rò rỉ (Leakage guard)", value: String(d.leakage_excluded.length), foot: d.leakage_excluded.join(", ") || "Không có biến trùng cận mục tiêu" },
+          { label: "CV R² (tăng cường gradient)", value: d.cv_r2.gb_mean.toFixed(3), foot: `± ${d.cv_r2.gb_std.toFixed(3)} qua 5 lần gập` },
+          { label: "CV R² (Ridge chuẩn hoá)", value: d.cv_r2.ridge_mean.toFixed(3), foot: `± ${d.cv_r2.ridge_std.toFixed(3)} qua 5 lần gập` },
+          { label: "Số dòng huấn luyện", value: d.n.toLocaleString("vi-VN"), foot: `${d.features.length} biến${d.log_target ? " · mục tiêu dạng log" : ""}` },
+          { label: "Bộ lọc rò rỉ", value: String(d.leakage_excluded.length), foot: d.leakage_excluded.join(", ") || "Không có biến trùng cận mục tiêu" },
         ].map((k) => (
           <Card key={k.label}>
             <CardHeader>
@@ -88,18 +88,18 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
             <CardDescription>Độ quan trọng hoán vị (permutation importance) trên 25% mẫu kiểm định (mức giảm R² khi xáo trộn biến)</CardDescription>
           </CardHeader>
           <CardContent>
-            <InsightChart spec={{ kind: "hbar", x: imp.map((i) => i.feature), series: [{ name: "importance", data: imp.map((i) => i.importance) }] }} height={320} />
+            <InsightChart spec={{ kind: "hbar", x: imp.map((i) => i.feature), series: [{ name: "độ quan trọng", data: imp.map((i) => i.importance) }] }} height={320} />
           </CardContent>
           <CardFooter className="text-xs text-muted-foreground">{d.note}</CardFooter>
         </Card>
         <Card {...insightTarget("whatif", feature ?? "none", `What-if: ${feature ?? ""} ${pct > 0 ? "+" : ""}${pct}%`, { feature, pct_change: pct, result })}>
           <CardHeader>
             <CardTitle>Kịch bản What-if đơn biến</CardTitle>
-            <CardDescription>Thay đổi một yếu tố cho toàn bộ bản ghi; Ridge bootstrap (200 lượt) cho khoảng tin cậy 90% (confidence interval)</CardDescription>
+            <CardDescription>Thay đổi một yếu tố cho toàn bộ bản ghi; Ridge bootstrap (200 lượt) cho khoảng tin cậy 90%</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <div className="grid gap-2">
-              <Label>Yếu tố (Driver)</Label>
+              <Label>Yếu tố</Label>
               <Select value={feature ?? ""} onValueChange={(v) => v && setFeature(v)} items={feats}>
                 <SelectTrigger className="w-full"><SelectValue placeholder="Chọn một biến số" /></SelectTrigger>
                 <SelectContent>
@@ -139,8 +139,8 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
                   x: curve.data.points.map((p) => `${p.pct > 0 ? "+" : ""}${p.pct}%`),
                   series: [
                     { name: `Δ ${data.target} %`, data: curve.data.points.map((p) => p.change) },
-                    { name: "low 90%", data: curve.data.points.map((p) => p.low) },
-                    { name: "high 90%", data: curve.data.points.map((p) => p.high) },
+                    { name: "cận dưới 90%", data: curve.data.points.map((p) => p.low) },
+                    { name: "cận trên 90%", data: curve.data.points.map((p) => p.high) },
                   ],
                 }}
                 height={180}
@@ -152,14 +152,14 @@ function DriversContent({ initialFeature, initialPct }: { initialFeature: string
       <div className="px-4 lg:px-6">
         <Card>
           <CardHeader>
-            <CardTitle>Hệ số Ridge chuẩn hoá (Standardised coefficients)</CardTitle>
+            <CardTitle>Hệ số Ridge chuẩn hoá</CardTitle>
             <CardDescription>Ứng với +1 độ lệch chuẩn (SD) của biến, giữ các biến khác cố định; “ổn định” nghĩa là KTC 90% không chứa 0</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Biến (Feature)</TableHead>
+                  <TableHead>Biến</TableHead>
                   <TableHead className="text-right">Hệ số</TableHead>
                   <TableHead className="text-right">KTC 90%</TableHead>
                   <TableHead>Chiều tác động</TableHead>

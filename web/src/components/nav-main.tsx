@@ -50,7 +50,7 @@ export function NavMain({
               render={<Link href="/analyst" />}
             >
               <SparklesIcon />
-              <span className="sr-only">AI Analyst</span>
+              <span className="sr-only">Hỏi AI</span>
             </Button>
           </SidebarMenuItem>
         </SidebarMenu>

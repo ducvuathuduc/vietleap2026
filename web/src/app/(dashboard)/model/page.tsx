@@ -81,7 +81,7 @@ export default function ModelPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Phân vai cột (column plan)</CardTitle>
+            <CardTitle>Phân vai cột</CardTitle>
             <CardDescription>Engine tự nhận diện vai trò cột để dựng dim và fact.</CardDescription>
           </CardHeader>
           <CardContent>

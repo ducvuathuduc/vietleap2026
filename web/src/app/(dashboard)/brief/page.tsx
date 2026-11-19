@@ -127,9 +127,9 @@ export default function BriefPage() {
               </CardHeader>
               <CardContent className="flex flex-col gap-2 text-sm">
                 <div>Đơn vị: <Chips items={brief.units.map((u) => UNIT_VI[u] ?? u)} /></div>
-                <div>Phân khúc: <Chips items={brief.segments} empty="engine tự chọn" /></div>
+                <div>Phân khúc: <Chips items={brief.segments} empty="hệ thống tự chọn" /></div>
                 <div>Thời gian: {brief.time.range ? `${brief.time.range[0]}–${brief.time.range[1]}` : "không nêu"}</div>
-                <div>Ngôn ngữ đề: {brief.language === "vi" ? "Tiếng Việt" : "English"}</div>
+                <div>Ngôn ngữ đề: {brief.language === "vi" ? "Tiếng Việt" : "Tiếng Anh"}</div>
               </CardContent>
             </Card>
             <Card>
