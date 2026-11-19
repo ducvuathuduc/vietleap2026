@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "VietLeap Insight",
   description: "Theo dõi tài chính công, FDI, ngân hàng, thị trường vốn, bất động sản và vị trí của Việt Nam trong ASEAN.",
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -252,7 +252,7 @@ export function InsightInspectorProvider({ children }: { children: React.ReactNo
         toast.info(body.headline)
         return
       }
-      if (pathname !== "/insights") router.push("/insights")
+      if (pathname !== "/lab/insights") router.push("/lab/insights")
       const ready = await waitFor(stepSelector(body.steps[0].id), 10_000)
       if (run !== storyRun.current) return
       if (!ready) toast.warning("Chưa thấy thẻ insight trên trang — câu chuyện vẫn chạy, bước thiếu sẽ được bỏ qua.")

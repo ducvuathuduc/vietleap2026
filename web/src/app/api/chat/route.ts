@@ -9,6 +9,7 @@ import {
 } from "ai"
 import { z } from "zod"
 
+import { guardApi } from "@/lib/api-guard"
 import { rateLimited } from "@/lib/rate-limit"
 
 import type { Insight, ModelsResponse, PipelineSummary, QualityResponse, Recommendation, SqlResult } from "@/lib/api/types"
@@ -39,7 +40,9 @@ const Body = z.object({
 })
 
 /** Mode probe for the analyst page (no secrets returned). */
-export function GET() {
+export function GET(req: Request) {
+  const denied = guardApi(req)
+  if (denied) return denied
   const m = analystModel()
   return Response.json({ mode: m ? "llm" : "offline", model: m?.label ?? null })
 }
@@ -59,6 +62,8 @@ function lastUserText(messages: UIMessage[]): string {
 }
 
 export async function POST(req: Request) {
+  const denied = guardApi(req)
+  if (denied) return denied
   const limited = rateLimited(req)
   if (limited) return limited
   let body: z.infer<typeof Body>

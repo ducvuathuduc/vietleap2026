@@ -49,7 +49,7 @@ export function BriefQuestionCard({ datasetId, hasBrief }: { datasetId: string; 
         </CardContent>
       ) : (
         <CardFooter>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/brief" />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/lab/brief" />}>
             Dán đề bài
           </Button>
         </CardFooter>

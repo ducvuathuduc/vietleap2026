@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { guardApi } from "@/lib/api-guard"
 import { jsonError } from "@/lib/engine/http"
 import { createUploadJob, listDatasets } from "@/lib/engine/store"
 
@@ -7,6 +8,8 @@ export function GET() {
 }
 
 export async function POST(req: Request) {
+  const denied = guardApi(req)
+  if (denied) return denied
   try {
     const form = await req.formData()
     const file = form.get("file")

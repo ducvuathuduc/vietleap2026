@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
+import { guardApi } from "@/lib/api-guard"
 
-export function GET() {
+export function GET(req: Request) {
+  const denied = guardApi(req)
+  if (denied) return denied
   return NextResponse.json({
     kinds: ["file", "api", "sql", "scrape", "social", "cv"],
     examples: {

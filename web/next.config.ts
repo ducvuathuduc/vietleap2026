@@ -2,28 +2,29 @@ import type { NextConfig } from "next";
 
 import { legacyRedirects } from "./src/lib/nav.ts";
 
-const isDev = process.env.NODE_ENV !== "production"
-
-// Security headers: allow same-origin and Google AI Studio preview/share iframe hosts while keeping strict CSP.
-const csp = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  `connect-src 'self'${isDev ? " ws: wss: http://localhost:* http://127.0.0.1:*" : ""}`,
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'self' https://aistudio.google.com https://*.google.com https://*.googleusercontent.com https://*.usercontent.goog",
-].join("; ")
-
-const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
-]
+// Static CSP (no nonce): Next 16 inline scripts and Recharts style attributes need 'unsafe-inline'.
+// React's dev overlay needs 'unsafe-eval' only outside production. Nobody may frame the site.
+function securityHeaders() {
+  const isDev = process.env.NODE_ENV !== "production"
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    `connect-src 'self'${isDev ? " ws: wss: http://localhost:* http://127.0.0.1:*" : ""}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ")
+  return [
+    { key: "Content-Security-Policy", value: csp },
+    { key: "X-Content-Type-Options", value: "nosniff" },
+    { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+  ]
+}
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -46,7 +47,7 @@ const nextConfig: NextConfig = {
     }
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }]
+    return [{ source: "/:path*", headers: securityHeaders() }]
   },
   cacheComponents: true,
   partialPrefetching: true,
