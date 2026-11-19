@@ -1,16 +1,7 @@
 """Tests for the FiinQuant connector — mock mode only (no credentials, no wheel)."""
-import importlib.util
-import sys
-from pathlib import Path
-
 import pandas as pd
-import pytest
 
-KIT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "fetch_fiinquant", KIT / "tools" / "fiinquant" / "fetch_fiinquant.py")
-fq = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(fq)
+from tools.fiinquant import fetch_fiinquant as fq
 
 TICKERS = ["VNINDEX", "VN30", "HPG", "VCB"]
 

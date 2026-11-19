@@ -1,0 +1,4 @@
+index,comGroupCode,tradingDate,totalStockUpPrice,totalStockDownPrice,totalStockNoChangePrice,totalStockUnderFloor,totalStockOverCeiling
+0,VNINDEX,2026-11-19 00:00,101,197,58,10.0,2.0
+1,VN30,2026-11-19 00:00,7,20,3,0.0,0.0
+2,HNXIndex,2026-11-19 00:00,28,79,44,11.0,0.0

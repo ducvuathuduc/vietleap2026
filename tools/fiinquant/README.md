@@ -1,97 +1,75 @@
-# FiinQuant connector — VN market daily trading data → bronze lake
+# FiinQuantX → vùng dữ liệu gốc
 
-Fetches daily OHLCV (+ buy/sell, foreign flow) for **VNINDEX, VN30** and a small
-watchlist (**HPG, VCB, VIC, FPT, MSN, VNM**) via FiinQuantX `Fetch_Trading_Data`
-(`by='1d'`, `adjusted=True`) and lands it as bronze Parquet, following the repo's
-connector conventions (retry, logging, raw kept, idempotent replace-mode runs).
+Cài trong môi trường Python của dự án. Wheel FiinQuantX 0.1.73 nằm cạnh README.
+Tệp requirements ghi các phiên bản đã có trong môi trường chạy, gồm matplotlib
+mà wheel không khai báo và PyArrow để ghi Parquet.
 
-## Account
-
-- Username: `thanhhdse184021@fpt.edu.vn` (FiinQuant trial, Professional plan,
-  verified active 18/11/2026; **trial expiry 30/11/2026 could NOT be verified in
-  the portal UI** — re-check before the contest).
-- Credentials come **only** from environment variables. Never hard-code them,
-  never commit them (`.env` is git-ignored).
-
-## Install
-
-FiinQuantX is **not on PyPI** — it ships as a wheel from the FiinQuant portal
-(and a pip index mirror). Any one of these works:
-
-```bash
-# A. from the portal wheel (offline copy kept next to this README)
-pip install tools/fiinquant/fiinquantx-0.1.73-py3-none-any.whl
-
-# B. from the FiinQuant pip index
-pip install --extra-index-url https://fiinquant.github.io/fiinquantx/simple fiinquantx
+```powershell
+python -m pip install -r tools/fiinquant/requirements.txt tools/fiinquant/fiinquantx-0.1.73-py3-none-any.whl
+python tools/fiinquant/fetch_fiinquant.py --all --mock
+python tools/fiinquant/fetch_fiinquant.py --all
+python tools/fiinquant/fetch_fiinquant.py bars --universe banks --since 2021-11-19
+python tools/fiinquant/fetch_fiinquant.py foreign --universe VCB,ACB
 ```
 
-Then verify the library imports:
+Lệnh thật đọc `FIINQUANT_USERNAME` và `FIINQUANT_PASSWORD` từ biến môi trường.
+Chế độ mock dùng ngày cố định 19/11/2026 và hạt giống cố định, ghi dưới
+`data/raw/fiinquant/_mock/`. Chọn Python trong `.venv` khi chạy trực tiếp
+trên Windows. Lệnh cũ không chỉ định dataset, chẳng hạn `--mock --tickers VCB`,
+vẫn tạo tệp bronze theo giao diện trước đây.
 
-```bash
-python -c "import FiinQuantX"
-```
+| Dataset | Phạm vi mặc định |
+| --- | --- |
+| `roster` | Ảnh chụp HOSE, HNX, UPCoM với BasicInfor và ICB. Mã–sàn ngoài danh sách TickerList được ghi trong sidecar. |
+| `bars` | Cổ phiếu hiện có trên ba sàn từ 19/11/2021. VNINDEX, VN30, HNXIndex và UpcomIndex từ 19/11/2016. Giá điều chỉnh và số liệu giao dịch theo SDK. |
+| `foreign` | Ngân hàng và VN30 từ 19/11/2021. Giữ nguyên dấu thời gian trong phiên nếu nguồn trả về. |
+| `valuation` | Ngân hàng và VN30, toàn bộ nhóm ICB L2 theo tài liệu, và bốn chỉ số. P/E và P/B từ 19/11/2021, phân biệt bằng `scope`. |
+| `bank_ratios` | Ngân hàng BANKS_L2, tỷ số hợp nhất theo quý đã kết thúc. Truy vấn từ năm 2015 và giữ các quý nguồn trả về. |
+| `breadth` | Độ rộng của bốn chỉ số và top tăng/giảm đóng góp của VNINDEX. Dòng đóng góp dùng ngày giao dịch từ ảnh chụp độ rộng VNINDEX. |
+| `vn30_weights` | Ảnh chụp Rebalance VN30, khóa theo mã và ngày chụp. |
+| `investor_flow` | Ngân hàng và VN30 trong 28 ngày lịch gần nhất. |
 
-If the import fails, resolve the missing dependency named in the error before
-running a real fetch. Known: wheel 0.1.73 needs `matplotlib` at import time (not
-declared as a wheel dependency) — run `pip install matplotlib` if the import fails
-with `ModuleNotFoundError: No module named 'matplotlib'`. (Wheel 0.1.73, SHA256
-`cc2c106251f601a86727b628756a3a816e12d07015cc7c808c9ab4fe2c5d6aff`.)
+`--universe` chọn mã cổ phiếu cho các truy vấn có danh sách mã. Danh mục vẫn
+kiểm tra theo ba sàn, tỷ số theo BANKS_L2 và tỷ trọng theo VN30. Phạm vi ngành
+và chỉ số của `valuation`, cũng như các chỉ số của `breadth`, cố định.
+`--since` đặt mốc sớm nhất cho dữ liệu lịch sử. Ngày cuối là ngày chạy theo giờ
+Việt Nam. Ngày giao dịch thực tế, mã thiếu và thời gian thực thi xem trong log.
+Danh mục hiện tại có thể bỏ sót mã đã hủy niêm yết. Dữ liệu ngày hiện tại có thể
+thay đổi sau khi đóng cửa.
 
-## The one fetch command
+Đợt tải ngày 19/11/2026 có giá, định giá và dòng tiền theo nhóm nhà đầu tư
+đến 18/11/2026. Dữ liệu khối ngoại và các ảnh chụp có ngày 19/11/2026.
+Tỷ số ngân hàng có dữ liệu từ quý I/2021 đến quý III/2026.
 
-```bash
-FIINQUANT_USERNAME='thanhhdse184021@fpt.edu.vn' FIINQUANT_PASSWORD='...' \
-  python tools/fiinquant/fetch_fiinquant.py --from-date 2024-01-01
-```
+## Tệp và giới hạn
 
-Output:
+- Mỗi lần xuất dữ liệu ghi cặp
+  `data/raw/fiinquant/<dataset>/<run_date>_<run_id>.parquet` và `.json`.
+  Parquet hiện hành là bản tích lũy, mỗi khóa giữ dòng lấy mới nhất. Cặp trước
+  được lưu trong `_history/` để đối chiếu. Đọc cặp hoàn chỉnh mới nhất ở cấp
+  dataset, tránh đọc đệ quy vào lịch sử. Sidecar ghi tham số, số dòng, cột,
+  SHA-256, giờ tải (+07:00), phiên bản SDK, HTTP và thời gian lấy.
+- Chuỗi ngày truy vấn lại từ phiên thứ năm gần nhất đã lưu của từng mã. Nếu có
+  dưới năm phiên thì dùng mốc yêu cầu. Tỷ số theo quý dùng năm quý gần nhất
+  đã lưu. Ảnh chụp giữ lịch sử theo ngày. Lần tải toàn bộ đầu tiên có thể kéo
+  dài vì SDK chia chuỗi ngày của cả thị trường thành nhiều lượt HTTP.
+- `_runs.jsonl` ghi một dòng cho mỗi lần gọi CLI mới, gồm thống kê từng
+  dataset, lỗi và tổng số HTTP. Phiên đăng nhập dùng chung cho cả lượt.
+  Bộ đếm theo dataset tính cả truy vấn danh mục dùng lần đầu trong dataset đó.
+- Tối đa 10 lượt HTTP mỗi giây trên các transport REST của SDK. Tạm dừng
+  theo `Retry-After` và thử lại với khoảng chờ tăng dần khi mất kết nối,
+  gặp HTTP 429 hoặc 5xx. HTTP 401/403 dừng lượt chạy. Giới hạn của gói được
+  công bố tại [bảng giá FiinQuant](https://fiinquant.vn/Pricing).
+- Tệp Parquet giữ giá trị nguồn và thêm trường nhận diện ảnh chụp/phạm vi
+  khi cần. Các khóa ghép theo từng dataset nằm trong `KEYS`. Quy ước mã
+  ngành theo danh mục ICB. Với SDK 0.1.73, truy vấn ngành bằng mã có dấu
+  gạch dưới như `BASIC_RESOURCES`. Kết quả gồm hậu tố `_L2`. [Danh mục ICB](https://docs.fiinquant.vn/ham-va-cong-thuc/11.-du-lieu-ho-tro/11.2.-danh-sach-nhom-nganh-icb).
 
-- `data/lake/bronze/fiinquant/fiinquant__trading_daily.parquet`
-  (columns: `ticker, timestamp, open, high, low, close, volume, value, bu, sd,
-  fb, fs, fn` + `_src, _ingested_at, _run_id, _mock, _row_hash`)
-- `data/lake/bronze/fiinquant/fiinquant__trading_daily.run.json`
-  (run metadata: run_id, fetched_at, tickers, rows, sha256)
+## Quyền sử dụng
 
-Re-runs are idempotent (replace mode, de-duplicated on ticker+timestamp).
-
-## Mock mode (no credentials, no wheel)
-
-```bash
-python tools/fiinquant/fetch_fiinquant.py --mock
-```
-
-Writes a deterministic seeded sample (same tickers, ~500 business days max) to
-the same bronze path, with `_mock=true` in the metadata. Use it to test the
-downstream pipeline without touching the trial quota.
-
-## Options
-
-```bash
-python tools/fiinquant/fetch_fiinquant.py --help
-# --from-date YYYY-MM-DD   earliest bar (default 2024-01-01)
-# --tickers A B C          override the full ticker list
-# --watchlist A B C        override the watchlist (default HPG VCB VIC FPT MSN VNM)
-# --out DIR                bronze output dir
-```
-
-## Ingest into the warehouse (no code changes needed)
-
-The bronze Parquet is directly consumable by the existing pipeline:
-
-```bash
-python de.py file data/lake/bronze/fiinquant/fiinquant__trading_daily.parquet --name fiinquant_trading
-```
-
-## Notes / unverified items
-
-- Index tickers `VNINDEX` / `VN30` follow the docs' example style (`UPCOMINDEX`
-  is used as a ticker in the official example). If the API rejects one, drop it
-  or swap `VN30` for the futures ticker `VN30F1M` and re-run.
-- Real fetch is **not yet tested end-to-end** (no credentials available in this
-  environment). First real run should be watched once, then re-runs are safe.
-- FiinQuantX 0.1.73 ships obfuscated code (upstream packaging choice) — do not
-  vendor-edit the wheel; upgrade only from the portal / pip index above.
-- Docs: https://docs.fiinquant.vn — login
-  (`FiinSession(username, password).login()`), history data
-  (`Fetch_Trading_Data`, section 2.2).
+Điều khoản FiinGroup, mục 2, cho phép tạo sản phẩm phái sinh từ dữ liệu
+với trích nguồn phù hợp, đồng thời giới hạn chuyển giao và cung cấp Hệ
+thống cho bên thứ ba. Giữ dữ liệu gốc trong vùng truy cập nội bộ. Chỉ đưa
+chỉ số tổng hợp có ghi nguồn lên dashboard công khai sau khi xác nhận phạm
+vi công bố với FiinGroup cho gói tài khoản đang dùng. Áp dụng cùng quy
+trình xác nhận cho các mẫu dữ liệu gốc trong bộ kiểm thử. [Điều khoản sử dụng FiinQuant](https://fiinquant.vn/Home/Privacy?isShowPolicy=True).
