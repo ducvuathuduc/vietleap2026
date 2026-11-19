@@ -18,14 +18,22 @@ const LINK =
 
 type Params = Promise<{ code: string }>
 
+/**
+ * Cache Components requires `generateStaticParams` to return at least one param, and a build without
+ * a published payload (CI) has no province to prerender. This code can never be a province code, so
+ * the page answers it with notFound() and the build still validates the route.
+ */
+const NO_PUBLISHED_PROVINCE = "__no_published_province__"
+
 /** Every province in the published payload is prerendered; any other code falls through to 404. */
 export async function generateStaticParams() {
   try {
     const monitor = await loadPublishedMonitor()
-    return monitor ? monitor.province.rows.map((row) => ({ code: row.code })) : []
+    if (monitor) return monitor.province.rows.map((row) => ({ code: row.code }))
   } catch {
-    return []
+    // A missing or half-written payload must not fail the build.
   }
+  return [{ code: NO_PUBLISHED_PROVINCE }]
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -46,6 +54,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function Page({ params }: { params: Params }) {
   const { code } = await params
+  if (code === NO_PUBLISHED_PROVINCE) notFound()
   const monitor = await readMonitor()
   if (!monitor) return <JudgeEmpty />
   const model = provinceDetail(monitor, code)
