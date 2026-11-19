@@ -62,8 +62,8 @@ def land_source(wh, name, path, provenance, run_id, *, frame=None):
     previous = wh.con.execute(
         """SELECT json_extract_string(provenance, '$.sha256') FROM meta.sources
            WHERE dataset = ? AND source = ? ORDER BY rowid DESC LIMIT 1""", [DATASET, name],
-    ).fetchone()
-    if previous and previous[0] == signature and wh.exists("bronze", name):
+    ).fetchall()
+    if previous and previous[0][0] == signature and wh.exists("bronze", name):
         return {"rows": wh.con.execute(f"SELECT count(*) FROM {fq}").fetchone()[0], "changed": False}
 
     if frame is not None:
@@ -117,6 +117,8 @@ def normalize_long(raw, source_id, run_id, catalog=()):
         frame["indicator_id"] = frame["indicator_id"].where(~canonical.isin(candidates), canonical)
     frame["measure_type"] = frame["measure_type"].replace({"month": "level", "avg_ytd": "ytd"})
     if source_id == "press":
+        indicator = frame["indicator_id"]
+        fdi_amount = indicator.isin(["fdi_province", "fdi_partner"]) & frame["measure_type"].eq("level")
         if "extractor_version" in frame and "parser_version" not in frame:
             frame = frame.rename(columns={"extractor_version": "parser_version"})
         if "geo" in frame and "geo_type" not in frame:
@@ -126,7 +128,33 @@ def normalize_long(raw, source_id, run_id, catalog=()):
             frame["geo_type"] = "national"
             frame.loc[local & indicator.str.startswith("bank_"), "geo_type"] = "ticker"
             frame.loc[local & indicator.str.startswith(("dtc_", "fdi_")), "geo_type"] = "province"
-            frame.loc[local & indicator.str.startswith("re_"), "geo_type"] = "city"
+            frame.loc[local & indicator.str.startswith("dtc_ministry_"), "geo_type"] = "ministry"
+            frame.loc[local & indicator.eq("fdi_partner"), "geo_type"] = "partner"
+            frame.loc[local & (indicator.str.startswith(("re_", "apartment_", "landed_home_"))
+                               | indicator.isin(["mortgage_rate", "deposit_rate_12m"])), "geo_type"] = "city"
+        frame["indicator_id"] = indicator.replace({
+            "bank_npl_coverage": "bank_coverage",
+            "bank_sector_credit_ytd": "credit_ytd",
+            "bank_sector_deposits_ytd": "deposit_ytd",
+        })
+        supply = indicator.eq("apartment_new_supply") & frame["measure_type"].eq("level")
+        frame.loc[supply, "indicator_id"] = "re_new_supply"
+        if "unit" in frame:
+            frame.loc[supply & frame["unit"].eq("can"), "unit"] = "căn"
+            margin = indicator.eq("margin_debt") & frame["measure_type"].eq("level")
+            frame.loc[margin & frame["unit"].eq("nghin_ty_vnd"), "unit"] = "nghìn tỷ đồng"
+        frame.loc[fdi_amount, ["indicator_id", "measure_type"]] = ["fdi_dang_ky", "ytd"]
+        frame.loc[indicator.eq("bank_npl"), "measure_type"] = "ratio"
+        if "period" in frame:
+            sector_ytd = indicator.isin(["bank_sector_credit_ytd", "bank_sector_deposits_ytd"])
+            frame.loc[sector_ytd, "period"] = frame.loc[sector_ytd, "period"].str.replace(
+                r"-Q([1-4])$", lambda match: f"-{int(match[1]) * 3:02d}", regex=True,
+            )
+        frame = _press_absorption(frame)
+        if {"source_id", "geo_type"} <= set(frame):
+            # The rate in the HCMC article is a benchmark from commercial banks.
+            benchmark = frame["source_id"].eq("realtique_cbre_hcm_q3_2026") & frame["indicator_id"].eq("mortgage_rate")
+            frame.loc[benchmark, ["geo", "geo_type"]] = ["VNM", "national"]
     if "geo" not in frame:
         for field, kind in (("province", "province"), ("province_code", "province"), ("ticker", "ticker"),
                             ("ministry", "ministry"), ("partner", "partner"), ("iso3", "country")):
@@ -139,6 +167,29 @@ def normalize_long(raw, source_id, run_id, catalog=()):
                 frame.loc[present, "geo"] = frame.loc[present, field].astype(str)
                 frame.loc[present, "geo_type"] = kind
     return observations(frame, source_id, run_id)
+
+
+def _press_absorption(frame):
+    """Publish the catalog's percent from same-source, same-city apartment counts."""
+    if not {"evidence_ok", "evidence", "period", "geo", "source_id", "value"} <= set(frame):
+        return frame
+    verified = frame.loc[frame["measure_type"].eq("level") & frame["evidence_ok"].astype(str).str.lower().eq("true")]
+    key = ["period", "geo", "source_id"]
+    rates = verified.loc[verified["indicator_id"].eq("mortgage_rate"), key].drop_duplicates()
+    supply = verified.loc[verified["indicator_id"].eq("re_new_supply") & verified["unit"].eq("căn"),
+                          key + ["value", "evidence"]]
+    sales = verified.loc[verified["indicator_id"].eq("apartment_absorption") & verified["unit"].isin(["can", "căn"])]
+    matched = sales.merge(supply, on=key, suffixes=("", "_supply")).merge(rates, on=key)
+    sold = pd.to_numeric(matched["value"], errors="coerce")
+    offered = pd.to_numeric(matched["value_supply"], errors="coerce")
+    valid = sold.ge(0) & offered.gt(0)
+    if not valid.any():
+        return frame
+    matched = matched.loc[valid].assign(
+        indicator_id="re_absorption", unit="%", value=(100 * sold[valid] / offered[valid]),
+        evidence=matched.loc[valid, "evidence"] + " | " + matched.loc[valid, "evidence_supply"],
+    )
+    return pd.concat([frame, matched[frame.columns]], ignore_index=True)
 
 
 def normalize_transfers(raw, run_id):
