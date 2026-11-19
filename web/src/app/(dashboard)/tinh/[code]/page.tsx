@@ -1,22 +1,94 @@
+import type { Metadata } from "next"
+import Link from "next/link"
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 
-import { JudgeArticle, JudgeEmpty, JudgeFallback, readMonitor } from "../../judge-screen"
-import { provinceDetailView } from "@/lib/monitor/sections"
+import { KnowBox } from "@/components/judge/know-box"
+import { PageHeader } from "@/components/judge/page-header"
+import { SiteFooter } from "@/components/judge/site-footer"
+import { TrustLine } from "@/components/judge/trust-line"
+import { PageShell } from "@/components/state"
+import { loadMonitor } from "@/lib/monitor/load"
 
-export default function Page({ params }: { params: Promise<{ code: string }> }) {
+import { JudgeEmpty, JudgePageSkeleton, readMonitor } from "../../judge-screen"
+import { provinceDetail } from "../../_lib/province-view"
+
+const FRAME = "mx-auto w-full max-w-[1200px] space-y-6 px-4 md:space-y-8 md:px-6"
+const LINK =
+  "w-fit underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+
+type Params = Promise<{ code: string }>
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { code } = await params
+  try {
+    const monitor = loadMonitor()
+    const detail = monitor ? provinceDetail(monitor, code) : null
+    return {
+      title: detail?.name ?? "Tỉnh thành",
+      description: detail
+        ? `Số liệu của ${detail.name} so với trung vị cả nước.`
+        : "Tỉnh thành chưa có trong bản đã xuất bản.",
+    }
+  } catch {
+    return { title: "Tỉnh thành", description: "Tỉnh thành chưa có trong bản đã xuất bản." }
+  }
+}
+
+export default function Page({ params }: { params: Params }) {
   return (
-    <Suspense fallback={<JudgeFallback />}>
+    <Suspense fallback={<JudgePageSkeleton kpis={0} cards={0} figures={1} />}>
       <Province params={params} />
     </Suspense>
   )
 }
 
-async function Province({ params }: { params: Promise<{ code: string }> }) {
+async function Province({ params }: { params: Params }) {
   const { code } = await params
   const monitor = await readMonitor()
   if (!monitor) return <JudgeEmpty />
-  const view = provinceDetailView(monitor, code)
-  if (!view) notFound()
-  return <JudgeArticle view={view} />
+  const model = provinceDetail(monitor, code)
+  if (!model) notFound()
+
+  return (
+    <PageShell>
+      <div className={FRAME}>
+        <PageHeader level={model.level} headline={model.headline} lead={model.lead} generatedAt={model.generatedAt} />
+        <p className="text-sm text-muted-foreground">Nhóm: {model.group}</p>
+
+        {model.trust ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xl font-semibold">So với trung vị cả nước</h2>
+            <dl className="flex flex-col gap-3">
+              {model.metrics.map((metric) => (
+                <div key={metric.id} className="flex flex-col gap-0.5 border-b border-border pb-3">
+                  <dt className="text-sm font-medium">{metric.name}</dt>
+                  <dd className="text-sm">
+                    {metric.valueText}
+                    <span className="text-muted-foreground"> · trung vị {metric.medianText} · chênh {metric.gapText}</span>
+                  </dd>
+                  {metric.period ? <dd className="text-xs text-muted-foreground">{metric.period}</dd> : null}
+                </div>
+              ))}
+            </dl>
+            <TrustLine {...model.trust} />
+          </section>
+        ) : null}
+
+        {model.know ? (
+          <KnowBox
+            definition={model.know.definition}
+            note={model.know.note}
+            unit={model.know.unit}
+            frequency={model.know.frequency}
+          />
+        ) : null}
+
+        <Link href={model.backHref} className={LINK}>
+          Về bảng tỉnh
+        </Link>
+        <SiteFooter sources={model.footer.sources} generatedAt={model.footer.generatedAt} />
+      </div>
+    </PageShell>
+  )
 }
