@@ -25,10 +25,11 @@ from urllib.robotparser import RobotFileParser
 import pandas as pd
 
 from .netguard import httpx_hooks
-from .sources import IngestResult, Source, make_provenance
+from .sources import IngestResult, Source, make_provenance, now_iso
 
 UA = "VietLeapInsightKit/1.0 (student hackathon research; contact: vietleap2026 participant)"
 CACHE = Path(__file__).resolve().parents[3] / "data" / "cache"
+BRONZE = Path(__file__).resolve().parents[3] / "data" / "lake" / "bronze"
 MAX_UNZIPPED_BYTES = 2 * 1024 ** 3
 
 
@@ -422,10 +423,92 @@ def ingest_reducto(src: Source) -> IngestResult:
     )
 
 
+# ----------------------------------------------------------------------------- tinyfish
+
+def _visible_text(html: str) -> str:
+    return re.sub(r"<[^>]+>", " ", re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html or "", flags=re.S | re.I))
+
+
+def evidence_text(src: Source, client=None) -> str | None:
+    """Page text for the _evidence_ok check: free TinyFetch first, plain GET as fallback (some origins block TinyFetch)."""
+    import httpx
+
+    from .tinyfish import fetch_text
+
+    text = fetch_text([src.uri], client=client).get(src.uri)
+    if text:
+        return text
+    own = client is None
+    http = client or httpx.Client(headers={"User-Agent": UA}, timeout=30, follow_redirects=True,
+                                  event_hooks=httpx_hooks(src))
+    try:
+        resp = http.get(src.uri)
+        resp.raise_for_status()
+        return _visible_text(resp.text)
+    except httpx.HTTPError:
+        return None
+    finally:
+        if own:
+            http.close()
+
+
+def ingest_tinyfish(src: Source, client=None) -> IngestResult:
+    """Optional TinyFish agent run (kind: tinyfish) -> one row per result item, raw run JSON kept in bronze.
+
+    Reads TINYFISH_API_KEY only from env. When unset (and mock=False), returns an empty frame and
+    status='skipped' provenance cleanly without raising. Rows carry _run_id/_fetched_at/_status/
+    _num_steps/_cost_usd and _evidence_ok (extracted numbers found in the page text).
+    """
+    from .tinyfish import DEFAULT_USD_PER_STEP, row_evidence, run_goal
+
+    o = src.options or {}
+    ttl = o.get("cache_ttl_h")
+    outcome = run_goal(
+        src.uri, str(o["goal"]),
+        output_schema=o.get("output_schema"),
+        poll_s=float(o.get("poll_s") or 5.0),
+        deadline_s=float(o.get("deadline_s") or 180.0),
+        browser_profile=o.get("browser_profile"),
+        proxy_country=o.get("proxy_country"),
+        cache=bool(o.get("cache", True)),
+        cache_ttl_h=24.0 if ttl is None else float(ttl),
+        max_usd=o.get("max_usd"),
+        usd_per_step=float(o.get("usd_per_step") or DEFAULT_USD_PER_STEP),
+        schema_strict=bool(o.get("schema_strict", True)),
+        mock=bool(o.get("mock", False)),
+        out_json=BRONZE / f"tinyfish_{_tname(src.name)}.json",
+        client=client,
+        net_guard=bool(o.get("_net_guard", False)),
+        source=src.name,
+    )
+    rows = []
+    if outcome.records:
+        text = evidence_text(src, client=client) if outcome.status == "ok" and o.get("evidence", True) else None
+        for record in outcome.records:
+            rows.append({**record, "_run_id": outcome.run_id, "_fetched_at": now_iso(), "_status": outcome.status,
+                         "_num_steps": outcome.steps, "_cost_usd": outcome.cost_usd,
+                         "_evidence_ok": row_evidence(record, text)})
+    frames = {src.name: pd.DataFrame(rows) if rows else pd.DataFrame()}
+    return IngestResult(
+        src,
+        frames,
+        make_provenance(
+            src,
+            frames,
+            status=outcome.status,
+            run_id=outcome.run_id,
+            steps=outcome.steps,
+            cost_usd=outcome.cost_usd,
+            message=outcome.message,
+            output_json=outcome.output_json,
+        ),
+    )
+
+
 # ----------------------------------------------------------------------------- dispatch
 
 CONNECTORS = {"file": ingest_file, "api": ingest_api, "sql": ingest_sql, "scrape": ingest_scrape,
-              "social": ingest_social, "cv": ingest_cv, "reducto": ingest_reducto}
+              "social": ingest_social, "cv": ingest_cv, "reducto": ingest_reducto, "tinyfish": ingest_tinyfish}
 
 
 def ingest(src: Source) -> IngestResult:

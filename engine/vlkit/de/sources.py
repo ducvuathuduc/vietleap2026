@@ -5,7 +5,7 @@ A sources.yaml looks like:
     dataset: housing            # name of the analytical dataset (gold tables are named after it)
     sources:
       - name: listings
-        kind: file              # file | api | sql | scrape | social | cv
+        kind: file              # file | api | sql | scrape | social | cv | reducto | tinyfish
         uri: data/raw/listings.xlsx
       - name: gdp_vn
         kind: api
@@ -36,7 +36,7 @@ import pandas as pd
 import yaml
 
 TZ = ZoneInfo("Asia/Saigon")
-KINDS = ("file", "api", "sql", "scrape", "social", "cv", "reducto")
+KINDS = ("file", "api", "sql", "scrape", "social", "cv", "reducto", "tinyfish")
 _VIEW = re.compile(
     r"^CREATE\s+OR\s+REPLACE\s+VIEW\s+(gold\.v_[a-z0-9_]+)\s+AS\s+((?:SELECT|WITH)\b.+)$",
     re.I | re.S | re.ASCII,
@@ -55,6 +55,10 @@ class Source:
     def __post_init__(self):
         if self.kind not in KINDS:
             raise ValueError(f"source '{self.name}': kind must be one of {KINDS}, got {self.kind!r}")
+        if self.kind == "tinyfish":
+            from .tinyfish import validate_options
+
+            validate_options(self.options)
 
     def to_dict(self) -> dict:
         return asdict(self)
