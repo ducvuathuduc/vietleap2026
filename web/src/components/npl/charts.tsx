@@ -26,9 +26,9 @@ function Tip({ active, payload, label, digits = 3, lang = "vi" }: { active?: boo
 }
 
 const medianConfig = {
-  median: { label: "Trung vị", color: "var(--chart-1)" },
+  median: { label: "Trung vị", color: "var(--foreground)" },
   band: { label: "25–75% ngân hàng", color: "var(--chart-1)" },
-  q4: { label: "Quý 4", color: "var(--chart-1)" },
+  q4: { label: "Quý 4", color: "var(--foreground)" },
 } satisfies ChartConfig
 
 function MedianTip({ active, payload, label, lang }: { active?: boolean; payload?: { payload?: { median?: number | null; p25?: number | null; p75?: number | null; nBanks?: number | null } }[]; label?: string | number; lang: Lang }) {
@@ -74,16 +74,16 @@ export function MedianChart({
           <XAxis dataKey="period" tickLine={false} axisLine={false} interval="preserveStartEnd" tick={{ fontSize: 11 }} />
           <YAxis width={52} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={axisTick(lang)} label={{ value: vi ? "% dư nợ" : "% of loans", angle: -90, position: "insideLeft", style: { fill: "var(--muted-foreground)", fontSize: 11 } }} />
           <ChartTooltip content={<MedianTip lang={lang} />} />
-          <Area dataKey="base" stackId="iqr" stroke="none" fill="transparent" name="P25" />
-          <Area dataKey="band" stackId="iqr" stroke="none" fill="var(--color-median)" fillOpacity={0.15} name={vi ? "25–75% ngân hàng" : "25–75% of banks"} />
-          <Line dataKey="median" name={vi ? "Trung vị" : "Median"} stroke="var(--color-median)" strokeWidth={2.5} dot={false} />
+          <Area dataKey="base" stackId="iqr" stroke="none" fill="transparent" name="P25" isAnimationActive={false} />
+          <Area dataKey="band" stackId="iqr" stroke="none" fill="var(--color-band)" fillOpacity={0.15} name={vi ? "25–75% ngân hàng" : "25–75% of banks"} isAnimationActive={false} />
+          <Line dataKey="median" name={vi ? "Trung vị" : "Median"} stroke="var(--foreground)" strokeWidth={2.5} dot={false} animationDuration={800} />
           {data.filter((row) => row.q4 && row.median != null).map((row) => (
             <ReferenceDot
               key={row.period}
               x={row.period}
               y={row.median ?? 0}
               r={4}
-              fill="var(--color-median)"
+              fill="var(--foreground)"
               stroke="var(--background)"
               label={row.period === mark?.period ? { value: mark.label, position: "top", fontSize: 11, fill: "var(--foreground)" } : undefined}
             />
@@ -91,9 +91,9 @@ export function MedianChart({
         </ComposedChart>
       </ChartContainer>
       <ul className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-        <li className="flex items-center gap-1"><span className="inline-block h-0.5 w-6 bg-chart-1" />{vi ? "Trung vị" : "Median"}</li>
+        <li className="flex items-center gap-1"><span className="inline-block h-0.5 w-6 bg-foreground" />{vi ? "Trung vị" : "Median"}</li>
         <li className="flex items-center gap-1"><span className="inline-block size-3 bg-chart-1/15" />{vi ? "25–75% ngân hàng" : "25–75% of banks"}</li>
-        <li className="flex items-center gap-1"><span className="inline-block size-2 rounded-full bg-chart-1" />{vi ? "Quý 4" : "Q4"}</li>
+        <li className="flex items-center gap-1"><span className="inline-block size-2 rounded-full bg-foreground" />{vi ? "Quý 4" : "Q4"}</li>
       </ul>
     </div>
   )
@@ -181,7 +181,7 @@ export function BankCompareChart({
         <YAxis width={52} tickLine={false} axisLine={false} tickFormatter={axisTick(lang)} />
         <ReferenceLine y={0} stroke="var(--muted-foreground)" />
         <ChartTooltip content={<Tip lang={lang} />} />
-        <Bar dataKey="bank" name={lang === "vi" ? "Trung bình của mã" : "This bank's mean"} fill="var(--color-bank)" radius={4} />
+        <Bar dataKey="bank" name={lang === "vi" ? "Trung bình của ngân hàng này" : "This bank's mean"} fill="var(--color-bank)" radius={4} />
         {data.map((row) => row.panel == null ? null : (
           <ReferenceDot key={row.quarter} x={row.quarter} y={row.panel} r={5} fill="var(--color-panel)" stroke="var(--background)" />
         ))}

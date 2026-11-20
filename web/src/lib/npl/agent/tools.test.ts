@@ -18,6 +18,7 @@ import {
   quarterEffects,
   type NplCitation,
 } from "./tools.ts"
+import * as tools from "./tools.ts"
 
 // The fixture is read directly (load.ts uses a bundler-only JSON import).
 const snapshot = JSON.parse(
@@ -39,6 +40,7 @@ test("overview: headline, level and benchmark with citations", () => {
   assert.equal(res.level.period, "2026Q3")
   assert.equal(res.benchmark.coef_pp, -0.425606)
   assert.equal(res.benchmark.n, 576)
+  assert.equal(res.data_period, "2021Q1–2026Q3")
   assert.match(res.note_vi, /liên hệ, không phải nhân quả/)
   assert.match(res.note_en, /association, not causation/)
   assertCitations(res.citations)
@@ -51,7 +53,8 @@ test("quarter_effects: Q2/Q3/Q4 with CI and the association note", () => {
   assert.equal(q4.coef_pp, -0.425606)
   assert.deepEqual(q4.ci95, [-0.576508, -0.274704])
   assert.equal(q4.n, 576)
-  assert.match(res.note_vi, /liên hệ, không phải nhân quả/)
+  assert.equal(res.data_period, "2021Q1–2026Q3")
+  assert.match(res.note_vi, /liên hệ trong dữ liệu, không phải nhân quả/)
   assertCitations(res.citations)
 })
 
@@ -93,6 +96,8 @@ test("compare_banks: up to 4 banks, missing listed", () => {
   assert.deepEqual(res.missing, ["SCB"])
   const vcb = res.rows.find((r) => r.code === "VCB")!
   assert.equal(vcb.q4_change_median_pp, -0.26)
+  assert.equal(vcb.d_npl_pp, 0.1)
+  assert.equal(vcb.adjusted_change_pp, 0.234139)
   assert.equal(vcb.forecast_next!.npl_pct, 0.3989)
   assertCitations(res.citations, 3)
 })
@@ -108,6 +113,8 @@ test("forecast: VCB next-quarter interval plus MAE and the not-a-promise note", 
   assert.equal(res.forecast!.npl_pct, 0.3989)
   assert.equal(res.mae.model, 0.403182)
   assert.equal(res.mae.seasonal_naive, 0.894094)
+  assert.deepEqual(res.backtest_period, ["2025Q1", "2026Q3"])
+  assert.match(res.backtest_note_en!, /2025Q1 to 2026Q3.*MAE.*0\.40.*0\.34.*0\.89/)
   assert.match(res.note_vi, /phép tính, không phải lời hứa/)
   assert.match(res.note_en, /calculation, not a promise/)
   assertCitations(res.citations)
@@ -164,4 +171,31 @@ test("glossary: known terms in both languages, unknown lists the vocabulary", ()
 test("every tool output stays inside the snapshot (no invented fields)", () => {
   const res = overview(snapshot)
   assert.ok(res.last_median && res.last_median.period <= snapshot.meta.period_end)
+})
+
+test("decoder and adjustments return the selected public bank-quarter checks", () => {
+  const published = {
+    ...snapshot,
+    decoder: { rows: [{
+      bank_code: "VCB",
+      period: "2026Q3",
+      delta_npl_ratio: -0.01,
+      delta_coverage: -0.15,
+      coverage: 1.04,
+      status: "missing",
+      signals: [{ id: "S3", text_vi: "Bao phủ giảm", text_en: "Coverage fell" }],
+    }] },
+  }
+  const result = tools.decoder(published, { code: " vcb ", period: "2026q3" })
+  assert.ok(result.found)
+  assert.equal(result.code, "VCB")
+  assert.equal(result.data_period, "2026Q3")
+  assert.equal(result.decoder?.status, "missing")
+  assert.equal(result.decoder?.inputs.ratios.coverage.value, 104)
+  assert.equal(result.decoder?.inputs.ratios.coverage.source, "FiinQuant (FiinGroup)")
+  assert.equal(result.decoder?.checks.S3, "flagged")
+  assert.equal(result.decoder?.checks.S1, "missing")
+  assert.deepEqual(bankProfile(published, { code: "VCB" }).decoder, result.decoder)
+  assert.deepEqual(adjustedChange(published, { code: "VCB" }).decoder, result.decoder)
+  assert.equal(tools.decoder(published, { code: "VCB", period: "2020Q1" }).found, false)
 })

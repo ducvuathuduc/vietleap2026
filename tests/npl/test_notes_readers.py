@@ -44,13 +44,13 @@ def test_numbers_and_units_follow_the_vietnamese_format():
 
 def test_text_reader_reads_loans_groups_and_the_provision_movement():
     found = notes_text.read_text([LOANS_PAGE, GROUPS_PAGE, MOVEMENT_PAGE])
-    assert found["loans_customer"] == {"value_vnd_bn": 1234.567, "page": 1, "reader": "text"}
+    assert found["loans_customer"] == {"value_vnd_bn": 1234.567, "page": 1, "reader": "text", "unit": "trieu"}
     assert found["group_2_watch"]["value_vnd_bn"] == 80.0
     assert found["group_5_loss"]["value_vnd_bn"] == 5.0
     assert found["provision_opening"]["value_vnd_bn"] == 30.0
     assert found["provision_charge"]["value_vnd_bn"] == 12.0
     assert found["provision_used_writeoff"]["value_vnd_bn"] == 8.0
-    assert found["provision_closing"] == {"value_vnd_bn": 34.0, "page": 3, "reader": "text"}
+    assert found["provision_closing"] == {"value_vnd_bn": 34.0, "page": 3, "reader": "text", "unit": "trieu"}
     assert all(item["page"] in (1, 2, 3) for item in found.values())
 
 
@@ -58,7 +58,7 @@ def test_table_reader_skips_the_ma_so_column_and_uses_the_page_unit():
     tables = [(1, [["Chỉ tiêu", "Mã số", "Năm nay", "Năm trước"],
                    ["Cho vay khách hàng", "130", "1.234.567", "1.100.000"]])]
     found = notes_text.read_tables(tables, scales={1: 0.001})
-    assert found["loans_customer"] == {"value_vnd_bn": 1234.567, "page": 1, "reader": "table"}
+    assert found["loans_customer"] == {"value_vnd_bn": 1234.567, "page": 1, "reader": "table", "unit": "unknown"}
 
 
 def test_provision_uses_are_magnitudes_while_a_reversal_stays_negative():
@@ -149,3 +149,25 @@ def test_agent_records_become_links_only_when_they_name_a_quarter_and_a_url():
                {"period": "2025Q2", "statement_type": "consolidated", "pdf_url": ""}]
     rows = notes_links.rows_from_agent("BID", records, found_at="now")
     assert [(row["period"], row["url"]) for row in rows] == [("2025Q1", "https://x.test/a.pdf")]
+
+
+TCB_LOANS_PAGE = """BÁO CÁO TÀI CHÍNH HỢP NHẤT
+Đơn vị tính: Triệu VND
+TÀI SẢN
+Cho vay khách hàng      130     766.700.000   700.000.000
+"""
+
+
+def test_the_tcb_page_is_read_in_its_printed_unit_not_a_thousand_times_too_small():
+    # TCB 2025Q3 was published as 766.7 bn: a 1000x slip. In triệu đồng the page says 766.700.000 -> 766,700 bn.
+    found = notes_text.read_text([TCB_LOANS_PAGE])
+    assert found["loans_customer"]["value_vnd_bn"] == 766700.0
+    assert found["loans_customer"]["unit"] == "trieu"
+    payload = {"unit_printed": "Đơn vị tính: Triệu VND", "period_label": "Quý 3 năm 2025",
+               "values_printed": {"loans_customer": 766700000}, "values": {"loans_customer": 766.7}}
+    assert notes_vision.payload_values(payload)["loans_customer"] == 766700.0     # printed + unit, not the model's sum
+    assert notes_vision.payload_unit(payload) == "trieu"
+    unknown = {"unit_printed": None, "values_printed": {"loans_customer": 766700000},
+               "values": {"loans_customer": 766.7}}
+    assert notes_vision.payload_values(unknown)["loans_customer"] == 766.7        # no unit line: no silent rescale
+    assert notes_vision.payload_unit(unknown) == "unknown"

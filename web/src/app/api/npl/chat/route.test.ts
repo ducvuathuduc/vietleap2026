@@ -22,3 +22,24 @@ for (const [name, body] of [["malformed JSON", "{"], ["schema-invalid JSON", JSO
     assert.match(result.request_id, /^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i)
   })
 }
+
+test("the chat route refuses buy and sell advice in the question language, with a decoder offer", async (t) => {
+  const previous = process.env.LLM_PROVIDER
+  process.env.LLM_PROVIDER = "offline"
+  t.after(() => {
+    if (previous === undefined) delete process.env.LLM_PROVIDER
+    else process.env.LLM_PROVIDER = previous
+  })
+  const cases = [
+    ["Should I buy VCB stock?", /investment advice/i, /decoder check/i],
+    ["Có nên bán cổ phiếu MBB không?", /khuyến nghị đầu tư/i, /giải mã/i],
+  ] as const
+  for (const [question, refusal, alternative] of cases) {
+    const body = JSON.stringify({ messages: [{ id: "a", role: "user", parts: [{ type: "text", text: question }] }] })
+    const response = await POST(new Request("http://localhost/api/npl/chat", { method: "POST", body }))
+    assert.equal(response.status, 200)
+    const stream = await response.text()
+    assert.match(stream, refusal)
+    assert.match(stream, alternative)
+  }
+})

@@ -37,8 +37,8 @@ Resources:
     Properties:
       Cluster: !Ref ClusterName
       ServiceName: vietleap-web
-      Cpu: "512"
-      Memory: "1024"
+      Cpu: "1024"
+      Memory: "2048"
       ExecutionRoleArn: !Ref ExecutionRoleArn
       TaskRoleArn: !Ref WebTaskRoleArn
       InfrastructureRoleArn: !Ref InfrastructureRoleArn

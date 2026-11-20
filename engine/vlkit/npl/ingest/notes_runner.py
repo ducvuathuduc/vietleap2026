@@ -26,7 +26,7 @@ from .notes_contract import GROUP_FIELDS, NPL_FIELDS
 PROVISION_MOVEMENT_LITE = ("provision_opening", "provision_charge", "provision_used_writeoff")
 from .notes_contract import (FIELDS, SILVER_COLUMNS, agreement, grade, kind_of, to_quarterly,
                              unit_scale)
-from .notes_gates import GATE_COLUMNS, GROUP_TOL, ROLLFORWARD_TOL, run_gates
+from .notes_gates import GATE_COLUMNS, GROUP_TOL, ROLLFORWARD_TOL, passes_silver, run_gates
 from .notes_links import (CATALOGUE, COLUMNS as LINK_COLUMNS, agent_goal, agent_schema, hits_only,
                           prefer_consolidated, probe_statement, rows_from_agent, rows_from_page,
                           vietstock_annual_urls)
@@ -40,6 +40,7 @@ from .watermark import load, quarter_periods, save
 
 LARGE = ("VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "STB")
 SILVER = "notes_bank_quarter.parquet"
+QUARANTINE = "notes_quarantine.parquet"
 GATES = "notes_gate.csv"
 LINKS = "notes_links.csv"
 FIRST_QUARTER = "2021Q1"
@@ -139,7 +140,9 @@ def _candidates(readings):
         value_grade, value = grade([(item["reader"], signed(field, item["value_vnd_bn"])) for item in found])
         if value_grade is None:
             continue
+        units = {str(item.get("unit") or "unknown") for item in found}
         per_field.setdefault(field, []).append({"grade": value_grade, "value": value, "page": page,
+                                                "unit": sorted(units)[0],
                                                 "readers": sorted({item["reader"] for item in found})})
     for entries in per_field.values():
         entries.sort(key=lambda item: (GRADE_ORDER[item["grade"]], -item["page"]))
@@ -262,8 +265,8 @@ def collect(readings, bank, period, url, sha, statement_type="unknown"):
         rows.append({"bank": bank, "period": period, "field": field,
                      "basis": "point" if kind_of(field) == "balance" else "ytd",
                      "value_vnd_bn": entry["value"], "page": entry["page"], "source_url": url,
-                     "statement_type": statement_type, "reader": ",".join(entry["readers"]),
-                     "grade": entry["grade"], "raw_sha256": sha})
+                     "statement_type": statement_type, "unit": entry.get("unit", "unknown"),
+                     "reader": ",".join(entry["readers"]), "grade": entry["grade"], "raw_sha256": sha})
     rows.extend(_derived_npl(rows, bank, period, url, sha, statement_type))
     return rows
 
@@ -282,8 +285,8 @@ def _derived_npl(rows, bank, period, url, sha, statement_type="unknown"):
     page = next(iter(parts.values()))["page"]
     return [{"bank": bank, "period": period, "field": "groups_3_5", "basis": "point",
              "value_vnd_bn": round(sum(row["value_vnd_bn"] for row in parts.values()), 6), "page": page,
-             "source_url": url, "statement_type": statement_type, "reader": "derived", "grade": grade_name,
-             "raw_sha256": sha}]
+             "source_url": url, "statement_type": statement_type, "unit": parts["group_3_substandard"].get("unit", "unknown"),
+             "reader": "derived", "grade": grade_name, "raw_sha256": sha}]
 
 
 def locate_table_pages(content, vision, total, page_cap=VISION_PAGE_CAP, model=None):
@@ -489,8 +492,24 @@ def discover(lake, banks, periods, probe, run_id, separate=True, annual_years=()
     return frame, stats
 
 
+def split_by_gates(merged, gates):
+    """(silver rows, quarantine rows): only a bank-quarter whose three protective gates passed may feed the decoder.
+
+    The quarantine keeps the failing gate in notes_gate.csv, so nothing is deleted and a later re-read can promote a
+    bank-quarter from quarantine to silver by overwriting its gate rows.
+    """
+    if merged is None or not len(merged):
+        return merged, merged
+    status = {}
+    if gates is not None and len(gates):
+        for row in gates.to_dict("records"):
+            status.setdefault((str(row["bank"]), str(row["period"])), {})[str(row["gate"])] = row["status"]
+    clean = merged.apply(lambda row: passes_silver(status.get((str(row["bank"]), str(row["period"])), {})), axis=1)
+    return merged[clean], merged[~clean]
+
+
 def merge_fragment_dir(lake, folder, run_id):
-    """Merge every fragment JSON in `folder` into silver + gates + watermark, and return the run log dict.
+    """Merge every fragment JSON in `folder` into silver + quarantine + gates + watermark, and return the run log.
 
     The parallel readers write fragments (rows + gates + stats) so no two of them ever touch the silver table;
     this is the single writer that folds their work together, keeping the better grade per bank-quarter-field.
@@ -499,18 +518,36 @@ def merge_fragment_dir(lake, folder, run_id):
     folder = Path(folder)
     paths = sorted(folder.glob("*.json")) if folder.exists() else []
     frame, gates = merge_fragments(paths)
-    existing = read_silver(lake, SILVER)
-    merged = merge_silver(existing, frame)
-    if len(merged):
-        write_silver(lake, SILVER, merged, {"run_id": run_id, "fragments": [path.name for path in paths]})
+    earlier = read_silver(lake, GATES)
+    if earlier is not None and len(earlier):
+        gates = pd.concat([earlier, gates], ignore_index=True) if len(gates) else earlier
     if len(gates):
+        gates = gates.drop_duplicates(["bank", "period", "gate"], keep="last").sort_values(
+            ["bank", "period", "gate"], ignore_index=True)
         write_silver(lake, GATES, gates, {"run_id": run_id})
+    existing = read_silver(lake, SILVER)
+    old_quarantine = read_silver(lake, QUARANTINE)
+    merged = merge_silver(existing, frame)
+    merged = pd.concat([merged, old_quarantine], ignore_index=True) if old_quarantine is not None and len(old_quarantine) else merged
+    merged = merge_silver(None, merged) if len(merged) else merged
+    clean, quarantine = split_by_gates(merged, gates)
+    if clean is None:
+        clean = pd.DataFrame(columns=SILVER_COLUMNS)
+    if quarantine is None:
+        quarantine = pd.DataFrame(columns=SILVER_COLUMNS)
+    # both tables are written even when empty: a bank-quarter that lost its gates must not linger in silver as a
+    # stale row from an earlier run
+    write_silver(lake, SILVER, clean, {"run_id": run_id, "fragments": [path.name for path in paths]})
+    write_silver(lake, QUARANTINE, quarantine, {"run_id": run_id, "reason": "a protective gate did not pass"})
+    merged = clean
     if len(merged):
         marks = load(lake / "state/watermarks.json")
         marks["notes_bank_quarter"] = str(merged["period"].max())
         marks["notes_bank_last"] = {bank: str(block["period"].max()) for bank, block in merged.groupby("bank")}
         save(lake / "state/watermarks.json", marks)
-    stats = {"fragments": len(paths), "rows": len(frame), "gates": len(gates)}
+    stats = {"fragments": len(paths), "rows": len(frame), "gates": len(gates),
+             "silver_rows": int(len(clean)) if clean is not None else 0,
+             "quarantine_rows": int(len(quarantine)) if quarantine is not None else 0}
     return {"run_id": run_id, "datasets": {"notes_merge": stats},
             "silver": {"rows": len(merged), "banks": int(merged["bank"].nunique()) if len(merged) else 0,
                        "periods": int(merged["period"].nunique()) if len(merged) else 0,

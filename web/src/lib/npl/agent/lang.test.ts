@@ -21,3 +21,15 @@ test("detectLang: English defaults to en", () => {
   assert.equal(detectLang("Compare VCB and MBB for Q4"), "en")
   assert.equal(detectLang("What is the forecast for MBB?"), "en")
 })
+
+test("detectLang follows the main question in alternating mixed-language turns", () => {
+  const turns = [
+    ["Cho tôi xem quarterly effects của quý 2 so với quý 1.", "vi"],
+    ["What was VCB’s latest adjusted change (thay đổi đã điều chỉnh)?", "en"],
+    ["Giải thích coverage, tức tỷ lệ bao phủ nợ xấu.", "vi"],
+    ["Show the four decoder checks (bộ giải mã) for VCB.", "en"],
+    ["Cho biết NPL dự báo cho next quarter.", "vi"],
+    ["How does the study define coverage (tỷ lệ bao phủ nợ xấu)?", "en"],
+  ] as const
+  assert.deepEqual(turns.map(([question]) => detectLang(question)), turns.map(([, lang]) => lang))
+})

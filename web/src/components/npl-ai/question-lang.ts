@@ -1,79 +1,67 @@
 import type { Lang } from "@/lib/npl/view"
 
-const VI_MARK = /[À-ỹĐđ]/
-const VI_WORD = new Set(["nợ", "quy", "quý", "co", "cờ"])
-const VI_PHRASE = new Set(["vi sao", "vì sao", "ngan hang", "ngân hàng"])
-const ADVICE_ASCII = /\b(buy|sell|mua|bán|khuyến nghị)\b/i
-const ADVICE_WORD = /(?:^|[^\p{L}\p{N}_])(buy|sell|mua|bán|khuyến nghị)(?=$|[^\p{L}\p{N}_])/iu
+type Prompts = Record<Lang, readonly [string, string, string]>
 
-const REFUSAL: Record<Lang, string> = {
-  vi: "Trang này không nói mua hay bán. Nó chỉ cho thấy mức giảm nợ xấu có được các số khác chống lại hay không.",
-  en: "This page does not say buy or sell. It only shows whether a fall in bad debt is backed by the other figures.",
+const overview: Prompts = {
+  vi: [
+    "Mức nợ xấu trung vị mới nhất là bao nhiêu?",
+    "Tỷ lệ bao phủ nợ xấu trung vị mới nhất là bao nhiêu?",
+    "Nợ xấu thường thay đổi thế nào qua các quý?",
+  ],
+  en: [
+    "What is the latest median NPL?",
+    "What is the latest median NPL coverage ratio?",
+    "How does NPL usually change by quarter?",
+  ],
 }
 
-export function questionLang(text: string): Lang {
-  if (VI_MARK.test(text)) return "vi"
-  const tokens = text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean)
-  for (const token of tokens) {
-    if (VI_WORD.has(token)) return "vi"
-  }
-  for (let i = 0; i < tokens.length - 1; i++) {
-    if (VI_PHRASE.has(`${tokens[i]} ${tokens[i + 1]}`)) return "vi"
-  }
-  return "en"
+const pagePrompts: Record<string, Prompts | undefined> = {
+  "/ngan-hang": {
+    vi: ["So sánh biến động nợ xấu mới nhất của ACB và VCB.", "Nợ xấu của TCB thay đổi thế nào qua các quý?", "Dự báo nợ xấu quý tới của MBB là bao nhiêu?"],
+    en: ["Compare the latest NPL changes at ACB and VCB.", "How has TCB’s NPL changed over time?", "What is the NPL forecast for MBB next quarter?"],
+  },
+  "/giai-ma": {
+    vi: ["Giải mã mức giảm nợ xấu của VCB quý mới nhất.", "ACB có cờ nào trong quý mới nhất?", "Nợ xấu của TCB thay đổi bao nhiêu sau khi điều chỉnh mùa vụ?"],
+    en: ["Run the four decoder checks for VCB’s latest quarter.", "Which decoder flags are active for ACB in the latest quarter?", "What is TCB’s latest seasonally adjusted NPL change?"],
+  },
+  "/thi-truong": {
+    vi: ["Giá cổ phiếu có liên hệ với biến động nợ xấu không?", "Phân tích thị trường sử dụng giai đoạn nào?", "Mối liên hệ với giá khác thế nào khi điều chỉnh mùa vụ?"],
+    en: ["Are stock returns associated with changes in NPL?", "What period does the market analysis cover?", "How does seasonal adjustment affect the relationship with returns?"],
+  },
+  "/phuong-phap": {
+    vi: ["Hiệu ứng mùa vụ được ước tính thế nào?", "Khoảng tin cậy của hiệu ứng quý nói lên điều gì?", "Phép kiểm định dự báo nợ xấu được thực hiện thế nào?"],
+    en: ["How are seasonal quarter effects estimated?", "What do the confidence intervals for quarter effects show?", "How is the NPL forecast backtested?"],
+  },
+  "/du-lieu": {
+    vi: ["Dữ liệu nợ xấu bao phủ giai đoạn nào?", "Nguồn của tỷ lệ nợ xấu là gì?", "Dữ liệu tổng quan bao gồm bao nhiêu ngân hàng?"],
+    en: ["What period does the NPL data cover?", "Where does the NPL ratio come from?", "How many banks are covered in the overview?"],
+  },
 }
 
-export function isAdvice(text: string): boolean {
-  return ADVICE_ASCII.test(text) || ADVICE_WORD.test(text)
-}
-
-export function refusalFor(text: string): string | null {
-  if (!isAdvice(text)) return null
-  return REFUSAL[questionLang(text)]
-}
-
-export function promptsFor(pathname: string): { vi: string; en: string } {
-  const path = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname || "/"
+export function promptsFor(pathname: string): Prompts {
+  const path = pathname.replace(/\/$/, "")
   const bank = /^\/ngan-hang\/([^/]+)/.exec(path)
   if (bank?.[1]) {
     const code = bankCode(bank[1])
     return {
-      vi: `Vì sao ${code} có cờ vàng quý này?`,
-      en: "Is VCB's NPL fall in 2025Q4 seasonal?",
+      vi: [
+        `Nợ xấu và tỷ lệ bao phủ của ${code} thay đổi thế nào qua các quý?`,
+        `Giải mã biến động nợ xấu của ${code} trong quý mới nhất.`,
+        `Dự báo nợ xấu quý tới của ${code} là bao nhiêu?`,
+      ],
+      en: [
+        `How have ${code}’s NPL and coverage ratios changed over time?`,
+        `Run the decoder for ${code} in the latest quarter.`,
+        `What is the next-quarter NPL forecast for ${code}?`,
+      ],
     }
   }
-  if (path === "/giai-ma") {
-    return {
-      vi: "Cờ vàng nào đang bật ở các ngân hàng lớn?",
-      en: "Which large banks have a yellow flag?",
-    }
-  }
-  if (path === "/phuong-phap") {
-    return {
-      vi: "Vì sao mức giảm quý 4 chưa đủ để kết luận?",
-      en: "Why is the Q4 dip not enough to conclude?",
-    }
-  }
-  if (path === "/du-lieu") {
-    return {
-      vi: "Bảng này gồm những cột nào?",
-      en: "Which columns are in this table?",
-    }
-  }
-  if (path === "/thi-truong") {
-    return {
-      vi: "Giá có phản ứng khi nợ xấu thay đổi không?",
-      en: "Does the price react when bad debt changes?",
-    }
-  }
-  return {
-    vi: "Mức nợ xấu trung vị mới nhất là bao nhiêu?",
-    en: "What is the latest median NPL?",
-  }
+  return pagePrompts[path] ?? overview
 }
 
 export function visibleText(value: string): string {
   return value
+    .replace(/(\*\*|__)([^\n]+?)\1/g, "$2")
     .replace(/[ \t]*\bM[456]\b(?:[ \t]*[–—-][ \t]*\bM[456]\b)?/gi, "")
     .replace(/[ \t]*\bget_ratios\b/gi, "")
     .replace(/[ \t]*\bconsolidated\b/gi, "")

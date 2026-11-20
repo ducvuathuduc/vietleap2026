@@ -3,14 +3,15 @@
 // (private data never reaches the model, a log or a trace), output number
 // guard, structured log line without prompt text, generic VI/EN error with a
 // request id — never a stack trace.
-import { createAgentUIStream, createUIMessageStream, createUIMessageStreamResponse, type UIMessage, type UIMessageChunk } from "ai"
+import { createAgentUIStream, createUIMessageStream, createUIMessageStreamResponse, type UIMessageChunk } from "ai"
 import { propagateAttributes } from "@langfuse/tracing"
 import { z } from "zod"
 
 import { makeNplAgent } from "@/lib/npl/agent/agent"
+import { guardNplStream, investmentAdviceNotice, messagesForNplModel, nplMessageText } from "@/lib/npl/agent/answer-policy"
 import { detectLang } from "@/lib/npl/agent/lang"
 import { loadNplSnapshot } from "@/lib/npl/agent/snapshot"
-import { filterInput, guardTextStream } from "@/lib/ratewatch/agent/guards"
+import { filterInput } from "@/lib/ratewatch/agent/guards"
 import { ratewatchModel } from "@/lib/ratewatch/agent/model"
 import { rateLimited } from "@/lib/rate-limit"
 
@@ -25,7 +26,7 @@ const Body = z.object({
     .array(
       z.object({
         id: z.string().min(1),
-        role: z.string(),
+        role: z.enum(["user", "assistant"]),
         parts: z.array(z.custom<unknown>((p) => typeof p === "object" && p !== null && "type" in p)),
       }),
     )
@@ -34,23 +35,6 @@ const Body = z.object({
   // client-generated session id (uuid) for Langfuse session grouping — never a name or phone
   sessionId: z.string().uuid().nullish(),
 })
-
-function lastUserText(messages: { role: string; parts: unknown[] }[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i]
-    if (m?.role !== "user") continue
-    return m.parts
-      .filter((p): p is { type: "text"; text: string } => {
-        if (typeof p !== "object" || p === null) return false
-        const part = p as { type?: unknown; text?: unknown }
-        return part.type === "text" && typeof part.text === "string"
-      })
-      .map((p) => p.text)
-      .join(" ")
-      .trim()
-  }
-  return ""
-}
 
 function noticeStream(notice: string): Response {
   const stream = createUIMessageStream({
@@ -107,29 +91,39 @@ export async function POST(req: Request) {
 
     const log: LogEntry = { status: 200, provider: "none", model: null, session: body.sessionId?.slice(0, 8) ?? null, tools: [], flagged: 0, ms: 0, rejected: null }
 
+    const question = nplMessageText(body.messages.findLast((message) => message.role === "user")?.parts ?? [])
+    const lang = detectLang(question)
     // Private data never reaches the model, a log or a trace.
-    const pii = filterInput(lastUserText(body.messages))
+    const pii = filterInput(question)
     if (!pii.ok) {
       log.rejected = "pii"
       logRequest(log)
-      return noticeStream(`${pii.notice_vi}\n\n${pii.notice_en}`)
+      return noticeStream(lang === "vi"
+        ? "Bạn vui lòng xoá thông tin cá nhân rồi hỏi lại. Trợ lý chỉ cần câu hỏi về số liệu nghiên cứu."
+        : "Please remove the personal information and ask again. The assistant only needs your question about the study data.")
     }
 
+    const refusal = investmentAdviceNotice(question, lang)
+    if (refusal) {
+      log.rejected = "investment_advice"
+      logRequest(log)
+      return noticeStream(refusal)
+    }
+
+    const unavailable = lang === "vi" ? "Trợ lý hiện chưa khả dụng. Bạn có thể xem số liệu trực tiếp trên các trang nghiên cứu." : "The assistant is temporarily unavailable. You can find the data on the study pages."
     const llm = ratewatchModel(process.env, body.sessionId)
     if (!llm) {
       log.rejected = "offline"
       logRequest(log)
-      return noticeStream(
-        "Chế độ offline: chưa cấu hình khoá LLM nên trợ lý trả lời không được bật. Hãy dùng các trang số liệu trên site — mọi số đều có nguồn.",
-      )
+      return noticeStream(unavailable)
     }
 
-    const snapshot = loadNplSnapshot()
-    const agent = makeNplAgent({ snapshot, model: llm.model, sessionId: body.sessionId, lang: detectLang(lastUserText(body.messages)) })
+    const snapshot = await loadNplSnapshot()
+    const agent = makeNplAgent({ snapshot, model: llm.model, sessionId: body.sessionId, lang })
     if (!agent) {
       log.rejected = "offline"
       logRequest(log)
-      return noticeStream("Chế độ offline: trợ lý chưa khả dụng.")
+      return noticeStream(unavailable)
     }
 
     const started = Date.now()
@@ -142,11 +136,12 @@ export async function POST(req: Request) {
       () =>
         createAgentUIStream({
           agent,
-          uiMessages: body.messages as unknown as UIMessage[],
+          uiMessages: messagesForNplModel(body.messages),
           abortSignal: req.signal,
           // Mid-stream failures (model or tool) surface as this generic text, never a stack.
-          onError: () =>
-            `Trợ lý gặp lỗi tạm thời (mã ${requestId.slice(0, 8)}) — vui lòng thử lại. / The assistant hit a temporary error (code ${requestId.slice(0, 8)}) — please try again.`,
+          onError: () => lang === "vi"
+            ? "Trợ lý gặp lỗi tạm thời. Bạn vui lòng thử lại."
+            : "The assistant hit a temporary error. Please try again.",
         }),
     )
 
@@ -159,7 +154,7 @@ export async function POST(req: Request) {
           },
         }),
       )
-      .pipeThrough(guardTextStream() as unknown as TransformStream<UIMessageChunk, UIMessageChunk>)
+      .pipeThrough(guardNplStream(lang))
       .pipeThrough(
         new TransformStream<UIMessageChunk, UIMessageChunk>({
           transform(chunk, controller) {

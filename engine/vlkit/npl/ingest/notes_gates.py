@@ -78,6 +78,28 @@ def npl_gate(values, vendor_pct):
             "value": round(gap_pp, 4), "threshold": NPL_TOL_PP}
 
 
+def unit_gate(rows):
+    """The statement's unit line was readable, so no amount rests on a silent default.
+
+    A uniform unit slip (TCB 2025Q3 read as 766.7 bn instead of 766,700 bn) is invisible to the sum gate and to the
+    ratio gate because both sides scale together; this gate is what keeps such a bank-quarter out of silver.
+    """
+    units = {str(row.get("unit") or "unknown") for row in rows}
+    if not units:
+        return {"gate": "unit_scale", "status": "skipped", "detail": "no row", "value": None, "threshold": None}
+    if "unknown" in units:
+        return {"gate": "unit_scale", "status": "fail",
+                "detail": f"unit line not readable on at least one page (units seen: {', '.join(sorted(units))})",
+                "value": None, "threshold": None}
+    return {"gate": "unit_scale", "status": "pass", "detail": f"units seen: {', '.join(sorted(units))}",
+            "value": None, "threshold": None}
+
+
+def passes_silver(gate_status):
+    """A bank-quarter may only feed the decoder when the three checks that protect it all passed."""
+    return all(gate_status.get(gate) == "pass" for gate in ("groups_sum_to_loans", "npl_vs_vendor", "unit_scale"))
+
+
 def _pct(value):
     return "missing" if value is None else f"{value:.2f}%"
 
@@ -93,7 +115,9 @@ def run_gates(frame, vendor=None):
     for (bank, period), block in frame.groupby(["bank", "period"], sort=True):
         values = values_of(block.to_dict("records"))
         vendor_pct = (vendor or {}).get((bank, period))
-        for gate in (groups_gate(values), rollforward_gate(values), npl_gate(values, vendor_pct)):
+        block_rows = block.to_dict("records")
+        for gate in (groups_gate(values), rollforward_gate(values), npl_gate(values, vendor_pct),
+                     unit_gate(block_rows)):
             rows.append({"bank": bank, "period": period, **gate})
     table = pd.DataFrame(rows, columns=GATE_COLUMNS)
     counts = table["status"].value_counts().to_dict() if len(table) else {}

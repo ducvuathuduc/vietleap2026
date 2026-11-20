@@ -88,10 +88,11 @@ def values(**overrides):
 
 def test_the_three_gates_pass_on_a_consistent_statement():
     gates, summary = notes_gates.run_gates(pd.DataFrame([
-        {"bank": "VCB", "period": "2025Q2", "field": field, "basis": "point", "value_vnd_bn": value}
+        {"bank": "VCB", "period": "2025Q2", "field": field, "basis": "point", "value_vnd_bn": value,
+         "unit": "trieu"}
         for field, value in values().items()]), vendor={("VCB", "2025Q2"): 5.0})
-    assert list(gates["status"]) == ["pass", "pass", "pass"]
-    assert summary == {"gates": 3, "pass": 3, "fail": 0, "skipped": 0}
+    assert list(gates["status"]) == ["pass", "pass", "pass", "pass"]
+    assert summary == {"gates": 4, "pass": 4, "fail": 0, "skipped": 0}
 
 
 def test_a_group_total_that_does_not_reach_the_loan_total_fails_the_first_gate():
@@ -199,6 +200,7 @@ def test_run_notes_writes_silver_gates_run_log_and_watermark_then_skips_the_same
     status = dict(zip(gates["gate"], gates["status"]))
     assert status["groups_sum_to_loans"] == "pass" and status["provision_rollforward"] == "pass"
     assert status["npl_vs_vendor"] == "skipped"      # no vendor panel in this lake: skipped, never passed
+    assert status["unit_scale"] == "pass"
     assert (tmp_path / "run_log" / f"{log['run_id']}.json").exists()
     marks = json.loads((tmp_path / "state/watermarks.json").read_text(encoding="utf-8"))
     assert marks["notes_bank_quarter"] == "2025Q2" and marks["notes_bank_last"] == {"VCB": "2025Q2"}
@@ -223,7 +225,8 @@ def test_merge_keeps_the_better_grade_when_a_bank_quarter_is_read_again():
     def row(grade, value):
         return {"bank": "VCB", "period": "2025Q2", "field": "loans_customer", "basis": "point",
                 "value_vnd_bn": value, "page": 1, "source_url": "https://x.test/a.pdf",
-                "statement_type": "consolidated", "reader": "text", "grade": grade, "raw_sha256": "sha"}
+                "statement_type": "consolidated", "unit": "trieu", "reader": "text", "grade": grade,
+                "raw_sha256": "sha"}
     merged = notes_runner.merge_silver(pd.DataFrame([row("verified", 100.0)]),
                                        pd.DataFrame([row("single", 101.0)]))
     assert len(merged) == 1 and merged.iloc[0]["value_vnd_bn"] == 100.0 and merged.iloc[0]["grade"] == "verified"
@@ -326,9 +329,13 @@ def test_a_fragment_run_writes_rows_to_json_and_leaves_silver_alone(tmp_path, mo
     frame, gates = notes_runner.merge_fragments([fragment])
     assert len(frame) == len(payload["rows"]) and set(frame.columns) == set(notes_runner.SILVER_COLUMNS)
     merge = notes_runner.merge_fragment_dir(tmp_path, fragment.parent, "notes-merge-test")
-    assert merge["datasets"]["notes_merge"]["fragments"] == 1 and merge["silver"]["rows"] == len(frame)
+    assert merge["datasets"]["notes_merge"]["fragments"] == 1
+    # this fragment only read one page, so the protective gates cannot pass: it is quarantined, not published
+    assert merge["silver"]["rows"] == 0
+    quarantine = pd.read_parquet(tmp_path / "silver/notes_quarantine.parquet")
+    assert len(quarantine) == len(frame) and set(quarantine["bank"]) == {"VCB"}
     silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
-    assert set(silver["bank"]) == {"VCB"} and silver["field"].nunique() > 0
+    assert len(silver) == 0 and set(silver.columns) == set(notes_runner.SILVER_COLUMNS)
 
 
 def test_the_choice_of_a_loans_page_is_driven_by_the_group_total():
@@ -402,3 +409,30 @@ def test_the_groups_3_5_total_is_emitted_as_a_derived_row_only_when_all_three_si
     assert rows["groups_3_5"]["reader"] == "derived" and rows["groups_3_5"]["grade"] == "single"
     only_two = [reading("group_3_substandard", 20.0, 39), reading("group_5_loss", 5.0, 39)]
     assert "groups_3_5" not in {row["field"] for row in notes_runner.collect(only_two, "VCB", "2025Q2", "u", "s")}
+
+
+def test_gate_rows_accumulate_per_bank_quarter_instead_of_being_overwritten(tmp_path):
+    def fragment(bank, period, gate_status):
+        rows = [{"bank": bank, "period": period, "field": "loans_customer", "basis": "point",
+                 "value_vnd_bn": 1000.0, "page": 1, "source_url": "https://x.test/a.pdf",
+                 "statement_type": "consolidated", "unit": "trieu", "reader": "text", "grade": "single",
+                 "raw_sha256": "sha"},
+                {"bank": bank, "period": period, "field": "group_1_current", "basis": "point",
+                 "value_vnd_bn": 1000.0, "page": 1, "source_url": "https://x.test/a.pdf",
+                 "statement_type": "consolidated", "unit": "trieu", "reader": "text", "grade": "single",
+                 "raw_sha256": "sha"}]
+        gates = [{"bank": bank, "period": period, "gate": gate, "status": gate_status,
+                  "detail": "", "value": None, "threshold": None}
+                 for gate in ("groups_sum_to_loans", "npl_vs_vendor", "unit_scale")]
+        return {"rows": rows, "gates": gates, "stats": {}}
+
+    (tmp_path / "fragA").mkdir()
+    (tmp_path / "fragB").mkdir()
+    (tmp_path / "fragA/one.json").write_text(__import__("json").dumps(fragment("VCB", "2025Q2", "pass")), encoding="utf-8")
+    notes_runner.merge_fragment_dir(tmp_path, tmp_path / "fragA", "run1")
+    (tmp_path / "fragB/two.json").write_text(__import__("json").dumps(fragment("STB", "2025Q3", "pass")), encoding="utf-8")
+    notes_runner.merge_fragment_dir(tmp_path, tmp_path / "fragB", "run2")
+    gates = pd.read_csv(tmp_path / "silver/notes_gate.csv")
+    assert set(gates["bank"]) == {"VCB", "STB"}          # the second run did not wipe the first bank's gates
+    silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
+    assert set(silver["bank"]) == {"VCB", "STB"}

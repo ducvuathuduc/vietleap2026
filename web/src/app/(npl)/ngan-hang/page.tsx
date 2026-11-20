@@ -58,7 +58,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">
           {vi
-            ? `${repeat.length} ngân hàng đảo chiều ở mọi cặp năm của mã đó.`
+            ? `${repeat.length} ngân hàng đảo chiều ở mọi cặp năm của ngân hàng đó.`
             : `${repeat.length} banks reversed in every year-pair they have.`}
         </h2>
         <div className="w-full min-w-0 overflow-x-auto">

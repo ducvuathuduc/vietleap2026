@@ -413,7 +413,7 @@ function decoderReading(cell: DecoderCell, lang: Lang): string {
   const both = cell.signals.some((signal) => signal.id === "S3") && cell.signals.some((signal) => signal.id === "S4")
   if (both) {
     return lang === "vi"
-      ? "NPL giảm, bao phủ giảm, và mức giảm quý 4 nằm trong dải các năm khác của mã này."
+      ? "NPL giảm, bao phủ giảm, và mức giảm quý 4 nằm trong dải các năm khác của ngân hàng này."
       : "NPL fell, coverage fell, and the Q4 decline sits inside this bank's other Q4 changes."
   }
   if (cell.status === "no_fall") {
@@ -834,15 +834,15 @@ export function bankModel(snapshot: Snapshot, code: string, lang: Lang) {
   const change = bank.q4_change_median_pp
   const changeText = change == null
     ? lang === "vi"
-      ? "Bản chụp không có trung vị thay đổi quý 4 của mã này."
-      : "This snapshot has no Q4-change median for this bank."
+      ? "Bản số liệu không có trung vị thay đổi quý 4 của ngân hàng này."
+      : "These figures have no Q4-change median for this bank."
     : lang === "vi"
       ? `Trung vị thay đổi quý 4 là ${formatNumber(change, lang)} điểm phần trăm, so với hệ số cả nhóm ${formatNumber(panel, lang)}.`
       : `Median Q4 change is ${formatNumber(change, lang)} pp, against the panel coefficient ${formatNumber(panel, lang)}.`
   const matched = everyYear(bank)
   const headline = matched
     ? lang === "vi"
-      ? `${bank.code} đảo chiều ở mọi cặp năm của mã này (${bank.down_then_up_years}/${bank.years}). ${changeText}`
+      ? `${bank.code} đảo chiều ở mọi cặp năm của ngân hàng này (${bank.down_then_up_years}/${bank.years}). ${changeText}`
       : `${bank.code} reversed in every year-pair on this file (${bank.down_then_up_years}/${bank.years}). ${changeText}`
     : lang === "vi"
       ? `${bank.code} không nằm trong danh sách đảo chiều mọi cặp năm. ${changeText}`

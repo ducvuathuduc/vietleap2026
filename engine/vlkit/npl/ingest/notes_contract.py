@@ -14,7 +14,7 @@ flows into single-quarter values so the five inputs share one period definition.
 import re
 
 KEY = ["bank", "period", "field", "basis"]
-SILVER_COLUMNS = KEY + ["value_vnd_bn", "page", "source_url", "statement_type", "reader", "grade",
+SILVER_COLUMNS = KEY + ["value_vnd_bn", "page", "source_url", "statement_type", "unit", "reader", "grade",
                         "raw_sha256"]
 READERS = ("text", "table", "vision_a", "vision_b")
 GRADES = ("verified", "single", "contested")
@@ -53,6 +53,26 @@ NUMBER = re.compile(r"\(?-?\d[\d.,]*\)?")
 def kind_of(field):
     """Label section of a field; a derived field (the groups 3-5 total) is point-in-time and has no labels."""
     return FIELDS.get(field, ("point", "derived"))[0]
+
+
+def unit_of(text):
+    """(multiplier to VND billion, label) where label is ty / trieu / nghin / dong / unknown.
+
+    The label matters as much as the multiplier: a statement whose unit line cannot be read must not be scaled on a
+    silent default, so the caller can flag it instead of publishing a number that is out by a thousand.
+    """
+    from ...vn import ascii_key
+
+    match = UNIT_LINE.search(ascii_key(text or ""))
+    if match is None:
+        return 1.0, "unknown"
+    tail = match.group(1)
+    for pattern, scale, label in ((r"nghin", 1e-6, "nghin"), (r"trieu", 1e-3, "trieu"), (r"ty|ti", 1.0, "ty")):
+        if re.search(pattern, tail):
+            return scale, label
+    if "dong" in tail or "vnd" in tail:
+        return 1e-9, "dong"
+    return 1.0, "unknown"
 
 
 def unit_scale(text):

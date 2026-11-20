@@ -21,7 +21,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
   return (
     <>
       <h1 className="text-xl font-semibold text-balance">{vi ? "Mọi ngân hàng, mọi quý: cờ vàng là dấu hiệu cần xem, không phải kết luận che giấu nợ." : "Every bank, every quarter: a yellow flag is a sign to review, not a conclusion that a bank is hiding bad debt."}</h1>
-      <p className="text-sm text-muted-foreground">{model.note}</p>
       <p><a className="text-sm underline underline-offset-4" href={pageHref("/", lang)}>{vi ? "Về tám ngân hàng lớn" : "Back to the eight large banks"}</a></p>
       <DecoderTable model={model} lang={lang} />
       <HowToRead

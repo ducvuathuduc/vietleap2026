@@ -18,7 +18,7 @@ import re
 import httpx
 import jsonschema
 
-from .notes_contract import FIELDS
+from .notes_contract import FIELDS, unit_of
 
 BASE_URL = "https://api.openai.com/v1"
 MODEL_A = os.getenv("NOTES_VISION_MODEL_A", "gpt-6-luna")
@@ -42,6 +42,7 @@ SCHEMA = {
         "unit_printed": {"type": ["string", "null"]},
         "period_label": {"type": ["string", "null"]},
         "values": {"type": "object", "additionalProperties": {"type": ["number", "null"]}},
+        "values_printed": {"type": "object", "additionalProperties": {"type": ["number", "string", "null"]}},
         "lines": {"type": "array", "items": {"type": "object", "additionalProperties": True}},
         "note": {"type": ["string", "null"]},
     },
@@ -50,7 +51,9 @@ SCHEMA = {
 PROMPT_A = f"""You are reading ONE page image of a Vietnamese bank's financial statement (bao cao tai chinh).
 Read the table on the page and return STRICT JSON, nothing else:
 {{"page_label": "...", "unit_printed": "the unit line as printed (Don vi tinh: ...)", "period_label": "the period the column belongs to",
-  "values": {{"<field>": <number in VND BILLION or null>}}, "note": "anything that makes a value uncertain"}}
+  "values": {{"<field>": <number in VND BILLION or null>}},
+  "values_printed": {{"<field>": <the same amount EXACTLY as printed on the page, in the page's own unit>}},
+  "note": "anything that makes a value uncertain"}}
 Fields to look for: {FIELDS_HINT}
 Rules: take the CURRENT period column (the first amount column), not the prior-period column. Convert the printed
 unit to VND billion and say which unit you saw. The arithmetic, exactly: "Don vi tinh: ty dong" -> the printed
@@ -66,7 +69,8 @@ note line whose label matches one of these ideas: {FIELDS_HINT}
 Return STRICT JSON only:
 {{"page_label": "...", "unit_printed": "...", "period_label": "...",
   "lines": [{{"label": "the printed label", "numbers": ["the amounts exactly as printed, current column first"]}}],
-  "values": {{"<field>": <number in VND BILLION or null>}}, "note": "..."}}
+  "values": {{"<field>": <number in VND BILLION or null>}},
+  "values_printed": {{"<field>": <the same amount EXACTLY as printed, page unit>}}, "note": "..."}}
 In "lines" copy the label and the numbers character by character, keeping Vietnamese diacritics and the printed
 thousand separators. In "values" convert the CURRENT period amount of each matched line to VND billion: "ty dong" -> as printed,
 "trieu dong" -> divide by 1,000 (31,168,107 -> 31,168.1), "dong/VND" -> divide by 1,000,000,000. Then check
@@ -154,19 +158,39 @@ def parse_json(text):
 
 
 def payload_values(payload):
-    """field -> float for the fields the model returned as numbers."""
-    from .notes_contract import FIELDS
+    """field -> VND billion, scaled HERE from the numbers the model transcribed and the unit line it read.
 
+    A vision model asked to divide by a thousand sometimes divides by a million (TCB 2025Q3: 766.7 instead of
+    766,700 bn), and a uniform slip is invisible to ratios and to the sum gate. So the prompt asks for the printed
+    numbers, and this module applies `unit_of` — the same rule the text reader uses — instead of trusting arithmetic.
+    `values` (already converted by the model) is only the fallback when it transcribed no printed amount at all.
+    """
+    from .notes_contract import FIELDS, unit_of
+
+    scale, label = unit_of((payload or {}).get("unit_printed") or "")
+    printed = (payload or {}).get("values_printed") or {}
     values = (payload or {}).get("values") or {}
     out = {}
-    for field, value in values.items():
-        if field not in FIELDS or value is None or isinstance(value, bool):
-            continue
-        try:
-            out[field] = float(value)
-        except (TypeError, ValueError):
-            continue
+    # without a readable unit line the printed numbers cannot be scaled, so the model's own conversion is kept and
+    # the row is labelled unit="unknown", which the unit gate turns into a quarantine instead of a silent rescale
+    order = ((values, 1.0), (printed, scale)) if label == "unknown" else ((printed, scale), (values, 1.0))
+    for source, factor in order:
+        for field, value in (source or {}).items():
+            if field in out or field not in FIELDS or value is None or isinstance(value, bool):
+                continue
+            try:
+                number = float(value)
+            except (TypeError, ValueError):
+                continue
+            out[field] = number * factor if factor != 1.0 else number
     return out
+
+
+def payload_unit(payload):
+    """The unit label the model copied ("ty", "trieu", "nghin", "dong", "unknown")."""
+    from .notes_contract import unit_of
+
+    return unit_of((payload or {}).get("unit_printed") or "")[1]
 
 
 def read_line_numbers(payload):
@@ -176,9 +200,9 @@ def read_line_numbers(payload):
     VND billion with the unit line the model copied; a reply without a readable unit is not scaled silently.
     """
     from .notes_text import key_of, matches
-    from .notes_contract import parse_number, unit_scale
+    from .notes_contract import parse_number
 
-    scale = unit_scale((payload or {}).get("unit_printed") or "")
+    scale, _ = unit_of((payload or {}).get("unit_printed") or "")
     found = {}
     for line in (payload or {}).get("lines") or []:
         if not isinstance(line, dict):
@@ -276,8 +300,9 @@ def read_page(reader, png, page):
             errors[name] = str(exc)[:160]
             continue
         values = payload_values(payload)
+        unit = payload_unit(payload)
         if name == "vision_b":
             values = {**read_line_numbers(payload), **values}
         for field, value in values.items():
-            readings.append({"field": field, "value_vnd_bn": value, "page": page, "reader": name})
+            readings.append({"field": field, "value_vnd_bn": value, "page": page, "reader": name, "unit": unit})
     return readings, errors

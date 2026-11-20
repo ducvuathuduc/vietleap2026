@@ -2,7 +2,7 @@
 // published snapshot only (web/seed/npl/snapshot.json, fixture fallback) and
 // returns its values together with citations (source, period, n, CI where
 // relevant) so the model can only speak numbers the snapshot carries.
-import type { Snapshot, Term } from "../view.ts"
+import { decoderModel, type DecoderSignal, type Snapshot, type Term } from "../view.ts"
 
 export interface NplCitation {
   source: string
@@ -25,11 +25,60 @@ function termCitation(prefix: string, term: Term, period: string | null): NplCit
   return cite(prefix, period, term.n, toCi95(term.ci95))
 }
 
+function periodRange(start: string | null | undefined, end: string | null | undefined): string | null {
+  return start && end && start !== end ? `${start}–${end}` : end || start || null
+}
+
+function snapshotPeriod(snapshot: Snapshot): string | null {
+  return periodRange(snapshot.meta.period_start, snapshot.meta.period_end)
+}
+
+type DecoderCheck = "flagged" | "clear" | "missing" | "inapplicable"
+
+function decoderCell(snapshot: Snapshot, code: string, period: string | null | undefined) {
+  if (!period || !snapshot.decoder) return null
+  const lookup = (lang: "vi" | "en") => decoderModel(snapshot, lang, "all").rows
+    .find((row) => row.bank === code)?.cells.find((cell) => cell?.period === period)
+  const en = lookup("en")
+  if (!en) return null
+  const vi = lookup("vi")
+  const { inputs, status } = en
+  const fell = en.dNpl != null && en.dNpl < 0
+  const check = (delta: number | null | undefined, flag: boolean, opposite: boolean): DecoderCheck => {
+    if (!fell) return en.dNpl == null ? "missing" : "inapplicable"
+    if (flag) return "flagged"
+    if (delta == null) return status === "clean" ? "clear" : "missing"
+    return opposite ? "flagged" : "clear"
+  }
+  // The view already reconciles overlapping publications and retains every active badge.
+  const checks: Record<DecoderSignal["id"], DecoderCheck> = {
+    S1: check(inputs.delta_g2_pp, status === "g2" || en.badges.includes("Group 2 rose"), (inputs.delta_g2_pp ?? 0) > 0),
+    S2: check(inputs.delta_writeoff_pp, status === "writeoff" || en.badges.includes("Write-offs rose"), (inputs.delta_writeoff_pp ?? 0) > 0),
+    S3: inputs.coverage_contested ? "missing" : check(inputs.d_coverage_pp, status === "coverage" || en.badges.includes("Coverage fell"), (inputs.d_coverage_pp ?? 0) < 0),
+    S4: !fell || !period.endsWith("Q4")
+      ? (en.dNpl == null ? "missing" : "inapplicable")
+      : check(null, status === "seasonal" || en.badges.includes("Inside the year-end range"), false),
+  }
+  return {
+    bank: code,
+    period,
+    d_npl_pp: en.dNpl,
+    status,
+    inputs,
+    checks,
+    reading_vi: vi?.reading ?? "",
+    reading_en: en.reading,
+  }
+}
+
+export type NplDecoderCell = NonNullable<ReturnType<typeof decoderCell>>
+
 // --- overview --------------------------------------------------------------
 
 export function overview(snapshot: Snapshot) {
   const last = snapshot.series.median_by_period.at(-1) ?? null
   return {
+    data_period: snapshotPeriod(snapshot),
     headline: snapshot.headline,
     level: snapshot.kpis.level,
     benchmark: snapshot.kpis.benchmark,
@@ -47,11 +96,15 @@ export function overview(snapshot: Snapshot) {
 // --- quarter_effects -------------------------------------------------------
 
 export function quarterEffects(snapshot: Snapshot) {
+  const data_period = snapshotPeriod(snapshot)
   return {
+    data_period,
+    reference_quarter: 1,
+    null_effect_pp: 0,
     effects: snapshot.quarter_effects,
     citations: snapshot.quarter_effects.map((e) => termCitation("quarter effects (Q2/Q3/Q4 vs Q1)", e, `Q${e.quarter}`)),
-    note_vi: "Đây là liên hệ, không phải nhân quả — dữ liệu bảng 2021Q2–2026Q3.",
-    note_en: "Association from 2021Q2–2026Q3 panel data, not causation.",
+    note_vi: "Đây là liên hệ trong dữ liệu, không phải nhân quả.",
+    note_en: "Association in the data, not causation.",
   }
 }
 
@@ -60,10 +113,12 @@ export function quarterEffects(snapshot: Snapshot) {
 export function bankProfile(snapshot: Snapshot, input: { code: string }) {
   const code = input.code.trim().toUpperCase()
   const bank = snapshot.banks.find((b) => b.code === code)
-  if (!bank) return { found: false as const, citations: [] as NplCitation[] }
+  if (!bank) return { found: false as const, data_period: null, citations: [] as NplCitation[] }
   return {
     found: true as const,
+    data_period: periodRange(bank.quarters[0]?.period, bank.latest?.period ?? bank.quarters.at(-1)?.period),
     bank,
+    decoder: decoderCell(snapshot, code, bank.latest?.period),
     citations: [cite("bank profile", bank.latest?.period ?? null, bank.years, null)],
   }
 }
@@ -73,15 +128,28 @@ export function bankProfile(snapshot: Snapshot, input: { code: string }) {
 export function adjustedChange(snapshot: Snapshot, input: { code: string; period?: string }) {
   const code = input.code.trim().toUpperCase()
   const bank = snapshot.banks.find((b) => b.code === code)
-  if (!bank) return { found: false as const, citations: [] as NplCitation[] }
-  const period = input.period ?? bank.latest?.period
-  if (!period) return { found: false as const, citations: [] as NplCitation[] }
-  const row = bank.quarters.find((q) => q.period === period.toUpperCase())
-  if (!row) return { found: false as const, citations: [] as NplCitation[] }
+  const period = input.period?.trim().toUpperCase() ?? bank?.latest?.period ?? null
+  const row = bank?.quarters.find((q) => q.period === period) ?? null
+  const cell = decoderCell(snapshot, code, period)
+  if (!row && !cell) return { found: false as const, data_period: null, citations: [] as NplCitation[] }
   return {
     found: true as const,
-    row,
-    citations: [cite("adjusted change (bank-quarter)", row.period, 1)],
+    data_period: period,
+    code,
+    row: row ?? { period: cell!.period, d_npl_pp: cell!.d_npl_pp, adjusted_change_pp: null },
+    decoder: cell,
+    citations: [cite("adjusted change (bank-quarter)", period, 1)],
+  }
+}
+
+export function decoder(snapshot: Snapshot, input: { code: string; period?: string }) {
+  const result = adjustedChange(snapshot, input)
+  if (!result.found) return result
+  return {
+    ...result,
+    check_count: Object.keys(result.decoder?.checks ?? {}).length,
+    monitored_loan_group: 2,
+    citations: [cite("NPL decoder (bank-quarter)", result.data_period, 1)],
   }
 }
 
@@ -97,6 +165,7 @@ export function compareBanks(snapshot: Snapshot, input: { codes: string[] }) {
     q4_change_median_pp: number | null
     q1_rebound_median_pp: number | null
     latest_period: string | null
+    d_npl_pp: number | null
     adjusted_change_pp: number | null
     forecast_next: { period: string; npl_pct: number; lo80: number; hi80: number } | null
   }[] = []
@@ -116,15 +185,22 @@ export function compareBanks(snapshot: Snapshot, input: { codes: string[] }) {
       q4_change_median_pp: bank.q4_change_median_pp,
       q1_rebound_median_pp: bank.q1_rebound_median_pp,
       latest_period: bank.latest?.period ?? null,
+      d_npl_pp: bank.quarters.find((q) => q.period === bank.latest?.period)?.d_npl_pp ?? null,
       adjusted_change_pp: bank.latest?.adjusted_change_pp ?? null,
       forecast_next: bank.latest?.forecast_next ?? null,
     })
   }
   return {
+    data_period: periodRange(...latestPeriodBounds(rows)),
     rows,
     missing,
-    citations: rows.map((row) => cite("bank medians (FiinQuant panel)", row.latest_period, null)),
+    citations: rows.map((row) => cite("bank medians and latest changes (FiinQuant panel)", row.latest_period, null)),
   }
+}
+
+function latestPeriodBounds(rows: { latest_period: string | null }[]): [string | undefined, string | undefined] {
+  const periods = rows.flatMap((row) => row.latest_period ? [row.latest_period] : []).sort()
+  return [periods[0], periods.at(-1)]
 }
 
 // --- forecast --------------------------------------------------------------
@@ -132,14 +208,21 @@ export function compareBanks(snapshot: Snapshot, input: { codes: string[] }) {
 export function forecast(snapshot: Snapshot, input: { code: string }) {
   const code = input.code.trim().toUpperCase()
   const bank = snapshot.banks.find((b) => b.code === code)
-  if (!bank) return { found: false as const, citations: [] as NplCitation[] }
+  if (!bank) return { found: false as const, data_period: null, citations: [] as NplCitation[] }
   const next = bank.latest?.forecast_next ?? null
-  if (!next) return { found: false as const, citations: [] as NplCitation[] }
+  if (!next) return { found: false as const, data_period: null, citations: [] as NplCitation[] }
+  const series = (bank.series ?? []).filter((point) => point.period < next.period).map(({ period, npl_pct }) => ({ period, npl_pct }))
   return {
     found: true as const,
+    data_period: periodRange(series[0]?.period, next.period),
+    code,
+    series,
     forecast: next,
     mae: snapshot.forecast.mae,
-    citations: [cite("forecast (model vs seasonal naive)", next.period, snapshot.forecast.backtest.length, [next.lo80, next.hi80])],
+    backtest_period: snapshot.forecast.test_period,
+    backtest_note_vi: snapshot.forecast.reading_vi || "Kiểm định trên các quý đã quan sát, so với dự báo giữ nguyên và dự báo mùa vụ.",
+    backtest_note_en: snapshot.forecast.reading_en || "Backtest on observed quarters against last-value and seasonal baselines.",
+    citations: [cite("forecast (model vs seasonal naive)", next.period, snapshot.forecast.backtest.length)],
     note_vi: "Đây là phép tính, không phải lời hứa.",
     note_en: "This is a calculation, not a promise.",
   }
@@ -149,6 +232,7 @@ export function forecast(snapshot: Snapshot, input: { code: string }) {
 
 export function marketReaction(snapshot: Snapshot) {
   return {
+    data_period: periodRange(snapshot.market.period_start, snapshot.market.period_end),
     events_with_car: snapshot.market.events_with_car,
     car_all: snapshot.market.car_by_day.filter((row) => row.group === "all"),
     regressions: snapshot.market.regressions,
@@ -163,10 +247,12 @@ export function marketReaction(snapshot: Snapshot) {
 export function method(snapshot: Snapshot, input: { model_id: string }) {
   const id = input.model_id.trim().toUpperCase()
   const entry = snapshot.method.find((m) => m.id.toUpperCase() === id)
-  if (!entry) return { found: false as const, valid_ids: snapshot.method.map((m) => m.id) }
+  if (!entry) return { found: false as const, data_period: null, valid_ids: snapshot.method.map((m) => m.id) }
   return {
     found: true as const,
+    data_period: snapshotPeriod(snapshot),
     entry,
+    null_effect_pp: /^M[2-6]$/.test(id) ? 0 : null,
     citations: [cite("study method", snapshot.meta.period_end, entry.n)],
   }
 }
@@ -175,6 +261,7 @@ export function method(snapshot: Snapshot, input: { model_id: string }) {
 
 export function limitations(snapshot: Snapshot) {
   return {
+    data_period: snapshotPeriod(snapshot),
     items: snapshot.limitations,
     legal: snapshot.legal,
     citations: [cite("snapshot limitations", snapshot.meta.period_end, snapshot.meta.n_bank_quarters)],
@@ -237,10 +324,25 @@ export function glossary(snapshot: Snapshot, input: { term: string }) {
   }
   const key = aliases[input.term.trim().toLowerCase()]
   const entry = key ? GLOSSARY[key] : undefined
-  if (!entry) return { found: false as const, terms: Object.keys(GLOSSARY) }
+  if (!entry) return { found: false as const, data_period: null, terms: Object.keys(GLOSSARY) }
   return {
     found: true as const,
+    data_period: null,
     entry,
     citations: [cite("glossary (in-code dictionary)", null, null)],
   }
+}
+
+export type NplToolResults = {
+  overview: ReturnType<typeof overview>
+  quarter_effects: ReturnType<typeof quarterEffects>
+  bank_profile: ReturnType<typeof bankProfile>
+  adjusted_change: ReturnType<typeof adjustedChange>
+  decoder: ReturnType<typeof decoder>
+  compare_banks: ReturnType<typeof compareBanks>
+  forecast: ReturnType<typeof forecast>
+  market_reaction: ReturnType<typeof marketReaction>
+  method: ReturnType<typeof method>
+  limitations: ReturnType<typeof limitations>
+  glossary: ReturnType<typeof glossary>
 }

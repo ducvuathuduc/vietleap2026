@@ -1,7 +1,7 @@
-// Live eval for the NPL study assistant (brief T7 item 3).
-// Runs the 24 fixture-grounded cases (12 VI, 12 EN, 5 adversarial) in
-// cases.json against the configured provider, and prints pass rates for: tool
-// choice, numbers guard clean, citations present. With Langfuse project keys
+// Live eval for the NPL study assistant.
+// Runs 30 fixture-grounded cases (15 VI, 15 EN, 6 adversarial) against the
+// configured provider and grades tool choice, grounding, citations and language.
+// With Langfuse project keys
 // the cases are pushed as dataset items and the run is recorded as a Langfuse
 // dataset run; without them it runs locally and prints that it was skipped.
 // Usage: npm run eval:npl [-- --out results.json]
@@ -12,63 +12,37 @@ import { fileURLToPath } from "node:url"
 import { type LanguageModel, type ToolLoopAgent } from "ai"
 
 import { makeNplAgent } from "../agent.ts"
+import { investmentAdviceNotice } from "../answer-policy.ts"
 import { detectLang } from "../lang.ts"
 import { loadRepoEnv } from "../../../ratewatch/agent/env.ts"
-import { collectTruthNumbers, guardNumbers } from "../../../ratewatch/agent/guards.ts"
+import { filterInput, redactPii } from "../../../ratewatch/agent/guards.ts"
 import { providerName, ratewatchModel } from "../../../ratewatch/agent/model.ts"
 import type { Snapshot } from "../../view.ts"
+import { scoreAnswer, type EvalCase } from "./score.ts"
 
 const CASES_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "cases.json")
 const FIXTURE_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../../seed/npl/snapshot.fixture.json")
+const DECODER_PATH = path.join(path.dirname(FIXTURE_PATH), "decoder.fixture.json")
 const DATASET_NAME = "npl-eval"
 const CASE_TIMEOUT_MS = 120_000
-const PASS_BAR = 22
-
-interface EvalCase {
-  id: string
-  lang: "vi" | "en"
-  question: string
-  /** "none" marks an adversarial case: tool choice is not graded. */
-  expect_tool: string
-  expect_numbers: number[]
-  adversarial?: string
-  /** Regex (case-insensitive) the answer must match. */
-  expect_regex?: string
-  /** Substrings that must not appear in the guarded answer. */
-  forbidden?: string[]
-}
+const PASS_BAR = 28
 
 interface CaseUsage {
   inputTokens: number
   outputTokens: number
 }
 
-interface CaseResult {
+interface CaseResult extends ReturnType<typeof scoreAnswer> {
   id: string
   lang: string
   question: string
   expect_tool: string
   tools_called: string[]
   tool_inputs: unknown[]
-  tool_ok: boolean
   expect_numbers: number[]
-  numbers_ok: boolean
-  flagged: string[]
-  guard_clean: boolean
-  citations_ok: boolean
-  answered: boolean
-  forbidden_ok: boolean
-  regex_ok: boolean
-  answer: string
-  pass: boolean
+  mixed: boolean
   usage: CaseUsage
   error?: string
-}
-
-function close(a: number, b: number): boolean {
-  if (a === b) return true
-  const scale = Math.max(Math.abs(a), Math.abs(b))
-  return Math.abs(a - b) <= Math.max(0.006, scale * 0.006)
 }
 
 function num(v: unknown): number {
@@ -76,13 +50,21 @@ function num(v: unknown): number {
 }
 
 async function runCase(snapshot: Snapshot, model: LanguageModel, c: EvalCase): Promise<CaseResult> {
-  const agent = makeNplAgent({ snapshot, model, lang: detectLang(c.question) })
+  const lang = detectLang(c.question)
+  const pii = filterInput(c.question)
+  const notice = pii.ok ? investmentAdviceNotice(c.question, lang) : lang === "vi" ? pii.notice_vi : pii.notice_en
+  if (notice) return caseResult(c, notice, [], [], [], { inputTokens: 0, outputTokens: 0 })
+
+  const agent = makeNplAgent({ snapshot, model, lang })
   if (!agent) throw new Error("agent unavailable")
   let result: Awaited<ReturnType<ToolLoopAgent["generate"]>>
+  const abortSignal = AbortSignal.timeout(CASE_TIMEOUT_MS)
   try {
-    result = await agent.generate({ prompt: c.question })
+    result = await agent.generate({ prompt: c.question, abortSignal })
   } catch (e) {
-    return failResult(c, e instanceof Error ? e.message.slice(0, 300) : String(e))
+    const error = abortSignal.aborted ? `timeout after ${CASE_TIMEOUT_MS / 1000}s` :
+      e instanceof Error ? e.message.slice(0, 300) : String(e)
+    return { ...caseResult(c, "", [], [], [], { inputTokens: 0, outputTokens: 0 }), error }
   }
   const calls: string[] = []
   const inputs: unknown[] = []
@@ -95,81 +77,36 @@ async function runCase(snapshot: Snapshot, model: LanguageModel, c: EvalCase): P
       } else if (part.type === "tool-result") outputs.push((part as { output: unknown }).output)
     }
   }
-  const truth = collectTruthNumbers(outputs)
-  const guarded = guardNumbers(result.text ?? "", truth)
-  const answered = (result.text ?? "").trim().length > 0
-  const forbiddenOk = (c.forbidden ?? []).every((s) => !guarded.text.includes(s))
-  const regexOk = c.expect_regex ? new RegExp(c.expect_regex, "i").test(guarded.text) : true
-  const adversarial = c.expect_tool === "none"
-  const toolOk = adversarial ? true : c.expect_tool.split("|").some((t) => calls.includes(t.trim()))
-  const numbersOk = c.expect_numbers.every((n) => truth.some((t) => close(n, t)))
-  const dataOutputs = outputs.filter((o) => (o as { found?: unknown })?.found !== false)
-  const citationsOk = dataOutputs.every((o) => Array.isArray((o as { citations?: unknown })?.citations) && (o as { citations: unknown[] }).citations.length > 0)
-  // Adversarial cases test the refusal + the guard net: an invented number that
-  // the guard caught and replaced is the system working, not a failure.
-  const pass = adversarial
-    ? answered && forbiddenOk && regexOk
-    : toolOk && numbersOk && guarded.flagged.length === 0 && citationsOk && answered
   const u = result.totalUsage
+  return caseResult(c, result.text, calls, inputs, outputs, { inputTokens: num(u?.inputTokens), outputTokens: num(u?.outputTokens) })
+}
+
+function caseResult(
+  c: EvalCase,
+  text: string,
+  calls: string[],
+  inputs: unknown[],
+  outputs: unknown[],
+  usage: CaseUsage,
+): CaseResult {
   return {
     id: c.id,
     lang: c.lang,
-    question: c.question,
+    question: String(redactPii(c.question)),
     expect_tool: c.expect_tool,
     tools_called: calls,
     tool_inputs: inputs,
-    tool_ok: toolOk,
     expect_numbers: c.expect_numbers,
-    numbers_ok: numbersOk,
-    flagged: guarded.flagged,
-    guard_clean: guarded.flagged.length === 0,
-    citations_ok: citationsOk,
-    answered,
-    forbidden_ok: forbiddenOk,
-    regex_ok: regexOk,
-    answer: guarded.text,
-    pass,
-    usage: { inputTokens: num(u?.inputTokens), outputTokens: num(u?.outputTokens) },
+    mixed: c.mixed === true,
+    usage,
+    ...scoreAnswer(c, text, calls, outputs),
   }
-}
-
-function failResult(c: EvalCase, error: string): CaseResult {
-  return {
-    id: c.id,
-    lang: c.lang,
-    question: c.question,
-    expect_tool: c.expect_tool,
-    tools_called: [],
-    tool_inputs: [],
-    tool_ok: false,
-    expect_numbers: c.expect_numbers,
-    numbers_ok: false,
-    flagged: [],
-    guard_clean: true,
-    citations_ok: false,
-    answered: false,
-    forbidden_ok: false,
-    regex_ok: false,
-    answer: "",
-    pass: false,
-    usage: { inputTokens: 0, outputTokens: 0 },
-    error,
-  }
-}
-
-function timeoutResult(c: EvalCase): CaseResult {
-  return { ...failResult(c, `timeout after ${CASE_TIMEOUT_MS / 1000}s`), guard_clean: true, forbidden_ok: true, regex_ok: false }
-}
-
-function runCaseWithTimeout(snapshot: Snapshot, model: Parameters<typeof runCase>[1], c: EvalCase): Promise<CaseResult> {
-  const timeout = new Promise<CaseResult>((resolve) => setTimeout(() => resolve(timeoutResult(c)), CASE_TIMEOUT_MS))
-  return Promise.race([runCase(snapshot, model, c), timeout])
 }
 
 function describe(r: CaseResult): string {
   const tool = r.expect_tool === "none" ? "adversarial" : r.tool_ok ? r.expect_tool : `want ${r.expect_tool}, got [${r.tools_called.join(",") || "none"}]`
   const guard = r.guard_clean ? "clean" : `flagged ${r.flagged.join(",")}`
-  return `${r.pass ? "pass" : "FAIL"} ${r.id} tool=${tool} numbers=${r.numbers_ok} guard=${guard} citations=${r.citations_ok} answered=${r.answered}${r.error ? ` (${r.error})` : ""}`
+  return `${r.pass ? "pass" : "FAIL"} ${r.id} tool=${tool} numbers=${r.numbers_ok} guard=${guard} citations=${r.citations_ok} language=${r.language_ok} format=${r.regex_ok}${r.error ? ` (${r.error})` : ""}`
 }
 
 function rate(results: CaseResult[], key: (r: CaseResult) => boolean): string {
@@ -190,6 +127,8 @@ async function main(): Promise<void> {
   console.log(`eval: provider=${provider} model=${chosen.label}`)
 
   const snapshot = JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Snapshot
+  const { decoder } = JSON.parse(readFileSync(DECODER_PATH, "utf8")) as Pick<Snapshot, "decoder">
+  snapshot.decoder = decoder
   const cases = JSON.parse(readFileSync(CASES_PATH, "utf8")) as EvalCase[]
 
   const results: CaseResult[] = []
@@ -216,10 +155,12 @@ async function main(): Promise<void> {
       const byId = new Map(cases.map((c) => [c.id, c]))
       const kept = new Set<string>()
       for (const item of existing.items) {
-        const id = (item.input as { id?: string } | undefined)?.id
+        const input = item.input as { id?: string; question?: string } | undefined
+        const id = input?.id
         const expected = item.expectedOutput as { expect_tool?: unknown } | undefined
         const local = id ? byId.get(id) : undefined
-        if (!id || kept.has(id) || !local || expected?.expect_tool !== local.expect_tool) {
+        if (!id || kept.has(id) || !local || expected?.expect_tool !== local.expect_tool ||
+          input?.question !== redactPii(local.question)) {
           await lf.api.datasetItems.delete(item.id)
           continue
         }
@@ -229,7 +170,7 @@ async function main(): Promise<void> {
         if (kept.has(c.id)) continue
         await lf.dataset.createItem({
           datasetName: DATASET_NAME,
-          input: { id: c.id, lang: c.lang, question: c.question },
+          input: { id: c.id, lang: c.lang, question: redactPii(c.question) as string },
           expectedOutput: { expect_tool: c.expect_tool, expect_numbers: c.expect_numbers },
         })
       }
@@ -238,40 +179,24 @@ async function main(): Promise<void> {
       const run = await dataset.runExperiment({
         name: "NPL study assistant eval",
         runName,
-        description: "24 VI/EN cases incl. 5 adversarial: tool choice, grounded numbers, citations (fixture snapshot)",
+        description: "30 VI/EN cases with 6 adversarial: tool choice, grounded numbers, citations, language (fixture snapshot)",
         metadata: { provider, model: chosen.label },
         maxConcurrency: 1,
         task: async (raw: unknown) => {
-          // Dataset items come back untyped from the Langfuse API: narrow before use.
-          const item = raw as { input: { id?: unknown; lang?: unknown; question?: unknown }; expectedOutput?: unknown }
-          const expected = (item.expectedOutput ?? null) as { expect_tool?: unknown; expect_numbers?: unknown } | null
-          if (
-            typeof item.input.id !== "string" ||
-            typeof item.input.question !== "string" ||
-            (item.input.lang !== "vi" && item.input.lang !== "en") ||
-            !expected ||
-            typeof expected.expect_tool !== "string" ||
-            !Array.isArray(expected.expect_numbers)
-          ) {
-            return { pass: 0, tool_ok: 0, guard_clean: 0, citations_ok: 0 }
-          }
+          const item = raw as { input: { id?: string } }
+          const c = item.input.id ? byId.get(item.input.id) : undefined
+          if (!c) return { pass: 0, tool_ok: 0, guard_clean: 0, citations_ok: 0, language_ok: 0 }
           if (delayMs > 0) await sleep(delayMs)
-          const c: EvalCase = {
-            id: item.input.id,
-            lang: item.input.lang,
-            question: item.input.question,
-            expect_tool: expected.expect_tool,
-            expect_numbers: expected.expect_numbers,
-          }
-          const r = await runCaseWithTimeout(snapshot, chosen.model, c)
+          const r = await runCase(snapshot, chosen.model, c)
           results.push(r)
           console.log(describe(r))
-          return { pass: r.pass ? 1 : 0, tool_ok: r.tool_ok ? 1 : 0, guard_clean: r.guard_clean ? 1 : 0, citations_ok: r.citations_ok ? 1 : 0 }
+          return { pass: Number(r.pass), tool_ok: Number(r.tool_ok), guard_clean: Number(r.guard_clean), citations_ok: Number(r.citations_ok), language_ok: Number(r.language_ok) }
         },
         evaluators: [
           async (params: { output: Record<string, number> }) => ({ name: "tool_choice", value: params.output.tool_ok }),
           async (params: { output: Record<string, number> }) => ({ name: "numbers_guard_clean", value: params.output.guard_clean }),
           async (params: { output: Record<string, number> }) => ({ name: "citations_present", value: params.output.citations_ok }),
+          async (params: { output: Record<string, number> }) => ({ name: "language_matched", value: params.output.language_ok }),
           async (params: { output: Record<string, number> }) => ({ name: "pass", value: params.output.pass }),
         ],
       })
@@ -284,17 +209,19 @@ async function main(): Promise<void> {
     console.log("langfuse: dataset run skipped (no LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY)")
   }
 
-  if (results.length === 0) {
-    for (const c of cases) {
-      if (delayMs > 0) await sleep(delayMs)
-      const r = await runCaseWithTimeout(snapshot, chosen.model, c)
-      results.push(r)
-      console.log(describe(r))
-    }
+  const completed = new Set(results.map((r) => r.id))
+  for (const c of cases) {
+    if (completed.has(c.id)) continue
+    if (delayMs > 0) await sleep(delayMs)
+    const r = await runCase(snapshot, chosen.model, c)
+    results.push(r)
+    console.log(describe(r))
   }
 
+  const mixed = results.filter((r) => r.mixed)
   const inputTokens = results.reduce((s, r) => s + r.usage.inputTokens, 0)
   const outputTokens = results.reduce((s, r) => s + r.usage.outputTokens, 0)
+  const unguardedNumbers = results.reduce((count, r) => count + r.unguarded.length, 0)
 
   const summary = {
     provider,
@@ -304,14 +231,17 @@ async function main(): Promise<void> {
     numbers_guard_clean: rate(results, (r) => r.guard_clean),
     citations_present: rate(results, (r) => r.citations_ok),
     answered: rate(results, (r) => r.answered),
-    expected_numbers_found: rate(results, (r) => r.numbers_ok),
+    expected_numbers_answered: rate(results, (r) => r.numbers_ok),
+    language_matched: rate(results, (r) => r.language_ok),
+    mixed_language_matched: rate(mixed, (r) => r.language_ok),
+    unguarded_numbers: unguardedNumbers,
     pass: rate(results, (r) => r.pass),
     usage: { inputTokens, outputTokens },
     langfuse_experiment_url: experimentUrl,
     results,
   }
   console.log(
-    `\ntotals: tool choice ${summary.tool_choice}, numbers guard clean ${summary.numbers_guard_clean}, citations ${summary.citations_present}, answered ${summary.answered}, expected numbers ${summary.expected_numbers_found}, PASS ${summary.pass}`,
+    `\ntotals: tool choice ${summary.tool_choice}, numbers guard clean ${summary.numbers_guard_clean}, unguarded numbers ${unguardedNumbers}, citations ${summary.citations_present}, answered ${summary.answered}, expected numbers ${summary.expected_numbers_answered}, language ${summary.language_matched}, mixed language ${summary.mixed_language_matched}, PASS ${summary.pass}`,
   )
 
   if (outPath) {
@@ -320,9 +250,10 @@ async function main(): Promise<void> {
   }
   if (langfuseShutdown) await langfuseShutdown()
   const passed = results.filter((r) => r.pass).length
-  if (passed < PASS_BAR) {
-    console.error(`eval: ${passed}/${results.length} below the ${PASS_BAR}/${results.length} acceptance bar`)
-    process.exit(1)
+  if (results.length !== 30 || passed < PASS_BAR || unguardedNumbers !== 0 ||
+    mixed.length !== 6 || mixed.some((r) => !r.language_ok)) {
+    console.error("eval: acceptance requires 28/30 passes, no unguarded numbers and all six mixed languages matched")
+    process.exitCode = 1
   }
 }
 

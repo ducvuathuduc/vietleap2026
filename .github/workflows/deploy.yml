@@ -5,7 +5,7 @@ name: Deploy
 on:
   workflow_dispatch:
   push:
-    branches: [feat/ratewatch]
+    branches: [main]
     paths:
       - "web/**"
       - "engine/**"

@@ -111,10 +111,10 @@ export function DecoderTable({ model, lang, hideSource = false }: { model: Model
                 {row.cells.map((item, index) => {
                   const visible = visibleCell(item, quarter, status)
                   const unpublished = !item || item.dNpl == null
-                  const marks = visible ? (visible.badges.length ? visible.badges : visible.label ? [visible.label] : []) : []
+                  const marks = visible && visible.dNpl != null ? (visible.badges.length ? visible.badges : visible.label ? [visible.label] : []) : []
                   return (
                     <TableCell key={model.periods[index]} className="align-top">
-                      {visible ? (
+                      {visible && visible.dNpl != null ? (
                         <div className="flex min-w-28 flex-col items-start gap-1">
                           <button
                             type="button"

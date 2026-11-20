@@ -17,7 +17,7 @@ charge keeps the sign the statement prints, so a reversal stays visible as a neg
 import re
 
 from ...vn import ascii_key
-from .notes_contract import FIELDS, numbers_in, parse_number, unit_scale
+from .notes_contract import FIELDS, numbers_in, parse_number, unit_of, unit_scale
 
 LABELS = {
     "loans_customer": ["cho vay khach hang", "du no cho vay khach hang"],
@@ -129,7 +129,8 @@ def _allowed(field, key, page, group_pages, movement_pages):
 
 def read_text(pages):
     """field -> {value_vnd_bn, page, reader} from the page texts, first page that shows the value wins."""
-    scales = {index: unit_scale(text) for index, text in enumerate(pages or [], start=1)}
+    units = {index: unit_of(text) for index, text in enumerate(pages or [], start=1)}
+    scales = {index: value[0] for index, value in units.items()}
     group_pages, movement_pages = page_guards(pages)
     found = {}
     for page, line in _lines(pages):
@@ -143,7 +144,7 @@ def read_text(pages):
             if value is None:
                 continue
             found[field] = {"value_vnd_bn": round(signed(field, value) * scales.get(page, 1.0), 6),
-                            "page": page, "reader": "text"}
+                            "page": page, "reader": "text", "unit": units.get(page, (1.0, "unknown"))[1]}
     return found
 
 
@@ -161,6 +162,7 @@ def read_tables(tables, scales=None):
         movement_here = any(any(variant in key for variant in ("so du dau ky", "so du cuoi ky")) for key in keys)
         group_pages = {page} if group_hits else set()
         movement_pages = {page} if movement_here else set()
+        text_scale, label = unit_of(" ".join(" ".join(str(cell or "") for cell in row) for row in rows))
         scale = float(scales.get(page) or unit_scale(" ".join(
             " ".join(str(cell or "") for cell in row) for row in rows)))
         for row, key in zip(rows, keys):
@@ -173,5 +175,5 @@ def read_tables(tables, scales=None):
                 if value is None:
                     continue
                 found[field] = {"value_vnd_bn": round(signed(field, value) * scale, 6), "page": page,
-                                "reader": "table"}
+                                "reader": "table", "unit": label}
     return found

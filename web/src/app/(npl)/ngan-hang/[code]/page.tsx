@@ -27,7 +27,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const adjusted = model.adjusted == null
     ? (vi
       ? "Bản chụp không có phần thay đổi sau khi trừ nhịp chung của quý."
-      : "This snapshot has no figure for the change after the usual quarter pattern is removed.")
+      : "These figures do not include the change after the usual quarter pattern is removed.")
     : (vi
       ? (model.latestPeriod
         ? `Ở ${model.latestPeriod}, phần thay đổi sau khi trừ nhịp chung của quý là ${formatNumber(model.adjusted, lang, 3)} điểm phần trăm.`
@@ -47,7 +47,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       </p>
       <Glossary lang={lang} />
       <section className="flex min-w-0 flex-col gap-2">
-        <h2 className="text-base font-semibold">{vi ? "Trung bình theo quý của mã này, chấm là hệ số cả nhóm" : "This bank's quarterly mean, dots are the panel coefficients"}</h2>
+        <h2 className="text-base font-semibold">{vi ? "Trung bình theo quý của ngân hàng này, chấm là hệ số cả nhóm" : "This bank's quarterly mean, dots are the panel coefficients"}</h2>
         <BankCompareChart rows={model.chart} lang={lang} />
       </section>
       {model.lines ? (
@@ -65,10 +65,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         label={vi ? "Cách đọc" : "How to read"}
         sentences={model.lines
           ? (vi
-            ? ["Cột là thay đổi trung bình của mã này theo quý, chấm là hệ số cả nhóm.", "Đường là NPL, NIM, bao phủ, LDR và tăng trưởng dư nợ của ngân hàng này theo thời gian."]
+            ? ["Cột là thay đổi trung bình của ngân hàng này theo quý, chấm là hệ số cả nhóm.", "Đường là NPL, NIM, bao phủ, LDR và tăng trưởng dư nợ của ngân hàng này theo thời gian."]
             : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The lines are this bank's NPL, NIM, coverage, LDR and loan growth over time."])
           : (vi
-            ? ["Cột là thay đổi trung bình của mã này theo quý, chấm là hệ số cả nhóm.", "Chuỗi NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ theo quý chưa được đưa ra trang này."]
+            ? ["Cột là thay đổi trung bình của ngân hàng này theo quý, chấm là hệ số cả nhóm.", "Chuỗi NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ theo quý chưa được đưa ra trang này."]
             : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The quarterly NPL, coverage, LDR, NIM and loan-growth lines are not on this page."])}
       />
       <p>{adjusted}</p>
@@ -89,7 +89,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             </p>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">{vi ? "Bản chụp không có dự báo quý kế cho mã này." : "This snapshot has no next-quarter forecast for this bank."}</p>
+          <p className="text-sm text-muted-foreground">{vi ? "Bản số liệu không có dự báo quý kế cho ngân hàng này." : "These figures have no next-quarter forecast for this bank."}</p>
         )}
       </section>
       <section className="flex min-w-0 flex-col gap-2">
@@ -128,7 +128,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">{vi ? "Bản chụp không có tín hiệu cho mã này." : "This snapshot has no signal for this bank."}</p>
+          <p className="text-sm text-muted-foreground">{vi ? "Bản số liệu không có tín hiệu cho ngân hàng này." : "These figures have no signal for this bank."}</p>
         )}
       </section>
     </>

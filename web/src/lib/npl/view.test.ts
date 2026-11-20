@@ -290,13 +290,13 @@ test("a bank outside the every-year list is not given that list's sentence", () 
   const model = bankModel(mini(), "ssb", "vi")
   assert.equal(model?.everyYear, false)
   assert.match(model?.headline ?? "", /không nằm trong danh sách/)
-  assert.doesNotMatch(model?.headline ?? "", /đảo chiều ở mọi cặp năm của mã này/)
+  assert.doesNotMatch(model?.headline ?? "", /đảo chiều ở mọi cặp năm của ngân hàng này/)
 })
 
 test("a bank that reversed every pair says so, and raw lines stay hidden until publication is on", () => {
   const hidden = bankModel(mini(), "VCB", "vi")
   assert.equal(hidden?.everyYear, true)
-  assert.match(hidden?.headline ?? "", /đảo chiều ở mọi cặp năm của mã này/)
+  assert.match(hidden?.headline ?? "", /đảo chiều ở mọi cặp năm của ngân hàng này/)
   assert.equal(hidden?.lines, null)
   assert.equal(hidden?.forecast?.npl, 2.1)
   assert.equal(hidden?.mae.model, 0.4)
@@ -564,6 +564,50 @@ test("a falling quarter with missing notes still shows the coverage and seasonal
   assert.equal(englishVcb?.pending, "Group 2 and write-offs are not in yet")
 })
 
+test("the published snapshot shows group-2 and write-off badges only when those inputs exist", () => {
+  const path = join(dirname(fileURLToPath(import.meta.url)), "../../../seed/npl/snapshot.json")
+  const snapshot = JSON.parse(readFileSync(path, "utf8")) as Snapshot
+  const decoder = snapshot.decoder
+  assert.ok(decoder && !Array.isArray(decoder))
+  const model = decoderModel(snapshot, "vi", "all")
+  const both = "Chưa có nhóm 2, xóa nợ"
+  let sawGroup2 = 0
+  let sawWriteoff = 0
+  for (const row of decoder.rows ?? []) {
+    if (row.delta_npl_ratio == null || row.delta_npl_ratio >= 0) continue
+    const cell = model.rows.find((item) => item.bank === row.bank_code)?.cells.find((item) => item?.period === row.period)
+    assert.ok(cell, `${row.bank_code} ${row.period}`)
+    const g2Known = row.delta_g2_ratio != null || (row.signals ?? []).some((signal) => signal.id === "S1")
+    const writeoffKnown = row.delta_writeoff_ratio != null || (row.signals ?? []).some((signal) => signal.id === "S2")
+    const text = cell.badges.join(" ")
+    if (cell.status === "clean") {
+      assert.deepEqual(cell.badges, ["Cải thiện có cơ sở"])
+      assert.equal(cell.pending, null)
+      continue
+    }
+    if (g2Known) {
+      sawGroup2 += 1
+      assert.match(text, row.delta_g2_ratio != null && row.delta_g2_ratio <= 0 && !(row.signals ?? []).some((signal) => signal.id === "S1") ? /Nhóm 2 không tăng/ : /Nhóm 2 tăng/)
+    } else {
+      assert.equal(text.includes("Nhóm 2"), false)
+    }
+    if (writeoffKnown) {
+      sawWriteoff += 1
+      assert.match(text, row.delta_writeoff_ratio != null && row.delta_writeoff_ratio <= 0 && !(row.signals ?? []).some((signal) => signal.id === "S2") ? /Xóa nợ không tăng/ : /Xóa nợ tăng/)
+    } else {
+      assert.equal(text.includes("Xóa nợ"), false)
+    }
+    if (g2Known && writeoffKnown) assert.equal(cell.pending, null)
+    else if (!g2Known && !writeoffKnown) assert.equal(cell.pending, both)
+    else assert.notEqual(cell.pending, both)
+  }
+  const ctg = model.rows.find((row) => row.bank === "CTG")?.cells.find((item) => item?.period === "2026Q1")
+  assert.ok(ctg?.badges.includes("Nhóm 2 tăng"))
+  assert.notEqual(ctg?.pending, both)
+  assert.ok(sawGroup2 > 0)
+  assert.equal(sawWriteoff, (decoder.rows ?? []).filter((row) => row.delta_npl_ratio != null && row.delta_npl_ratio < 0 && (row.delta_writeoff_ratio != null || (row.signals ?? []).some((signal) => signal.id === "S2"))).length)
+})
+
 test("the page shell clips horizontal overflow", () => {
   assert.match(PAGE_SHELL, /overflow-x-hidden/)
   const layout = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/layout.tsx"), "utf8")
@@ -586,6 +630,10 @@ test("the page shell clips horizontal overflow", () => {
   assert.match(overview, /hideSource/)
   const charts = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/charts.tsx"), "utf8")
   assert.match(charts, /strokeWidth=\{2\.5\}/)
+  assert.match(charts, /stroke="var\(--foreground\)"/)
+  assert.match(charts, /animationDuration=\{800\}/)
+  assert.match(charts, /fill="var\(--color-band\)"/)
+  assert.match(charts, /bg-foreground/)
   assert.match(charts, /% dư nợ/)
   assert.match(charts, /25–75% ngân hàng/)
   assert.match(charts, /Quý 4/)
