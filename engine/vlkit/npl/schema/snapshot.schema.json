@@ -1,0 +1,1216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NPL dashboard snapshot",
+  "type": "object",
+  "required": [
+    "meta",
+    "headline",
+    "kpis",
+    "series",
+    "quarter_effects",
+    "banks",
+    "heterogeneity",
+    "linkage",
+    "market",
+    "forecast",
+    "robustness",
+    "method",
+    "limitations",
+    "legal",
+    "ai_use"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "snapshot_id",
+        "generated_at",
+        "period_start",
+        "period_end",
+        "n_banks",
+        "n_bank_quarters",
+        "publish_bank_series",
+        "sources",
+        "quality"
+      ],
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "period_start": {
+          "$ref": "#/$defs/period"
+        },
+        "period_end": {
+          "$ref": "#/$defs/period"
+        },
+        "n_banks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "n_bank_quarters": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "publish_bank_series": {
+          "type": "boolean"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "quality": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/quality"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "headline": {
+      "type": "object",
+      "required": [
+        "vi",
+        "en",
+        "keys"
+      ],
+      "properties": {
+        "vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "kpis": {
+      "type": "object",
+      "required": [
+        "level",
+        "benchmark",
+        "trend"
+      ],
+      "properties": {
+        "level": {
+          "type": "object",
+          "required": [
+            "npl_median_pct",
+            "period",
+            "n_banks"
+          ],
+          "properties": {
+            "npl_median_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "period": {
+              "$ref": "#/$defs/period"
+            },
+            "n_banks": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "benchmark": {
+          "type": "object",
+          "required": [
+            "q4_coef_pp",
+            "ci95",
+            "p",
+            "p_wild_bootstrap",
+            "n",
+            "clusters"
+          ],
+          "properties": {
+            "q4_coef_pp": {
+              "type": "number"
+            },
+            "ci95": {
+              "$ref": "#/$defs/ci95"
+            },
+            "p": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "p_wild_bootstrap": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "n": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "clusters": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "trend": {
+          "type": "object",
+          "required": [
+            "down_then_up",
+            "npl_4q_avg_median_pct",
+            "period"
+          ],
+          "properties": {
+            "down_then_up": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "year",
+                  "share_pct",
+                  "n"
+                ],
+                "properties": {
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900
+                  },
+                  "share_pct": {
+                    "type": "number"
+                  },
+                  "n": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "npl_4q_avg_median_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "period": {
+              "$ref": "#/$defs/period"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "series": {
+      "type": "object",
+      "required": [
+        "median_by_period"
+      ],
+      "properties": {
+        "median_by_period": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/quarterSeries"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "quarter_effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "quarter",
+          "coef_pp",
+          "ci95",
+          "p",
+          "p_wild_bootstrap"
+        ],
+        "properties": {
+          "quarter": {
+            "enum": [
+              2,
+              3,
+              4
+            ]
+          },
+          "coef_pp": {
+            "type": "number"
+          },
+          "ci95": {
+            "$ref": "#/$defs/ci95"
+          },
+          "p": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "p_wild_bootstrap": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "banks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/bank"
+      }
+    },
+    "heterogeneity": {
+      "type": "object",
+      "required": [
+        "pre_period",
+        "high_banks",
+        "regression",
+        "reading",
+        "what_this_does_not_show"
+      ],
+      "properties": {
+        "pre_period": {
+          "type": "string",
+          "minLength": 1
+        },
+        "high_banks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "regression": {
+          "$ref": "#/$defs/regression"
+        },
+        "reading": {
+          "type": "string",
+          "minLength": 1
+        },
+        "what_this_does_not_show": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "linkage": {
+      "type": "object",
+      "required": [
+        "seasonal",
+        "correlation",
+        "correlation_n",
+        "roa_note",
+        "reading",
+        "what_this_does_not_show"
+      ],
+      "properties": {
+        "seasonal": {
+          "type": "object",
+          "required": [
+            "d_coverage_pct",
+            "d_nim_pct",
+            "loan_growth_yoy_pct"
+          ],
+          "properties": {
+            "d_coverage_pct": {
+              "$ref": "#/$defs/regression"
+            },
+            "d_nim_pct": {
+              "$ref": "#/$defs/regression"
+            },
+            "loan_growth_yoy_pct": {
+              "$ref": "#/$defs/regression"
+            }
+          },
+          "additionalProperties": false
+        },
+        "correlation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
+        "correlation_n": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "roa_note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reading": {
+          "type": "string",
+          "minLength": 1
+        },
+        "what_this_does_not_show": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "market": {
+      "type": "object",
+      "required": [
+        "car_by_day",
+        "regressions"
+      ],
+      "properties": {
+        "car_by_day": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/carDay"
+          }
+        },
+        "regressions": {
+          "type": "object",
+          "required": [
+            "raw",
+            "adjusted",
+            "raw_q4",
+            "adjusted_q4"
+          ],
+          "properties": {
+            "raw": {
+              "$ref": "#/$defs/regression"
+            },
+            "adjusted": {
+              "$ref": "#/$defs/regression"
+            },
+            "raw_q4": {
+              "$ref": "#/$defs/regression"
+            },
+            "adjusted_q4": {
+              "$ref": "#/$defs/regression"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "forecast": {
+      "type": "object",
+      "required": [
+        "backtest",
+        "mae"
+      ],
+      "properties": {
+        "backtest": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/backtestQuarter"
+          }
+        },
+        "mae": {
+          "type": "object",
+          "required": [
+            "model",
+            "last_value",
+            "seasonal_naive"
+          ],
+          "properties": {
+            "model": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "last_value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "seasonal_naive": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "robustness": {
+      "type": "object",
+      "required": [
+        "leave_one_bank_out",
+        "drop_2021_2022",
+        "state_vs_private",
+        "median_regression"
+      ],
+      "properties": {
+        "leave_one_bank_out": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "properties": {
+            "min": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "max": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "drop_2021_2022": {
+          "$ref": "#/$defs/regression"
+        },
+        "state_vs_private": {
+          "type": "object",
+          "required": [],
+          "properties": {
+            "state": {
+              "$ref": "#/$defs/regression"
+            },
+            "private": {
+              "$ref": "#/$defs/regression"
+            }
+          },
+          "additionalProperties": false
+        },
+        "median_regression": {
+          "$ref": "#/$defs/medianRegression"
+        }
+      },
+      "additionalProperties": false
+    },
+    "method": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/method"
+      },
+      "minItems": 7,
+      "maxItems": 7
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "legal": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "text_vi",
+          "text_en"
+        ],
+        "properties": {
+          "ref": {
+            "type": "string",
+            "format": "uri"
+          },
+          "text_vi": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text_en": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "ai_use": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "meta": {
+        "properties": {
+          "publish_bank_series": {
+            "const": true
+          }
+        }
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "banks": {
+        "items": {
+          "required": [
+            "series"
+          ]
+        }
+      }
+    }
+  },
+  "else": {
+    "properties": {
+      "banks": {
+        "items": {
+          "not": {
+            "required": [
+              "series"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "period": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{3}Q[1-4]$"
+    },
+    "ci95": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "text": {
+      "type": "object",
+      "required": [
+        "vi",
+        "en"
+      ],
+      "properties": {
+        "vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "method",
+        "url",
+        "licence",
+        "retrieved_at",
+        "rows"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "enum": [
+            "api",
+            "scrape",
+            "file"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "licence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retrieved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "quality": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "status",
+        "detail"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "quarterSeries": {
+      "type": "object",
+      "required": [
+        "period",
+        "npl_median_pct",
+        "npl_p25_pct",
+        "npl_p75_pct",
+        "coverage_median_pct",
+        "n_banks"
+      ],
+      "properties": {
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "npl_median_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "npl_p25_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "npl_p75_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "coverage_median_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "n_banks": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "bankQuarter": {
+      "type": "object",
+      "required": [
+        "period",
+        "npl_pct",
+        "coverage_pct",
+        "ldr_pct",
+        "nim_pct",
+        "loan_growth_pct"
+      ],
+      "properties": {
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "npl_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "coverage_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "ldr_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "nim_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loan_growth_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "bankSignal": {
+      "type": "object",
+      "required": [
+        "id",
+        "period",
+        "text_vi",
+        "text_en"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5"
+          ]
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "text_vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text_en": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "nextForecast": {
+      "type": "object",
+      "required": [
+        "period",
+        "npl_pct",
+        "lo80",
+        "hi80"
+      ],
+      "properties": {
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "npl_pct": {
+          "type": "number"
+        },
+        "lo80": {
+          "type": "number"
+        },
+        "hi80": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "bank": {
+      "type": "object",
+      "required": [
+        "code",
+        "ticker",
+        "name_vi",
+        "name_en",
+        "ownership",
+        "q4_change_median_pp",
+        "q1_rebound_median_pp",
+        "down_then_up_years",
+        "years",
+        "latest",
+        "signals"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ticker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name_vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ownership": {
+          "enum": [
+            "state",
+            "private"
+          ]
+        },
+        "q4_change_median_pp": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "q1_rebound_median_pp": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "down_then_up_years": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "years": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest": {
+          "type": "object",
+          "required": [
+            "period",
+            "adjusted_change_pp",
+            "forecast_next"
+          ],
+          "properties": {
+            "period": {
+              "$ref": "#/$defs/period"
+            },
+            "adjusted_change_pp": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "forecast_next": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/nextForecast"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bankSignal"
+          }
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bankQuarter"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "coefficient": {
+      "type": "object",
+      "required": [
+        "coefficient",
+        "ci95",
+        "p"
+      ],
+      "properties": {
+        "coefficient": {
+          "type": "number"
+        },
+        "ci95": {
+          "$ref": "#/$defs/ci95"
+        },
+        "p": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "se": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "wild_p": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "regression": {
+      "type": "object",
+      "required": [
+        "n",
+        "clusters",
+        "terms"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "clusters": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "terms": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/coefficient"
+          }
+        },
+        "period": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/period"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "unavailable_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "medianRegression": {
+      "type": "object",
+      "required": [
+        "n",
+        "terms"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "terms": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/coefficient"
+          }
+        },
+        "inference": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "carDay": {
+      "type": "object",
+      "required": [
+        "group",
+        "day",
+        "n",
+        "mean_car_pct",
+        "ci95"
+      ],
+      "properties": {
+        "group": {
+          "enum": [
+            "all",
+            "Q4"
+          ]
+        },
+        "day": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mean_car_pct": {
+          "type": "number"
+        },
+        "ci95": {
+          "$ref": "#/$defs/ci95"
+        }
+      },
+      "additionalProperties": false
+    },
+    "backtestQuarter": {
+      "type": "object",
+      "required": [
+        "period",
+        "npl_pct",
+        "predicted_npl_pct",
+        "last_value",
+        "seasonal_naive",
+        "n"
+      ],
+      "properties": {
+        "period": {
+          "$ref": "#/$defs/period"
+        },
+        "npl_pct": {
+          "type": "number"
+        },
+        "predicted_npl_pct": {
+          "type": "number"
+        },
+        "last_value": {
+          "type": "number"
+        },
+        "seasonal_naive": {
+          "type": "number"
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "method": {
+      "type": "object",
+      "required": [
+        "id",
+        "name_vi",
+        "name_en",
+        "spec",
+        "n",
+        "reading_vi",
+        "reading_en",
+        "does_not_show_vi",
+        "does_not_show_en"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M6",
+            "M7"
+          ]
+        },
+        "name_vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "spec": {
+          "type": "string",
+          "minLength": 1
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reading_vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reading_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "does_not_show_vi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "does_not_show_en": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

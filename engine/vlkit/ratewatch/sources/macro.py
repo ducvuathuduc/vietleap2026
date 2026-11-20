@@ -11,6 +11,7 @@ from ...vn import ascii_key
 SBV = "https://sbv.gov.vn"
 NSO = "https://www.nso.gov.vn/cpi-vi/"
 DATE = r"(\d{1,2})(?:[/.-]|\s+tháng\s+)(\d{1,2})(?:[/.-]|\s+năm\s+)(20\d{2})"
+CPI_PERIOD = re.compile(r"Kỳ tham chiếu\s*:?\s*(?:tháng\s+)?(1[0-2]|0?[1-9])/(20\d{2})", re.I)
 TENORS = {"qua dem", "1 tuan", "2 tuan", "1 thang", "3 thang", "6 thang", "9 thang"}
 
 
@@ -47,7 +48,11 @@ def _table_rows(content, header):
             if cells:
                 entries.append(cells)
         if any(header(ascii_key(cells[0])) for cells in entries):
-            captions = [_text(element) for element in table.xpath(
+            date_elements = table.xpath(
+                "ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' ls01-wrap ')][1]"
+                "/div[contains(concat(' ', normalize-space(@class), ' '), ' ls01-date ')]"
+            )
+            captions = [_text(element) for element in date_elements or table.xpath(
                 "./caption|preceding::*[self::h2 or self::h3 or self::p or self::strong]"
             )]
             leading = [" ".join(row) for row in entries if not any("tham chiếu" in cell.lower() for cell in row)]
@@ -117,14 +122,14 @@ def parse_fx(content):
 
 def parse_cpi(content):
     root = _dom(content)
-    period = re.search(r"Kỳ tham chiếu\s*:?\s*(\d{1,2})/(20\d{2})", _text(root), re.I)
+    period = CPI_PERIOD.search(_text(root))
     if period is None:
         return []
     for paragraph in root.xpath("//p"):
         text = _text(paragraph)
         if not re.match(r"(Chỉ số giá tiêu dùng(?:\s*\(CPI\))?|CPI)\b", text, re.I):
             continue
-        latest = re.search(r"(tăng|giảm)\s+(\d+[,.]\d+)\s*%\s*so với cùng kỳ năm (?:trước|20\d{2})", text, re.I)
+        latest = re.search(r"(tăng|giảm)\s+(\d+(?:[,.]\d+)?)\s*%\s*so với cùng kỳ năm (?:trước|20\d{2})", text, re.I)
         if latest:
             value = _number(latest[2])
             return [dict(month=f"{period[2]}-{int(period[1]):02}", pct=value if latest[1].lower() == "tăng" else -value)]
@@ -251,13 +256,22 @@ def cpi_provider(fetch, watermark=None):
         raw = fetch(NSO)
         yield "cpi_index", NSO, raw, []
         selected = {}
-        for link in _dom(raw).xpath("//a[@href]"):
-            title = _text(link)
-            period = re.search(r"Kỳ tham chiếu\s*:\s*(\d{1,2})/(20\d{2})", title, re.I)
+        root = _dom(raw)
+        entries = [(_text(link), link.get("href")) for link in root.xpath("//a[@href]")]
+        for item in root.xpath("//div[contains(concat(' ', normalize-space(@class), ' '), ' archive-container ')]//section"):
+            # The release's anchor may close before the section after HTML recovery.
+            links = item.xpath("ancestor::a[1]/@href | preceding-sibling::*[1][self::p]/a/@href")
+            if links:
+                entries.append((_text(item), links[0]))
+        for title, href in entries:
+            period = CPI_PERIOD.search(title)
             if period and ascii_key(title).startswith("chi so gia tieu dung"):
                 month = f"{period[2]}-{int(period[1]):02}"
-                url = urljoin(NSO, link.get("href"))
-                if urlsplit(url).netloc == urlsplit(NSO).netloc and (watermark is None or month >= watermark):
+                if watermark and month < watermark:
+                    continue
+                url = urljoin(NSO, href)
+                parts = urlsplit(url)
+                if parts.scheme == "https" and parts.netloc == urlsplit(NSO).netloc:
                     selected.setdefault(month, url)
         if not selected:
             raise ValueError("Không tìm thấy bản tin CPI mới trong danh mục")

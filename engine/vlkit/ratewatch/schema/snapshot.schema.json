@@ -48,6 +48,21 @@
           },
           "minItems": 1
         },
+        "source_status": {
+          "type": "object",
+          "properties": {
+            "interbank": { "$ref": "#/$defs/source_status" },
+            "omo": { "$ref": "#/$defs/source_status" },
+            "central_fx": { "$ref": "#/$defs/source_status" },
+            "sbv_credit": { "$ref": "#/$defs/source_status" },
+            "sbv_deposit": { "$ref": "#/$defs/source_status" },
+            "cpi": { "$ref": "#/$defs/source_status" },
+            "fiin_quarter": { "$ref": "#/$defs/source_status" },
+            "fiin_market": { "$ref": "#/$defs/source_status" }
+          },
+          "required": ["interbank", "omo", "central_fx", "sbv_credit", "sbv_deposit", "cpi", "fiin_quarter", "fiin_market"],
+          "additionalProperties": false
+        },
         "sources": {
           "type": "array",
           "items": {
@@ -65,7 +80,7 @@
           "minItems": 1
         }
       },
-      "required": ["snapshot_id", "generated_at", "run_ids", "coverage", "quality", "sources"],
+      "required": ["snapshot_id", "generated_at", "run_ids", "coverage", "quality", "source_status", "sources"],
       "additionalProperties": false
     },
     "policy": {
@@ -379,6 +394,21 @@
       "required": ["cpi_yoy", "sbv_monthly"],
       "additionalProperties": false
     },
+    "geo": {
+      "type": "object",
+      "properties": {
+        "provinces": {
+          "type": "array",
+          "minItems": 34,
+          "maxItems": 34,
+          "items": { "$ref": "#/$defs/province" }
+        },
+        "boundary": { "const": "web/public/geo/vn-34.geo.json" },
+        "attribution": { "$ref": "#/$defs/string" }
+      },
+      "required": ["provinces", "boundary", "attribution"],
+      "additionalProperties": false
+    },
     "changes": {
       "type": "array",
       "items": {
@@ -399,6 +429,58 @@
   "required": ["meta", "policy", "banks", "market", "macro", "changes"],
   "additionalProperties": false,
   "$defs": {
+    "source_status": {
+      "type": "object",
+      "properties": {
+        "status": { "enum": ["ok", "error", "stale", "missing"] },
+        "latest_period": { "$ref": "#/$defs/nullable_string" },
+        "observed_at": { "anyOf": [{ "$ref": "#/$defs/datetime" }, { "type": "null" }] },
+        "detail": { "$ref": "#/$defs/nullable_string" }
+      },
+      "required": ["status", "latest_period", "observed_at", "detail"],
+      "additionalProperties": false
+    },
+    "province": {
+      "type": "object",
+      "properties": {
+        "pcode": { "$ref": "#/$defs/string" },
+        "name_vi": { "$ref": "#/$defs/string" },
+        "name_en": { "$ref": "#/$defs/string" },
+        "branches_total": { "$ref": "#/$defs/count" },
+        "branches_by_bank": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/count" }
+        },
+        "branch_source": { "$ref": "#/$defs/string" },
+        "population": { "$ref": "#/$defs/count" },
+        "population_period": { "$ref": "#/$defs/string" },
+        "deposits_bn": { "$ref": "#/$defs/nullable_number" },
+        "credit_bn": { "$ref": "#/$defs/nullable_number" },
+        "deposit_period": { "$ref": "#/$defs/nullable_string" },
+        "deposit_source": { "$ref": "#/$defs/nullable_string" },
+        "best_counter_12m": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "bank": { "$ref": "#/$defs/string" },
+                "rate_pct": { "$ref": "#/$defs/rate" },
+                "grade": { "enum": ["verified", "single"] }
+              },
+              "required": ["bank", "rate_pct", "grade"],
+              "additionalProperties": false
+            },
+            { "type": "null" }
+          ]
+        }
+      },
+      "required": ["pcode", "name_vi", "name_en", "branches_total", "branches_by_bank", "branch_source", "population",
+                   "population_period", "deposits_bn", "credit_bn", "deposit_period", "deposit_source", "best_counter_12m"],
+      "additionalProperties": false
+    },
+    "nullable_string": {
+      "anyOf": [{ "$ref": "#/$defs/string" }, { "type": "null" }]
+    },
     "string": {
       "type": "string",
       "minLength": 1

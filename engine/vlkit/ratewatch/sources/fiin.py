@@ -8,6 +8,7 @@ import pandas as pd
 from dotenv import dotenv_values
 
 from ..warehouse import TZ
+from . import SourceFailure
 
 BASE = "https://docs.fiinquant.vn/"
 RATIO_DOC = BASE + "ham-va-cong-thuc/3.-phan-tich-co-ban-and-dinh-gia/3.2.-ham-chi-so-bao-cao-tai-chinh"
@@ -98,14 +99,16 @@ def fiin_provider(credentials, tickers, today):
         policy = PoliteSdk()
 
         @contextmanager
-        def sdk_http():
+        def sdk_http(series):
             try:
                 with quiet_sdk(), policy.install():
                     yield
-            except AuthError:
-                raise FiinAuthenticationError from None
+            except (AuthError, FiinAuthenticationError):
+                raise SourceFailure(series, "FiinAuthenticationError") from None
+            except Exception as exc:
+                raise SourceFailure(series, type(exc).__name__) from None
 
-        with sdk_http():
+        with sdk_http("fiin"):
             from FiinQuantX import FiinSession
 
             client = FiinSession(username=username, password=password).login()
@@ -113,20 +116,21 @@ def fiin_provider(credentials, tickers, today):
                 fundamental = client.FundamentalAnalysis()
             except NameError:
                 raise FiinAuthenticationError from None
+        with sdk_http("fiin_quarter"):
             raw = fundamental.get_ratios(tickers=vendor_tickers, years=[today.year - 2, today.year - 1, today.year],
                                          quarters=[1, 2, 3, 4], type="consolidated")
         yield "fiin_quarter", RATIO_DOC, frame_of(raw).to_json(orient="records", date_format="iso").encode(), quarterly
         options = dict(tickers=vendor_tickers, from_date=str(today - timedelta(days=366)),
                        to_date=str(today - timedelta(days=1)))
-        with sdk_http():
+        with sdk_http("fiin_market"):
             close = frame_of(client.Fetch_Trading_Data(
                 **options, realtime=False, adjusted=True, fields=["close"], by="1d",
             ).get_data())
         yield "fiin_raw_close", MARKET_DOC, close.to_json(orient="records", date_format="iso").encode(), []
-        with sdk_http():
+        with sdk_http("fiin_market"):
             pb = frame_of(client.MarketDepth().get_stock_valuation(**options))
         yield "fiin_raw_valuation", MARKET_DOC, pb.to_json(orient="records", date_format="iso").encode(), []
-        with sdk_http():
+        with sdk_http("fiin_market"):
             flow = frame_of(client.Fetch_Trading_Data(
                 **options, realtime=False, adjusted=False, fields=["fn"], by="1d",
             ).get_data())

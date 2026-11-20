@@ -17,6 +17,14 @@ def valid_url(value):
     return url.scheme in {"https", "http"} and bool(url.hostname) and url.username is None
 
 
+def _reconcile_tolerance(series, total, parts):
+    # SBV publishes whole-billion credit balances in some months. Up to six
+    # sector balances and the total can each be rounded by half a billion.
+    if series == "sbv_credit" and total.is_integer() and parts.is_integer():
+        return 3.5
+    return 0.05
+
+
 def evaluate(con, now):
     def query(sql):
         return con.execute(sql).fetchall()
@@ -71,7 +79,7 @@ def evaluate(con, now):
         where total_bn is not null and parts_bn is not null order by 1, 2, 3, 4
     """)
     inconsistent = [(series, period, total, parts) for series, period, total, parts in reconciliation
-                    if abs(total - parts) > 0.05]
+                    if abs(total - parts) > _reconcile_tolerance(series, total, parts)]
     calibration = query("""
         select rate_pct, grade from gold.v_rate_edition
         where bank_code = 'STB' and term_months = 6 and channel = 'counter'

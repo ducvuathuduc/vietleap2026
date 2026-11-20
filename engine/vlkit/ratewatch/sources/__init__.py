@@ -19,6 +19,14 @@ KEYS = {
 }
 
 
+class SourceFailure(RuntimeError):
+    """A provider error with its source and a message safe for the run log."""
+
+    def __init__(self, source, detail):
+        super().__init__(detail)
+        self.source = source
+
+
 def encode(value):
     return json.dumps(value, ensure_ascii=False, allow_nan=False, indent=2).encode("utf-8")
 
@@ -38,7 +46,8 @@ def atomic(path, content):
 def ingest_sources(lake, run_id, providers):
     started = monotonic()
     lake = Path(lake)
-    log = {"run_id": run_id, "records": {}, "new_records": {}, "errors": {}, "watermarks": {}, "usd": 0}
+    log = {"run_id": run_id, "records": {}, "new_records": {}, "errors": {}, "watermarks": {},
+           "observed_at": {}, "usd": 0}
     for provider in providers:
         name = provider.__name__
         try:
@@ -82,10 +91,13 @@ def ingest_sources(lake, run_id, providers):
                     }
                 atomic(path, encode([merged[key] for key in sorted(merged)]))
                 log["records"][series] = len(merged)
+                log["observed_at"][series] = at
                 log["new_records"][series] = log["new_records"].get(series, 0) + new
                 period = next((period for period in ("date", "month", "quarter") if period in keys), None)
                 if period:
                     log["watermarks"][series] = max(row[period] for row in merged.values())
+        except SourceFailure as exc:
+            log["errors"][exc.source] = str(exc)
         except Exception as exc:
             # SDK exceptions can contain request data.
             log["errors"][name] = type(exc).__name__ if name.startswith("fiin") else f"{type(exc).__name__}: {exc}"

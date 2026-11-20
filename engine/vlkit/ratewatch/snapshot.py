@@ -1,6 +1,6 @@
 """Build and validate the public RateWatch snapshot before replacing published artifacts."""
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -137,11 +137,54 @@ def _changes(con):
     return sorted(changes, key=lambda row: row["observed_at"], reverse=True)
 
 
-def build_snapshot(con, now):
+def _source_status(con, now, source_log):
+    observations = {
+        row["series"]: row for row in _read(con, """
+            select series, max(date::varchar) as period, max(observed_at::varchar) as observed_at
+            from gold.fact_money_market_day group by series
+            union all
+            select series, max(month::varchar), max(observed_at::varchar) from gold.fact_macro_month group by series
+            union all
+            select 'fiin_quarter', max(quarter::varchar), max(observed_at::varchar) from gold.fact_bank_quarter
+            union all
+            select 'fiin_market', max(date::varchar), max(observed_at::varchar) from gold.fact_bank_market_day
+        """)
+    }
+    log = source_log or {}
+    errors = {}
+    for series, reason in log.get("errors", {}).items():
+        if series in {"cpi", "cpi_index"}:
+            errors["cpi"] = reason
+        elif series == "fiin":
+            errors["fiin_quarter"] = errors["fiin_market"] = reason
+        else:
+            errors["fiin_market" if series.startswith("fiin_raw_") else series] = reason
+    statuses = {}
+    for series in ("interbank", "omo", "central_fx", "sbv_credit", "sbv_deposit", "cpi", "fiin_quarter", "fiin_market"):
+        row = observations.get(series, {})
+        observed = log.get("observed_at", {}).get(series) or row.get("observed_at")
+        reason = errors.get(series)
+        status = "ok"
+        if reason:
+            status = "error"
+        elif not observed:
+            status, reason = "missing", "Chưa có dữ liệu trong kho"
+        elif now - datetime.fromisoformat(observed) > timedelta(days=30):
+            status, reason = "stale", "Lần đọc gần nhất đã quá 30 ngày"
+        statuses[series] = dict(status=status, latest_period=row.get("period"), observed_at=observed, detail=reason)
+    return statuses
+
+
+def build_snapshot(con, now, *, source_log=None, geo=None):
     quality = evaluate(con, now)
     failed = [item for item in quality if item["status"] == "fail"]
     if failed:
         raise ValueError("Kiểm tra thất bại: " + ", ".join(f'{item["id"]}: {item["detail"]}' for item in failed))
+    source_status = _source_status(con, now, source_log)
+    optional_warnings = [f'{series}: {status["detail"]}' for series, status in source_status.items() if status["detail"]]
+    quality.append(dict(id="optional_sources", name="Tình trạng nguồn bổ sung",
+                        status="warn" if optional_warnings else "pass",
+                        detail=" · ".join(optional_warnings) or "Các nguồn bổ sung đã được đọc"))
     rows = _read(con, """select * replace (timezone('Asia/Ho_Chi_Minh', observed_at) as observed_at)
                          from gold.v_curve_today
                          order by bank_code, term_months, channel, tier, reader""")
@@ -180,11 +223,12 @@ def build_snapshot(con, now):
             from gold.fact_macro_month where series in ('sbv_credit', 'sbv_deposit') group by month order by month
         """),
     }
-    digest = sha256(encode([run_ids, banks, market, macro, policy])).hexdigest()[:12]
+    digest = sha256(encode([run_ids, banks, market, macro, policy, source_status, geo])).hexdigest()[:12]
     return dict(meta=dict(snapshot_id=f"{run_ids[-1]}-{digest}", generated_at=_iso(now), run_ids=run_ids,
-                          coverage=coverage, quality=quality,
+                          coverage=coverage, quality=quality, source_status=source_status,
                           sources=_read(con, "select distinct * from gold.dim_source order by id")),
-                policy=policy, banks=banks, market=market, macro=macro, changes=_changes(con))
+                policy=policy, banks=banks, market=market, macro=macro, changes=_changes(con),
+                **({"geo": geo} if geo is not None else {}))
 
 
 def validate_snapshot(payload):
@@ -253,15 +297,18 @@ bình quân của FiinQuant làm đại diện cho tăng trưởng dư nợ gộ
 
 **Đối chiếu báo giá.** Hai loại nguồn trở lên đồng ý trong 0,005 điểm phần trăm được gắn verified.
 Mâu thuẫn giữ mọi giá đọc. Một loại nguồn được gắn single. Bản công bố loại nhóm contested khỏi thống kê.
+
+**Nguồn bổ sung.** `meta.source_status` ghi kỳ dữ liệu mới nhất, lần đọc thành công gần nhất và lý do
+cảnh báo nếu lần nạp gặp lỗi, dữ liệu vắng mặt hoặc lần đọc đã quá 30 ngày.
 """, encoding="utf-8")
 
 
-def publish(db, destination, out, *, now=None):
+def publish(db, destination, out, *, now=None, source_log=None, geo=None):
     now = now or datetime.now(TZ)
     out = Path(out)
     destination = Path(destination)
     with duckdb.connect(str(db), read_only=True) as con:
-        payload = build_snapshot(con, now)
+        payload = build_snapshot(con, now, source_log=source_log, geo=geo)
         validate_snapshot(payload)
         encoded = encode(payload)
         out.mkdir(parents=True, exist_ok=True)

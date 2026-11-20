@@ -1,0 +1,6261 @@
+{
+  "_fixture_note": "Built from out/npl/results.json and the DuckDB file written beside it. Figures are copied from those files, not typed by hand. Raw FiinQuant series are omitted because publish_bank_series is false. Replace this file with web/seed/npl/snapshot.json when B2 writes it.",
+  "meta": {
+    "snapshot_id": "fixture-2026-11-20T16:57:14+07:00",
+    "generated_at": "2026-11-20T16:57:14+07:00",
+    "period_start": "2021Q1",
+    "period_end": "2026Q3",
+    "n_banks": 27,
+    "n_bank_quarters": 614,
+    "publish_bank_series": false,
+    "sources": [
+      {
+        "id": "fiin_ratios",
+        "name": "FiinQuant get_ratios, consolidated",
+        "method": "api",
+        "url": "https://docs.fiinquant.vn/ham-va-cong-thuc/3.-phan-tich-co-ban-and-dinh-gia/3.2.-ham-chi-so-bao-cao-tai-chinh",
+        "licence": "FiinGroup. Raw bank-quarter rows stay unpublished until publish_bank_series is true.",
+        "retrieved_at": "2026-11-20T16:57:14+07:00",
+        "rows": 614
+      },
+      {
+        "id": "fiin_market",
+        "name": "FiinQuant daily price, valuation and foreign flow",
+        "method": "api",
+        "url": "https://docs.fiinquant.vn/fiinquant-en/function-and-formula/historical-data-function",
+        "licence": "FiinGroup. The page publishes the event-study aggregate, not the daily rows.",
+        "retrieved_at": "2026-11-20T16:57:14+07:00",
+        "rows": 154404
+      },
+      {
+        "id": "report_calendar",
+        "name": "Disclosure deadline, Article 14 clause 3",
+        "method": "file",
+        "url": "https://vbpl.vn/FileData/TW/Lists/VBPQ/Attachments/146048/VanBanGoc_96-2020-TT-BTC.pdf",
+        "licence": "Public legal text. Circular 96/2020/TT-BTC.",
+        "retrieved_at": "2026-11-20T16:57:14+07:00",
+        "rows": 23
+      }
+    ],
+    "quality": [
+      {
+        "id": "keys",
+        "name": "Khóa ngân hàng-quý",
+        "status": "pass",
+        "detail": "Nhật ký làm sạch: 614 dòng trước, 614 dòng sau ở bước bản ghi trùng."
+      },
+      {
+        "id": "missing",
+        "name": "Giá trị thiếu",
+        "status": "warn",
+        "detail": "Số ô thiếu: {'npl_pct': 5, 'coverage_pct': 5, 'ldr_pct': 0, 'roa_pct': 614, 'nim_pct': 0, 'loan_growth_yoy_pct': 0}. Giữ nguyên giá trị thiếu, kể cả NPL; mỗi mô hình dùng mẫu hợp lệ riêng."
+      },
+      {
+        "id": "roa",
+        "name": "ROA",
+        "status": "warn",
+        "detail": "Nguồn không trả ROA. Mô hình liên hệ không gồm ROA."
+      },
+      {
+        "id": "annual_q4",
+        "name": "Đối chiếu NPL năm và quý 4",
+        "status": "warn",
+        "detail": "131 cặp, 11 cặp khác ở hai chữ số, chênh lệch tuyệt đối trung bình 0.0074 điểm phần trăm."
+      }
+    ],
+    "cleaning": [
+      {
+        "step": "Kiểu dữ liệu và lược đồ",
+        "before": 614,
+        "after": 614,
+        "detail": "Loại khóa sai. Ánh xạ trường tỷ lệ: {'npl_pct': 'npl', 'coverage_pct': 'coverage', 'ldr_pct': 'ldr', 'roa_pct': 'roa', 'nim_pct': 'nim', 'loan_growth_yoy_pct': 'growth_component_average_loans_growth_percentage_yo_y'}."
+      },
+      {
+        "step": "Giá trị thiếu",
+        "before": 614,
+        "after": 614,
+        "detail": "Số ô thiếu: {'npl_pct': 5, 'coverage_pct': 5, 'ldr_pct': 0, 'roa_pct': 614, 'nim_pct': 0, 'loan_growth_yoy_pct': 0}. Giữ nguyên giá trị thiếu, kể cả NPL; mỗi mô hình dùng mẫu hợp lệ riêng."
+      },
+      {
+        "step": "Bản ghi trùng",
+        "before": 614,
+        "after": 614,
+        "detail": "Chuẩn hóa bí danh BIDV → BID và gộp dòng có cùng khóa và cùng giá trị phân tích."
+      },
+      {
+        "step": "Đơn vị",
+        "before": 614,
+        "after": 614,
+        "detail": "Quy đổi tỷ lệ FiinQuant từ phân số sang %, làm tròn 2 chữ số; biến động dùng điểm phần trăm."
+      },
+      {
+        "step": "Phân nhóm",
+        "before": 614,
+        "after": 614,
+        "detail": "Mã niêm yết → mã ngân hàng → sở hữu. Nhóm nhà nước gồm VCB, BID, CTG. [VCB](https://portal.vietcombank.com.vn/VCBDigital/2023/BCTN/en/executive-board-report/), [BID](https://bidv.com.vn/wps/wcm/connect/2961231d-3291-4326-89b6-7350d04c496c/BIDV%2BAnnual%2BReport%2B2024.FNL.pdf?MOD=AJPERES), [CTG](https://investor.vietinbank.vn/vi/w/information-on-shareholders-owning-more-than-1-charter-capital-of-vietinbank)."
+      },
+      {
+        "step": "Ngoại lai",
+        "before": 614,
+        "after": 614,
+        "detail": "Số cờ (IQR 1,5 lần; \\"
+      },
+      {
+        "step": "Quy tắc nghiệp vụ",
+        "before": 614,
+        "after": 614,
+        "detail": "Chuyển thành thiếu 0 giá trị NPL ngoài [0, 100) và 1 giá trị bao phủ âm. Phát hiện 2 khoảng trống. Chỉ tính chênh lệch hai quý liên tiếp."
+      }
+    ],
+    "schema": [
+      {
+        "table": "dim_bank",
+        "keys": "bank_code",
+        "grain": "Một ngân hàng hoặc chỉ số"
+      },
+      {
+        "table": "dim_period",
+        "keys": "period",
+        "grain": "Một quý"
+      },
+      {
+        "table": "dim_date",
+        "keys": "date",
+        "grain": "Một ngày giao dịch hoặc mốc công bố"
+      },
+      {
+        "table": "fact_bank_quarter",
+        "keys": "bank_code, period, basis",
+        "grain": "Ngân hàng × quý × phạm vi báo cáo"
+      },
+      {
+        "table": "fact_bank_market_day",
+        "keys": "bank_code, date",
+        "grain": "Ngân hàng hoặc chỉ số × phiên"
+      },
+      {
+        "table": "fact_report_event",
+        "keys": "bank_code, period, basis",
+        "grain": "Ngân hàng × quý × phạm vi báo cáo"
+      }
+    ],
+    "eda": {
+      "href": "#eda",
+      "summary_vi": "Số ô thiếu: {'npl_pct': 5, 'coverage_pct': 5, 'ldr_pct': 0, 'roa_pct': 614, 'nim_pct': 0, 'loan_growth_yoy_pct': 0}. Giữ nguyên giá trị thiếu, kể cả NPL; mỗi mô hình dùng mẫu hợp lệ riêng. Chuyển thành thiếu 0 giá trị NPL ngoài [0, 100) và 1 giá trị bao phủ âm. Phát hiện 2 khoảng trống. Chỉ tính chênh lệch hai quý liên tiếp.",
+      "summary_en": "Missing cells are kept. Deltas use consecutive quarters only. See the cleaning table on this page. The HTML profile file is not in this snapshot."
+    }
+  },
+  "headline": {
+    "vi": "Từ 2021Q2 đến 2026Q3, hệ số quý 4 so với quý 1 là -0.426 điểm phần trăm (khoảng 95% -0.577 đến -0.275, n = 576, 27 ngân hàng). Chưa coi mức giảm NPL quý 4 là cải thiện bền.",
+    "en": "From 2021Q2 to 2026Q3, the Q4 coefficient versus Q1 is -0.426 pp (95% interval -0.577 to -0.275, n = 576, 27 banks). Do not treat the Q4 NPL decline as a lasting improvement.",
+    "keys": [
+      "M2.baseline.terms.Q4.coefficient",
+      "M2.baseline.terms.Q4.ci95",
+      "M2.baseline.n",
+      "M2.baseline.clusters"
+    ]
+  },
+  "kpis": {
+    "level": {
+      "npl_median_pct": 2.22,
+      "period": "2026Q3",
+      "n_banks": 23
+    },
+    "benchmark": {
+      "coef_pp": -0.425606,
+      "ci95": [
+        -0.576508,
+        -0.274704
+      ],
+      "p": 4.16e-06,
+      "p_wild_bootstrap": 0.001,
+      "n": 576,
+      "clusters": 27
+    },
+    "trend": {
+      "down_then_up": [
+        {
+          "year": 2021,
+          "share_pct": 40.7407,
+          "n": 27
+        },
+        {
+          "year": 2022,
+          "share_pct": 44.4444,
+          "n": 27
+        },
+        {
+          "year": 2023,
+          "share_pct": 70.3704,
+          "n": 27
+        },
+        {
+          "year": 2024,
+          "share_pct": 68.0,
+          "n": 25
+        },
+        {
+          "year": 2025,
+          "share_pct": 53.8462,
+          "n": 26
+        }
+      ],
+      "npl_4q_avg_median_pct": 1.8738,
+      "period": "2025Q4–2026Q3"
+    }
+  },
+  "series": {
+    "median_by_period": [
+      {
+        "period": "2021Q1",
+        "npl_median_pct": 1.575,
+        "npl_p25_pct": 1.215,
+        "npl_p75_pct": 1.8675,
+        "coverage_median_pct": 65.92,
+        "n_banks": 26
+      },
+      {
+        "period": "2021Q2",
+        "npl_median_pct": 1.53,
+        "npl_p25_pct": 1.275,
+        "npl_p75_pct": 2.015,
+        "coverage_median_pct": 70.4,
+        "n_banks": 27
+      },
+      {
+        "period": "2021Q3",
+        "npl_median_pct": 1.89,
+        "npl_p25_pct": 1.41,
+        "npl_p75_pct": 2.15,
+        "coverage_median_pct": 73.26,
+        "n_banks": 27
+      },
+      {
+        "period": "2021Q4",
+        "npl_median_pct": 1.65,
+        "npl_p25_pct": 1.13,
+        "npl_p75_pct": 2.145,
+        "coverage_median_pct": 79.52,
+        "n_banks": 27
+      },
+      {
+        "period": "2022Q1",
+        "npl_median_pct": 1.74,
+        "npl_p25_pct": 1.195,
+        "npl_p75_pct": 2.355,
+        "coverage_median_pct": 80.56,
+        "n_banks": 27
+      },
+      {
+        "period": "2022Q2",
+        "npl_median_pct": 1.6,
+        "npl_p25_pct": 1.235,
+        "npl_p75_pct": 2.375,
+        "coverage_median_pct": 84.28,
+        "n_banks": 27
+      },
+      {
+        "period": "2022Q3",
+        "npl_median_pct": 1.59,
+        "npl_p25_pct": 1.195,
+        "npl_p75_pct": 2.35,
+        "coverage_median_pct": 74.15,
+        "n_banks": 27
+      },
+      {
+        "period": "2022Q4",
+        "npl_median_pct": 1.67,
+        "npl_p25_pct": 1.125,
+        "npl_p75_pct": 2.505,
+        "coverage_median_pct": 70.42,
+        "n_banks": 27
+      },
+      {
+        "period": "2023Q1",
+        "npl_median_pct": 1.86,
+        "npl_p25_pct": 1.44,
+        "npl_p75_pct": 2.88,
+        "coverage_median_pct": 72.7,
+        "n_banks": 27
+      },
+      {
+        "period": "2023Q2",
+        "npl_median_pct": 2.43,
+        "npl_p25_pct": 1.62,
+        "npl_p75_pct": 3.125,
+        "coverage_median_pct": 60.89,
+        "n_banks": 27
+      },
+      {
+        "period": "2023Q3",
+        "npl_median_pct": 2.61,
+        "npl_p25_pct": 1.78,
+        "npl_p75_pct": 3.36,
+        "coverage_median_pct": 55.33,
+        "n_banks": 27
+      },
+      {
+        "period": "2023Q4",
+        "npl_median_pct": 2.05,
+        "npl_p25_pct": 1.465,
+        "npl_p75_pct": 2.8,
+        "coverage_median_pct": 63.71,
+        "n_banks": 27
+      },
+      {
+        "period": "2024Q1",
+        "npl_median_pct": 2.46,
+        "npl_p25_pct": 1.735,
+        "npl_p75_pct": 3.06,
+        "coverage_median_pct": 55.25,
+        "n_banks": 27
+      },
+      {
+        "period": "2024Q2",
+        "npl_median_pct": 2.54,
+        "npl_p25_pct": 1.685,
+        "npl_p75_pct": 3.275,
+        "coverage_median_pct": 58.8,
+        "n_banks": 27
+      },
+      {
+        "period": "2024Q3",
+        "npl_median_pct": 2.47,
+        "npl_p25_pct": 1.79,
+        "npl_p75_pct": 3.19,
+        "coverage_median_pct": 62.95,
+        "n_banks": 27
+      },
+      {
+        "period": "2024Q4",
+        "npl_median_pct": 2.33,
+        "npl_p25_pct": 1.52,
+        "npl_p75_pct": 2.75,
+        "coverage_median_pct": 68.43,
+        "n_banks": 25
+      },
+      {
+        "period": "2025Q1",
+        "npl_median_pct": 2.49,
+        "npl_p25_pct": 1.785,
+        "npl_p75_pct": 3.075,
+        "coverage_median_pct": 59.17,
+        "n_banks": 27
+      },
+      {
+        "period": "2025Q2",
+        "npl_median_pct": 2.5,
+        "npl_p25_pct": 1.635,
+        "npl_p75_pct": 3.12,
+        "coverage_median_pct": 60.675,
+        "n_banks": 26
+      },
+      {
+        "period": "2025Q3",
+        "npl_median_pct": 2.69,
+        "npl_p25_pct": 1.83,
+        "npl_p75_pct": 3.08,
+        "coverage_median_pct": 60.06,
+        "n_banks": 27
+      },
+      {
+        "period": "2025Q4",
+        "npl_median_pct": 2.11,
+        "npl_p25_pct": 1.29,
+        "npl_p75_pct": 2.95,
+        "coverage_median_pct": 69.52,
+        "n_banks": 26
+      },
+      {
+        "period": "2026Q1",
+        "npl_median_pct": 2.24,
+        "npl_p25_pct": 1.59,
+        "npl_p75_pct": 3.23,
+        "coverage_median_pct": 58.39,
+        "n_banks": 27
+      },
+      {
+        "period": "2026Q2",
+        "npl_median_pct": 1.865,
+        "npl_p25_pct": 1.3925,
+        "npl_p75_pct": 2.93,
+        "coverage_median_pct": 66.675,
+        "n_banks": 24
+      },
+      {
+        "period": "2026Q3",
+        "npl_median_pct": 2.22,
+        "npl_p25_pct": 1.545,
+        "npl_p75_pct": 3.09,
+        "coverage_median_pct": 62.36,
+        "n_banks": 23
+      }
+    ]
+  },
+  "quarter_effects": [
+    {
+      "quarter": 2,
+      "coef_pp": -0.101887,
+      "ci95": [
+        -0.35268,
+        0.148906
+      ],
+      "p": 0.41128086,
+      "p_wild_bootstrap": 0.469,
+      "n": 576,
+      "clusters": 27
+    },
+    {
+      "quarter": 3,
+      "coef_pp": -0.134139,
+      "ci95": [
+        -0.20789,
+        -0.060389
+      ],
+      "p": 0.0009208,
+      "p_wild_bootstrap": 0.002,
+      "n": 576,
+      "clusters": 27
+    },
+    {
+      "quarter": 4,
+      "coef_pp": -0.425606,
+      "ci95": [
+        -0.576508,
+        -0.274704
+      ],
+      "p": 4.16e-06,
+      "p_wild_bootstrap": 0.001,
+      "n": 576,
+      "clusters": 27
+    }
+  ],
+  "banks": [
+    {
+      "code": "ABB",
+      "ticker": "ABB",
+      "name_vi": "ABB",
+      "name_en": "ABB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.585,
+      "q1_rebound_median_pp": 0.495,
+      "down_then_up_years": 1,
+      "years": 4,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.52
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.043333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": -0.108333
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.5975
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.57,
+          "q1_pp": -0.02,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.53,
+          "q1_pp": 1.15,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.6,
+          "q1_pp": 1.01,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -1.75,
+          "q1_pp": -0.06,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.354139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.1638,
+          "lo80": 0.7564,
+          "hi80": 1.6143
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.28,
+          "adjusted_change_pp": 0.381887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.59,
+          "adjusted_change_pp": 0.724139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.57,
+          "adjusted_change_pp": -0.144394
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": -0.02
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.081887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.184139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.53,
+          "adjusted_change_pp": 0.955606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 1.15,
+          "adjusted_change_pp": 1.15
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.52,
+          "adjusted_change_pp": 0.621887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": -1.04,
+          "adjusted_change_pp": -0.905861
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.6,
+          "adjusted_change_pp": -0.174394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 1.01,
+          "adjusted_change_pp": 1.01
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.37,
+          "adjusted_change_pp": -0.268113
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.35,
+          "adjusted_change_pp": -0.215861
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -1.05,
+          "adjusted_change_pp": -0.948113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.12,
+          "adjusted_change_pp": 0.014139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -1.75,
+          "adjusted_change_pp": -1.324394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": -0.06
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.38,
+          "adjusted_change_pp": 0.481887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.22,
+          "adjusted_change_pp": 0.354139
+        }
+      ]
+    },
+    {
+      "code": "ACB",
+      "ticker": "ACB",
+      "name_vi": "ACB",
+      "name_en": "ACB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.07,
+      "q1_rebound_median_pp": 0.05,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.102
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.055
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.091667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.09
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.07,
+          "q1_pp": 0.05,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.27,
+          "q1_pp": 0.23,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": 0.01,
+          "q1_pp": 0.24,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": 0.0,
+          "q1_pp": -0.01,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.12,
+          "q1_pp": 0.0,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.294139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 0.9123,
+          "lo80": 0.5048,
+          "hi80": 1.3627
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.23,
+          "adjusted_change_pp": -0.128113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.294139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.355606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.05
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": 0.041887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.25,
+          "adjusted_change_pp": 0.384139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.27,
+          "adjusted_change_pp": 0.155606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.23,
+          "adjusted_change_pp": 0.23
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.09,
+          "adjusted_change_pp": 0.191887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.14,
+          "adjusted_change_pp": 0.274139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.435606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.24,
+          "adjusted_change_pp": 0.24
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.03,
+          "adjusted_change_pp": 0.131887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.144139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.425606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": -0.01
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": -0.118113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.17,
+          "adjusted_change_pp": -0.035861
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.12,
+          "adjusted_change_pp": 0.305606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.0
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.161887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.294139
+        }
+      ]
+    },
+    {
+      "code": "BAB",
+      "ticker": "BAB",
+      "name_vi": "BAB",
+      "name_en": "BAB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.05,
+      "q1_rebound_median_pp": 0.04,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.192
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.176
+        },
+        {
+          "quarter": 3,
+          "mean_pp": -0.07
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.006
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.05,
+          "q1_pp": -0.02,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.06,
+          "q1_pp": 0.04,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": 0.15,
+          "q1_pp": 0.19,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.09,
+          "q1_pp": 0.02,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": 0.02,
+          "q1_pp": 0.73,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q1",
+        "adjusted_change_pp": 0.73,
+        "forecast_next": null
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.4,
+          "adjusted_change_pp": 0.501887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.134139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.05,
+          "adjusted_change_pp": 0.375606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": -0.02
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.15,
+          "adjusted_change_pp": -0.015861
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": 0.365606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.04
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.13,
+          "adjusted_change_pp": 0.231887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.204139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": 0.15,
+          "adjusted_change_pp": 0.575606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.19
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.37,
+          "adjusted_change_pp": 0.471887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.15,
+          "adjusted_change_pp": -0.015861
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.09,
+          "adjusted_change_pp": 0.335606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.02
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.12,
+          "adjusted_change_pp": 0.014139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.445606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.73,
+          "adjusted_change_pp": 0.73
+        }
+      ]
+    },
+    {
+      "code": "BID",
+      "ticker": "BID",
+      "name_vi": "BID",
+      "name_en": "BID",
+      "ownership": "state",
+      "q4_change_median_pp": -0.375,
+      "q1_rebound_median_pp": 0.275,
+      "down_then_up_years": 3,
+      "years": 4,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.2275
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.023333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.068333
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.3875
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.61,
+          "q1_pp": -0.03,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.19,
+          "q1_pp": 0.39,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.35,
+          "q1_pp": 0.26,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.4,
+          "q1_pp": 0.29,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.154139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.5074,
+          "lo80": 1.1,
+          "hi80": 1.9579
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.13,
+          "adjusted_change_pp": -0.028113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.114139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.61,
+          "adjusted_change_pp": -0.184394
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": -0.03
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.161887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.32,
+          "adjusted_change_pp": 0.454139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.19,
+          "adjusted_change_pp": 0.235606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.39,
+          "adjusted_change_pp": 0.39
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.141887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.144139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.35,
+          "adjusted_change_pp": 0.075606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.26,
+          "adjusted_change_pp": 0.26
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.111887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.324139
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.09,
+          "adjusted_change_pp": 0.191887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": 0.024139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.4,
+          "adjusted_change_pp": 0.025606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.29,
+          "adjusted_change_pp": 0.29
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.171887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.154139
+        }
+      ]
+    },
+    {
+      "code": "BVB",
+      "ticker": "BVB",
+      "name_vi": "BVB",
+      "name_en": "BVB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.25,
+      "q1_rebound_median_pp": 0.14,
+      "down_then_up_years": 4,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.214
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.351667
+        },
+        {
+          "quarter": 3,
+          "mean_pp": -0.084
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.474
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.41,
+          "q1_pp": -0.11,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.01,
+          "q1_pp": 0.14,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.25,
+          "q1_pp": 0.6,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -1.56,
+          "q1_pp": 0.34,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.14,
+          "q1_pp": 0.1,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q2",
+        "adjusted_change_pp": 0.211887,
+        "forecast_next": null
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.081887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.13,
+          "adjusted_change_pp": 0.264139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.41,
+          "adjusted_change_pp": 0.015606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": -0.11
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.31,
+          "adjusted_change_pp": 0.411887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.204139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.415606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.14,
+          "adjusted_change_pp": 0.14
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 1.45,
+          "adjusted_change_pp": 1.551887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": -0.82,
+          "adjusted_change_pp": -0.685861
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.25,
+          "adjusted_change_pp": 0.175606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.6,
+          "adjusted_change_pp": 0.6
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": -0.038113
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.88,
+          "adjusted_change_pp": 1.014139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -1.56,
+          "adjusted_change_pp": -1.134394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.34,
+          "adjusted_change_pp": 0.34
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.4,
+          "adjusted_change_pp": 0.501887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.68,
+          "adjusted_change_pp": -0.545861
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": 0.285606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.1,
+          "adjusted_change_pp": 0.1
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.11,
+          "adjusted_change_pp": 0.211887
+        }
+      ]
+    },
+    {
+      "code": "CTG",
+      "ticker": "CTG",
+      "name_vi": "CTG",
+      "name_en": "CTG",
+      "ownership": "state",
+      "q4_change_median_pp": -0.23,
+      "q1_rebound_median_pp": 0.04,
+      "down_then_up_years": 3,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.1
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.118333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.026667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.21
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.41,
+          "q1_pp": -0.01,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.18,
+          "q1_pp": 0.04,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.24,
+          "q1_pp": 0.22,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.23,
+          "q1_pp": 0.33,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": 0.01,
+          "q1_pp": -0.08,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.134139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 0.9063,
+          "lo80": 0.4988,
+          "hi80": 1.3567
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.46,
+          "adjusted_change_pp": 0.561887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.33,
+          "adjusted_change_pp": 0.464139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.41,
+          "adjusted_change_pp": 0.015606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": -0.01
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.1,
+          "adjusted_change_pp": 0.201887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.204139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.18,
+          "adjusted_change_pp": 0.245606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.04
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.1,
+          "adjusted_change_pp": 0.234139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.24,
+          "adjusted_change_pp": 0.185606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.22,
+          "adjusted_change_pp": 0.22
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.22,
+          "adjusted_change_pp": 0.321887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.12,
+          "adjusted_change_pp": 0.014139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.23,
+          "adjusted_change_pp": 0.195606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.33,
+          "adjusted_change_pp": 0.33
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.24,
+          "adjusted_change_pp": -0.138113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": -0.085861
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.435606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": -0.08,
+          "adjusted_change_pp": -0.08
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.18,
+          "adjusted_change_pp": 0.281887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.134139
+        }
+      ]
+    },
+    {
+      "code": "EIB",
+      "ticker": "EIB",
+      "name_vi": "EIB",
+      "name_en": "EIB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.13,
+      "q1_rebound_median_pp": 0.21,
+      "down_then_up_years": 4,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.208
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.02
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.003333
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.124
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.22,
+          "q1_pp": 0.02,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.1,
+          "q1_pp": 0.54,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": 0.01,
+          "q1_pp": 0.21,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.18,
+          "q1_pp": 0.06,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.13,
+          "q1_pp": 0.21,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": -0.325861,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 2.3189,
+          "lo80": 1.9115,
+          "hi80": 2.7694
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.29,
+          "adjusted_change_pp": -0.188113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.304139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": 0.205606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.02
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.001887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.154139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.325606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.54,
+          "adjusted_change_pp": 0.54
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.41,
+          "adjusted_change_pp": 0.511887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": 0.024139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.435606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.21
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": -0.118113
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.204139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.18,
+          "adjusted_change_pp": 0.245606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.06
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.171887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.33,
+          "adjusted_change_pp": 0.464139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.13,
+          "adjusted_change_pp": 0.295606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.21
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.111887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": -0.46,
+          "adjusted_change_pp": -0.325861
+        }
+      ]
+    },
+    {
+      "code": "HDB",
+      "ticker": "HDB",
+      "name_vi": "HDB",
+      "name_en": "HDB",
+      "ownership": "private",
+      "q4_change_median_pp": 0.03,
+      "q1_rebound_median_pp": 0.18,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.23
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.003333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.216667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.104
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": 0.25,
+          "q1_pp": -0.08,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.13,
+          "q1_pp": 0.18,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.47,
+          "q1_pp": 0.45,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": 0.03,
+          "q1_pp": 0.44,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.46,
+          "q1_pp": 0.16,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.764139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 3.1316,
+          "lo80": 2.7241,
+          "hi80": 3.582
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.3,
+          "adjusted_change_pp": -0.198113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.324139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": 0.25,
+          "adjusted_change_pp": 0.675606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.08,
+          "adjusted_change_pp": -0.08
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.24,
+          "adjusted_change_pp": -0.138113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.344139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.13,
+          "adjusted_change_pp": 0.555606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.18,
+          "adjusted_change_pp": 0.18
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.3,
+          "adjusted_change_pp": 0.401887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.11,
+          "adjusted_change_pp": 0.244139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.47,
+          "adjusted_change_pp": -0.044394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.45,
+          "adjusted_change_pp": 0.45
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": -0.038113
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.2,
+          "adjusted_change_pp": -0.065861
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": 0.03,
+          "adjusted_change_pp": 0.455606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.44,
+          "adjusted_change_pp": 0.44
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.271887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.36,
+          "adjusted_change_pp": 0.494139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.46,
+          "adjusted_change_pp": -0.034394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.16
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.291887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.63,
+          "adjusted_change_pp": 0.764139
+        }
+      ]
+    },
+    {
+      "code": "KLB",
+      "ticker": "KLB",
+      "name_vi": "KLB",
+      "name_en": "KLB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.07,
+      "q1_rebound_median_pp": 0.19,
+      "down_then_up_years": 4,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.198
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.205
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.188333
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.096
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.11,
+          "q1_pp": 0.19,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.06,
+          "q1_pp": -0.03,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.21,
+          "q1_pp": 0.53,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.03,
+          "q1_pp": 0.26,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.07,
+          "q1_pp": 0.04,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.284139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.6863,
+          "lo80": 1.2788,
+          "hi80": 2.1367
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": -0.038113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.57,
+          "adjusted_change_pp": 0.704139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": 0.315606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.19
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.13,
+          "adjusted_change_pp": -0.028113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.134139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": 0.365606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": -0.03
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.21,
+          "adjusted_change_pp": -0.108113
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.49,
+          "adjusted_change_pp": 0.624139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.21,
+          "adjusted_change_pp": 0.215606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.53,
+          "adjusted_change_pp": 0.53
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.48,
+          "adjusted_change_pp": -0.378113
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.094139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": 0.395606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.26,
+          "adjusted_change_pp": 0.26
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.2,
+          "adjusted_change_pp": -0.098113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.094139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.355606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.04
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.031887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.15,
+          "adjusted_change_pp": 0.284139
+        }
+      ]
+    },
+    {
+      "code": "LPB",
+      "ticker": "LPB",
+      "name_vi": "LPB",
+      "name_en": "LPB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.1,
+      "q1_rebound_median_pp": 0.05,
+      "down_then_up_years": 4,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.082
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.205
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.121667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.386
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.05,
+          "q1_pp": 0.05,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.06,
+          "q1_pp": -0.01,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -1.45,
+          "q1_pp": 0.05,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.39,
+          "q1_pp": 0.16,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.1,
+          "q1_pp": 0.16,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.154139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.5629,
+          "lo80": 1.1555,
+          "hi80": 2.0134
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.09,
+          "adjusted_change_pp": 0.011887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.08,
+          "adjusted_change_pp": 0.214139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.05,
+          "adjusted_change_pp": 0.375606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.05
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.081887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.134139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.485606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": -0.01
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.98,
+          "adjusted_change_pp": 1.081887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.36,
+          "adjusted_change_pp": 0.494139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -1.45,
+          "adjusted_change_pp": -1.024394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.05
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.34,
+          "adjusted_change_pp": 0.441887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.23,
+          "adjusted_change_pp": 0.364139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.39,
+          "adjusted_change_pp": 0.035606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.16
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.111887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.174139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.325606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.16
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.111887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.154139
+        }
+      ]
+    },
+    {
+      "code": "MBB",
+      "ticker": "MBB",
+      "name_vi": "MBB",
+      "name_en": "MBB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.29,
+      "q1_rebound_median_pp": 0.22,
+      "down_then_up_years": 4,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.4
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.283333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.26
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.296
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.05,
+          "q1_pp": 0.09,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.05,
+          "q1_pp": 0.67,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.29,
+          "q1_pp": 0.89,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.61,
+          "q1_pp": 0.22,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.58,
+          "q1_pp": 0.13,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.354139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.3756,
+          "lo80": 0.9681,
+          "hi80": 1.826
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.53,
+          "adjusted_change_pp": -0.428113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.324139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.05,
+          "adjusted_change_pp": 0.375606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.09,
+          "adjusted_change_pp": 0.09
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.311887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.16,
+          "adjusted_change_pp": -0.025861
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.475606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.67,
+          "adjusted_change_pp": 0.67
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.32,
+          "adjusted_change_pp": -0.218113
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.45,
+          "adjusted_change_pp": 0.584139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.29,
+          "adjusted_change_pp": 0.135606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.89,
+          "adjusted_change_pp": 0.89
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.85,
+          "adjusted_change_pp": -0.748113
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.59,
+          "adjusted_change_pp": 0.724139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.61,
+          "adjusted_change_pp": -0.184394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.22,
+          "adjusted_change_pp": 0.22
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.24,
+          "adjusted_change_pp": -0.138113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.27,
+          "adjusted_change_pp": 0.404139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.58,
+          "adjusted_change_pp": -0.154394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.13,
+          "adjusted_change_pp": 0.13
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.03,
+          "adjusted_change_pp": 0.131887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.22,
+          "adjusted_change_pp": 0.354139
+        }
+      ]
+    },
+    {
+      "code": "MSB",
+      "ticker": "MSB",
+      "name_vi": "MSB",
+      "name_en": "MSB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.1,
+      "q1_rebound_median_pp": 0.05,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.106
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.051667
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.061667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.074
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.21,
+          "q1_pp": 0.05,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.21,
+          "q1_pp": 0.31,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.07,
+          "q1_pp": 0.31,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.2,
+          "q1_pp": -0.11,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.1,
+          "q1_pp": -0.03,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.304139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 2.4383,
+          "lo80": 2.0308,
+          "hi80": 2.8887
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.261887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.064139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.21,
+          "adjusted_change_pp": 0.215606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.05
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.29,
+          "adjusted_change_pp": -0.188113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.134139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.635606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.31,
+          "adjusted_change_pp": 0.31
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.54,
+          "adjusted_change_pp": 0.641887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.38,
+          "adjusted_change_pp": 0.514139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.355606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.31,
+          "adjusted_change_pp": 0.31
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.001887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.2,
+          "adjusted_change_pp": -0.065861
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.2,
+          "adjusted_change_pp": 0.225606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": -0.11
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.13,
+          "adjusted_change_pp": 0.231887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.09,
+          "adjusted_change_pp": 0.224139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.325606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": -0.03
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.13,
+          "adjusted_change_pp": -0.028113
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.304139
+        }
+      ]
+    },
+    {
+      "code": "NAB",
+      "ticker": "NAB",
+      "name_vi": "NAB",
+      "name_en": "NAB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.55,
+      "q1_rebound_median_pp": 0.16,
+      "down_then_up_years": 3,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.194
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.158333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.28
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.56
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.32,
+          "q1_pp": -0.06,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.68,
+          "q1_pp": 0.66,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.73,
+          "q1_pp": 0.55,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.52,
+          "q1_pp": 0.16,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.55,
+          "q1_pp": -0.34,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q2",
+        "adjusted_change_pp": -0.248113,
+        "forecast_next": null
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.47,
+          "adjusted_change_pp": 0.571887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.47,
+          "adjusted_change_pp": 0.604139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.32,
+          "adjusted_change_pp": 0.105606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": -0.06
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.15,
+          "adjusted_change_pp": -0.048113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.67,
+          "adjusted_change_pp": 0.804139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.68,
+          "adjusted_change_pp": -0.254394
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.66,
+          "adjusted_change_pp": 0.66
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.71,
+          "adjusted_change_pp": 0.811887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.12,
+          "adjusted_change_pp": 0.254139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.73,
+          "adjusted_change_pp": -0.304394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.55,
+          "adjusted_change_pp": 0.55
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.09,
+          "adjusted_change_pp": 0.011887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.28,
+          "adjusted_change_pp": 0.414139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.52,
+          "adjusted_change_pp": -0.094394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.16
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.36,
+          "adjusted_change_pp": 0.461887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": -0.005861
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.55,
+          "adjusted_change_pp": -0.124394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": -0.34,
+          "adjusted_change_pp": -0.34
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.35,
+          "adjusted_change_pp": -0.248113
+        }
+      ]
+    },
+    {
+      "code": "NVB",
+      "ticker": "NVB",
+      "name_vi": "NVB",
+      "name_en": "NVB",
+      "ownership": "private",
+      "q4_change_median_pp": 1.06,
+      "q1_rebound_median_pp": -0.78,
+      "down_then_up_years": 0,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": -0.372
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 2.125
+        },
+        {
+          "quarter": 3,
+          "mean_pp": -0.608333
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.772
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": 1.06,
+          "q1_pp": 0.73,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 3.21,
+          "q1_pp": 5.07,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": 3.43,
+          "q1_pp": -0.78,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": -11.07,
+          "q1_pp": -5.5,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.49,
+          "q1_pp": -1.38,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": -1.425861,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 5.7569,
+          "lo80": 5.3495,
+          "hi80": 6.2074
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.46,
+          "adjusted_change_pp": 0.594139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": 1.06,
+          "adjusted_change_pp": 1.485606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.73,
+          "adjusted_change_pp": 0.73
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 7.32,
+          "adjusted_change_pp": 7.421887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 3.67,
+          "adjusted_change_pp": 3.804139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 3.21,
+          "adjusted_change_pp": 3.635606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 5.07,
+          "adjusted_change_pp": 5.07
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 2.65,
+          "adjusted_change_pp": 2.751887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.68,
+          "adjusted_change_pp": 0.814139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": 3.43,
+          "adjusted_change_pp": 3.855606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": -0.78,
+          "adjusted_change_pp": -0.78
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 6.3,
+          "adjusted_change_pp": 6.401887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -4.67,
+          "adjusted_change_pp": -4.535861
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -11.07,
+          "adjusted_change_pp": -10.644394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": -5.5,
+          "adjusted_change_pp": -5.5
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -2.69,
+          "adjusted_change_pp": -2.588113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -2.23,
+          "adjusted_change_pp": -2.095861
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.49,
+          "adjusted_change_pp": -0.064394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": -1.38,
+          "adjusted_change_pp": -1.38
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.82,
+          "adjusted_change_pp": -0.718113
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": -1.56,
+          "adjusted_change_pp": -1.425861
+        }
+      ]
+    },
+    {
+      "code": "OCB",
+      "ticker": "OCB",
+      "name_vi": "OCB",
+      "name_en": "OCB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.24,
+      "q1_rebound_median_pp": 0.74,
+      "down_then_up_years": 5,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.626
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.121667
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.27
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.39
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.19,
+          "q1_pp": 0.85,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.24,
+          "q1_pp": 1.09,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.99,
+          "q1_pp": 0.12,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.02,
+          "q1_pp": 0.74,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.51,
+          "q1_pp": 0.33,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q2",
+        "adjusted_change_pp": 0.071887,
+        "forecast_next": null
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.16,
+          "adjusted_change_pp": -0.058113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.114139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.19,
+          "adjusted_change_pp": 0.235606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.85,
+          "adjusted_change_pp": 0.85
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.21,
+          "adjusted_change_pp": -0.108113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.51,
+          "adjusted_change_pp": 0.644139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.24,
+          "adjusted_change_pp": 0.185606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 1.09,
+          "adjusted_change_pp": 1.09
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": -0.038113
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.56,
+          "adjusted_change_pp": 0.694139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.99,
+          "adjusted_change_pp": -0.564394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.12,
+          "adjusted_change_pp": 0.12
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.25,
+          "adjusted_change_pp": 0.351887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.204139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.405606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.74,
+          "adjusted_change_pp": 0.74
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.44,
+          "adjusted_change_pp": -0.338113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.23,
+          "adjusted_change_pp": 0.364139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.51,
+          "adjusted_change_pp": -0.084394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.33,
+          "adjusted_change_pp": 0.33
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": 0.071887
+        }
+      ]
+    },
+    {
+      "code": "PGB",
+      "ticker": "PGB",
+      "name_vi": "PGB",
+      "name_en": "PGB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.325,
+      "q1_rebound_median_pp": 0.065,
+      "down_then_up_years": 2,
+      "years": 4,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.1025
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.161667
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.185
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.33
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.23,
+          "q1_pp": -0.01,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.42,
+          "q1_pp": -0.09,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.05,
+          "q1_pp": 0.37,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.62,
+          "q1_pp": 0.14,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 1.134139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 3.6129,
+          "lo80": 3.2055,
+          "hi80": 4.0634
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.09,
+          "adjusted_change_pp": 0.191887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.08,
+          "adjusted_change_pp": 0.214139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.23,
+          "adjusted_change_pp": 0.195606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": -0.01
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.261887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.31,
+          "adjusted_change_pp": 0.444139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.42,
+          "adjusted_change_pp": 0.005606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": -0.09,
+          "adjusted_change_pp": -0.09
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.6,
+          "adjusted_change_pp": 0.701887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": -0.46,
+          "adjusted_change_pp": -0.325861
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.05,
+          "adjusted_change_pp": 0.375606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.37,
+          "adjusted_change_pp": 0.37
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.6,
+          "adjusted_change_pp": 0.701887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.34,
+          "adjusted_change_pp": -0.205861
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.62,
+          "adjusted_change_pp": -0.194394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.14,
+          "adjusted_change_pp": 0.14
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.62,
+          "adjusted_change_pp": 0.721887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.52,
+          "adjusted_change_pp": 0.654139
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -1.1,
+          "adjusted_change_pp": -0.998113
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 1.0,
+          "adjusted_change_pp": 1.134139
+        }
+      ]
+    },
+    {
+      "code": "SGB",
+      "ticker": "SGB",
+      "name_vi": "SGB",
+      "name_en": "SGB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.14,
+      "q1_rebound_median_pp": 0.42,
+      "down_then_up_years": 5,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.434
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.203333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.191667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.124
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.08,
+          "q1_pp": 0.42,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.01,
+          "q1_pp": 0.22,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.2,
+          "q1_pp": 0.35,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.19,
+          "q1_pp": 0.62,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.14,
+          "q1_pp": 0.56,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.304139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 2.8156,
+          "lo80": 2.4081,
+          "hi80": 3.266
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.15,
+          "adjusted_change_pp": -0.048113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.62,
+          "adjusted_change_pp": 0.754139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.08,
+          "adjusted_change_pp": 0.345606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.42,
+          "adjusted_change_pp": 0.42
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.5,
+          "adjusted_change_pp": -0.398113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.24,
+          "adjusted_change_pp": 0.374139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.415606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.22,
+          "adjusted_change_pp": 0.22
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.061887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.064139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.2,
+          "adjusted_change_pp": 0.225606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.35,
+          "adjusted_change_pp": 0.35
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.271887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.3,
+          "adjusted_change_pp": 0.434139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.19,
+          "adjusted_change_pp": 0.235606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.62,
+          "adjusted_change_pp": 0.62
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.031887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": 0.024139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": 0.285606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.56,
+          "adjusted_change_pp": 0.56
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.63,
+          "adjusted_change_pp": -0.528113
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.304139
+        }
+      ]
+    },
+    {
+      "code": "SHB",
+      "ticker": "SHB",
+      "name_vi": "SHB",
+      "name_en": "SHB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.36,
+      "q1_rebound_median_pp": 0.05,
+      "down_then_up_years": 3,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.088
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.22
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.092
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.258
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.53,
+          "q1_pp": 0.05,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.48,
+          "q1_pp": 0.02,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.36,
+          "q1_pp": 0.17,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.19,
+          "q1_pp": -0.03,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.69,
+          "q1_pp": 0.23,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q1",
+        "adjusted_change_pp": 0.23,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.9709,
+          "lo80": 1.5635,
+          "hi80": 2.4214
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.271887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.294139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.53,
+          "adjusted_change_pp": -0.104394
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.05
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.81,
+          "adjusted_change_pp": 0.911887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": -0.085861
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.48,
+          "adjusted_change_pp": 0.905606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.02
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.291887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.324139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.36,
+          "adjusted_change_pp": 0.065606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.17
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.101887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.204139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.19,
+          "adjusted_change_pp": 0.235606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": -0.03
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.031887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.26,
+          "adjusted_change_pp": 0.394139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.69,
+          "adjusted_change_pp": -0.264394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.23,
+          "adjusted_change_pp": 0.23
+        }
+      ]
+    },
+    {
+      "code": "SSB",
+      "ticker": "SSB",
+      "name_vi": "SSB",
+      "name_en": "SSB",
+      "ownership": "private",
+      "q4_change_median_pp": 0.02,
+      "q1_rebound_median_pp": 0.0,
+      "down_then_up_years": 0,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.028
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.02
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.006667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": 0.036
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.03,
+          "q1_pp": -0.01,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.01,
+          "q1_pp": 0.0,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": 0.07,
+          "q1_pp": 0.02,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": 0.02,
+          "q1_pp": -0.05,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": 0.11,
+          "q1_pp": 0.18,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.164139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.9696,
+          "lo80": 1.5621,
+          "hi80": 2.42
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.061887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": -0.08,
+          "adjusted_change_pp": 0.054139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": 0.395606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": -0.01
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.061887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.124139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.435606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.0
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.13,
+          "adjusted_change_pp": 0.231887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.14,
+          "adjusted_change_pp": 0.274139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.495606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.02
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.05,
+          "adjusted_change_pp": 0.051887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.094139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.445606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": -0.05,
+          "adjusted_change_pp": -0.05
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.11,
+          "adjusted_change_pp": 0.211887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.134139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": 0.11,
+          "adjusted_change_pp": 0.535606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.18,
+          "adjusted_change_pp": 0.18
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.111887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.03,
+          "adjusted_change_pp": 0.164139
+        }
+      ]
+    },
+    {
+      "code": "STB",
+      "ticker": "STB",
+      "name_vi": "STB",
+      "name_en": "STB",
+      "ownership": "private",
+      "q4_change_median_pp": 0.08,
+      "q1_rebound_median_pp": 0.11,
+      "down_then_up_years": 1,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.062
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.152
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.076
+        },
+        {
+          "quarter": 4,
+          "mean_pp": 0.738
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.06,
+          "q1_pp": -0.22,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.08,
+          "q1_pp": 0.21,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": 0.08,
+          "q1_pp": 0.0,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.07,
+          "q1_pp": 0.11,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": 3.66,
+          "q1_pp": 0.21,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q1",
+        "adjusted_change_pp": 0.21,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 7.0749,
+          "lo80": 6.6675,
+          "hi80": 7.5254
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.171887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.144139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": 0.365606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": -0.22
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.37,
+          "adjusted_change_pp": -0.235861
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.08,
+          "adjusted_change_pp": 0.505606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.21
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.6,
+          "adjusted_change_pp": 0.701887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.41,
+          "adjusted_change_pp": 0.544139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": 0.08,
+          "adjusted_change_pp": 0.505606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.0,
+          "adjusted_change_pp": 0.0
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.15,
+          "adjusted_change_pp": 0.251887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.174139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.355606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.11,
+          "adjusted_change_pp": 0.11
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.05,
+          "adjusted_change_pp": 0.051887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.29,
+          "adjusted_change_pp": 0.424139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": 3.66,
+          "adjusted_change_pp": 4.085606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.21
+        }
+      ]
+    },
+    {
+      "code": "TCB",
+      "ticker": "TCB",
+      "name_vi": "TCB",
+      "name_en": "TCB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.09,
+      "q1_rebound_median_pp": 0.01,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": -0.002
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.051667
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.116667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.022
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": 0.09,
+          "q1_pp": 0.01,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.26,
+          "q1_pp": -0.06,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.2,
+          "q1_pp": -0.03,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.17,
+          "q1_pp": 0.05,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.09,
+          "q1_pp": 0.02,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.324139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.0029,
+          "lo80": 0.5955,
+          "hi80": 1.4534
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.081887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.21,
+          "adjusted_change_pp": 0.344139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": 0.09,
+          "adjusted_change_pp": 0.515606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.01
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.031887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.184139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.26,
+          "adjusted_change_pp": 0.685606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": -0.06
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.22,
+          "adjusted_change_pp": 0.321887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.29,
+          "adjusted_change_pp": 0.424139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.2,
+          "adjusted_change_pp": 0.225606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": -0.03
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.1,
+          "adjusted_change_pp": 0.201887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.194139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.17,
+          "adjusted_change_pp": 0.255606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.05
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.09,
+          "adjusted_change_pp": 0.191887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.034139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.09,
+          "adjusted_change_pp": 0.335606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.02
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.324139
+        }
+      ]
+    },
+    {
+      "code": "TPB",
+      "ticker": "TPB",
+      "name_vi": "TPB",
+      "name_en": "TPB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.77,
+      "q1_rebound_median_pp": 0.61,
+      "down_then_up_years": 5,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.548
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.045
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.226667
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.584
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.22,
+          "q1_pp": 0.32,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.07,
+          "q1_pp": 0.61,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.92,
+          "q1_pp": 0.18,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.77,
+          "q1_pp": 0.75,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.94,
+          "q1_pp": 0.88,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.374139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.8056,
+          "lo80": 1.3981,
+          "hi80": 2.256
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.061887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": 0.024139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": 0.205606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.32,
+          "adjusted_change_pp": 0.32
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.29,
+          "adjusted_change_pp": -0.188113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.194139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.355606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.61,
+          "adjusted_change_pp": 0.61
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.76,
+          "adjusted_change_pp": 0.861887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.76,
+          "adjusted_change_pp": 0.894139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.92,
+          "adjusted_change_pp": -0.494394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.18,
+          "adjusted_change_pp": 0.18
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.17,
+          "adjusted_change_pp": -0.068113
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.23,
+          "adjusted_change_pp": 0.364139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.77,
+          "adjusted_change_pp": -0.344394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.75,
+          "adjusted_change_pp": 0.75
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.22,
+          "adjusted_change_pp": -0.118113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.18,
+          "adjusted_change_pp": 0.314139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.94,
+          "adjusted_change_pp": -0.514394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.88,
+          "adjusted_change_pp": 0.88
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.31,
+          "adjusted_change_pp": -0.208113
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.24,
+          "adjusted_change_pp": 0.374139
+        }
+      ]
+    },
+    {
+      "code": "VAB",
+      "ticker": "VAB",
+      "name_vi": "VAB",
+      "name_en": "VAB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.1,
+      "q1_rebound_median_pp": -0.1,
+      "down_then_up_years": 1,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": -0.04
+        },
+        {
+          "quarter": 2,
+          "mean_pp": 0.32
+        },
+        {
+          "quarter": 3,
+          "mean_pp": -0.173333
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.208
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.1,
+          "q1_pp": -0.1,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.03,
+          "q1_pp": -0.1,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.1,
+          "q1_pp": 0.76,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.33,
+          "q1_pp": -0.74,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.48,
+          "q1_pp": -0.02,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.294139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 1.0242,
+          "lo80": 0.6168,
+          "hi80": 1.4747
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q3",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.064139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.325606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": -0.1
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.06,
+          "adjusted_change_pp": 0.041887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.17,
+          "adjusted_change_pp": -0.035861
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": 0.395606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": -0.1
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 1.06,
+          "adjusted_change_pp": 1.161887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": -0.8,
+          "adjusted_change_pp": -0.665861
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.325606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.76,
+          "adjusted_change_pp": 0.76
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.291887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.84,
+          "adjusted_change_pp": -0.705861
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.33,
+          "adjusted_change_pp": 0.095606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": -0.74,
+          "adjusted_change_pp": -0.74
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": 0.48,
+          "adjusted_change_pp": 0.581887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.68,
+          "adjusted_change_pp": 0.814139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.48,
+          "adjusted_change_pp": -0.054394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": -0.02
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.07,
+          "adjusted_change_pp": 0.031887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.16,
+          "adjusted_change_pp": 0.294139
+        }
+      ]
+    },
+    {
+      "code": "VBB",
+      "ticker": "VBB",
+      "name_vi": "VBB",
+      "name_en": "VBB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.55,
+      "q1_rebound_median_pp": 0.54,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.442
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.398
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.328
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.3
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": 1.0,
+          "q1_pp": 0.69,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.68,
+          "q1_pp": 0.66,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -1.5,
+          "q1_pp": 0.54,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.55,
+          "q1_pp": -0.11,
+          "reversed": false
+        },
+        {
+          "year": 2025,
+          "q4_pp": 0.23,
+          "q1_pp": 0.43,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.544139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 2.0223,
+          "lo80": 1.6148,
+          "hi80": 2.4727
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.141887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.74,
+          "adjusted_change_pp": 0.874139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": 1.0,
+          "adjusted_change_pp": 1.425606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.69,
+          "adjusted_change_pp": 0.69
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.43,
+          "adjusted_change_pp": -0.328113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.42,
+          "adjusted_change_pp": 0.554139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.68,
+          "adjusted_change_pp": -0.254394
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.66,
+          "adjusted_change_pp": 0.66
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.45,
+          "adjusted_change_pp": -0.348113
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.2,
+          "adjusted_change_pp": 0.334139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -1.5,
+          "adjusted_change_pp": -1.074394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.54,
+          "adjusted_change_pp": 0.54
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.33,
+          "adjusted_change_pp": 0.431887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.13,
+          "adjusted_change_pp": 0.004139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.55,
+          "adjusted_change_pp": -0.124394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": -0.11,
+          "adjusted_change_pp": -0.11
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": 0.23,
+          "adjusted_change_pp": 0.655606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.43,
+          "adjusted_change_pp": 0.43
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -1.48,
+          "adjusted_change_pp": -1.378113
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.41,
+          "adjusted_change_pp": 0.544139
+        }
+      ]
+    },
+    {
+      "code": "VCB",
+      "ticker": "VCB",
+      "name_vi": "VCB",
+      "name_en": "VCB",
+      "ownership": "state",
+      "q4_change_median_pp": -0.26,
+      "q1_rebound_median_pp": 0.17,
+      "down_then_up_years": 5,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.138
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.07
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.19
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.316
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": -0.52,
+          "q1_pp": 0.17,
+          "reversed": true
+        },
+        {
+          "year": 2022,
+          "q4_pp": -0.12,
+          "q1_pp": 0.17,
+          "reversed": true
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.23,
+          "q1_pp": 0.24,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.26,
+          "q1_pp": 0.07,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.45,
+          "q1_pp": 0.04,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.234139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 0.3989,
+          "lo80": -0.0085,
+          "hi80": 0.8494
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.14,
+          "adjusted_change_pp": -0.038113
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.42,
+          "adjusted_change_pp": 0.554139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": -0.52,
+          "adjusted_change_pp": -0.094394
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.17
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": -0.2,
+          "adjusted_change_pp": -0.098113
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.324139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": -0.12,
+          "adjusted_change_pp": 0.305606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.17,
+          "adjusted_change_pp": 0.17
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.081887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.38,
+          "adjusted_change_pp": 0.514139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.23,
+          "adjusted_change_pp": 0.195606
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.24,
+          "adjusted_change_pp": 0.24
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": -0.02,
+          "adjusted_change_pp": 0.081887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.02,
+          "adjusted_change_pp": 0.154139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.26,
+          "adjusted_change_pp": 0.165606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.07
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": 0.071887
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": 0.03,
+          "adjusted_change_pp": 0.164139
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.45,
+          "adjusted_change_pp": -0.024394
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.04,
+          "adjusted_change_pp": 0.04
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.1,
+          "adjusted_change_pp": 0.234139
+        }
+      ]
+    },
+    {
+      "code": "VIB",
+      "ticker": "VIB",
+      "name_vi": "VIB",
+      "name_en": "VIB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.34,
+      "q1_rebound_median_pp": 0.28,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.394
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.028333
+        },
+        {
+          "quarter": 3,
+          "mean_pp": 0.1
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.186
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": 0.2,
+          "q1_pp": 0.07,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.1,
+          "q1_pp": 1.19,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.54,
+          "q1_pp": 0.46,
+          "reversed": true
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.34,
+          "q1_pp": 0.28,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.35,
+          "q1_pp": -0.03,
+          "reversed": false
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": 0.404139,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 3.0023,
+          "lo80": 2.5948,
+          "hi80": 3.4527
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": -0.04,
+          "adjusted_change_pp": 0.061887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.43,
+          "adjusted_change_pp": 0.564139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": 0.2,
+          "adjusted_change_pp": 0.625606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.07,
+          "adjusted_change_pp": 0.07
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.161887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.1,
+          "adjusted_change_pp": 0.034139
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.1,
+          "adjusted_change_pp": 0.525606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 1.19,
+          "adjusted_change_pp": 1.19
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": 0.05,
+          "adjusted_change_pp": 0.184139
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.54,
+          "adjusted_change_pp": -0.114394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": 0.46,
+          "adjusted_change_pp": 0.46
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.06,
+          "adjusted_change_pp": 0.161887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": 0.19,
+          "adjusted_change_pp": 0.324139
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.34,
+          "adjusted_change_pp": 0.085606
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.28,
+          "adjusted_change_pp": 0.28
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.23,
+          "adjusted_change_pp": -0.128113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.24,
+          "adjusted_change_pp": -0.105861
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.35,
+          "adjusted_change_pp": 0.075606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": -0.03,
+          "adjusted_change_pp": -0.03
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.01,
+          "adjusted_change_pp": 0.091887
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": 0.27,
+          "adjusted_change_pp": 0.404139
+        }
+      ]
+    },
+    {
+      "code": "VPB",
+      "ticker": "VPB",
+      "name_vi": "VPB",
+      "name_en": "VPB",
+      "ownership": "private",
+      "q4_change_median_pp": -0.18,
+      "q1_rebound_median_pp": 0.26,
+      "down_then_up_years": 2,
+      "years": 5,
+      "quarter_means": [
+        {
+          "quarter": 1,
+          "mean_pp": 0.278
+        },
+        {
+          "quarter": 2,
+          "mean_pp": -0.02
+        },
+        {
+          "quarter": 3,
+          "mean_pp": -0.228333
+        },
+        {
+          "quarter": 4,
+          "mean_pp": -0.048
+        }
+      ],
+      "pairs": [
+        {
+          "year": 2021,
+          "q4_pp": 0.57,
+          "q1_pp": 0.26,
+          "reversed": false
+        },
+        {
+          "year": 2022,
+          "q4_pp": 0.71,
+          "q1_pp": 0.51,
+          "reversed": false
+        },
+        {
+          "year": 2023,
+          "q4_pp": -0.73,
+          "q1_pp": -0.17,
+          "reversed": false
+        },
+        {
+          "year": 2024,
+          "q4_pp": -0.61,
+          "q1_pp": 0.54,
+          "reversed": true
+        },
+        {
+          "year": 2025,
+          "q4_pp": -0.18,
+          "q1_pp": 0.25,
+          "reversed": true
+        }
+      ],
+      "latest": {
+        "period": "2026Q3",
+        "adjusted_change_pp": -0.025861,
+        "forecast_next": {
+          "period": "2026Q4",
+          "npl_pct": 2.8529,
+          "lo80": 2.4455,
+          "hi80": 3.3034
+        }
+      },
+      "signals": [],
+      "quarters": [
+        {
+          "period": "2021Q2",
+          "d_npl_pp": 0.01,
+          "adjusted_change_pp": 0.111887
+        },
+        {
+          "period": "2021Q3",
+          "d_npl_pp": 0.53,
+          "adjusted_change_pp": 0.664139
+        },
+        {
+          "period": "2021Q4",
+          "d_npl_pp": 0.57,
+          "adjusted_change_pp": 0.995606
+        },
+        {
+          "period": "2022Q1",
+          "d_npl_pp": 0.26,
+          "adjusted_change_pp": 0.26
+        },
+        {
+          "period": "2022Q2",
+          "d_npl_pp": 0.42,
+          "adjusted_change_pp": 0.521887
+        },
+        {
+          "period": "2022Q3",
+          "d_npl_pp": -0.23,
+          "adjusted_change_pp": -0.095861
+        },
+        {
+          "period": "2022Q4",
+          "d_npl_pp": 0.71,
+          "adjusted_change_pp": 1.135606
+        },
+        {
+          "period": "2023Q1",
+          "d_npl_pp": 0.51,
+          "adjusted_change_pp": 0.51
+        },
+        {
+          "period": "2023Q2",
+          "d_npl_pp": 0.28,
+          "adjusted_change_pp": 0.381887
+        },
+        {
+          "period": "2023Q3",
+          "d_npl_pp": -0.78,
+          "adjusted_change_pp": -0.645861
+        },
+        {
+          "period": "2023Q4",
+          "d_npl_pp": -0.73,
+          "adjusted_change_pp": -0.304394
+        },
+        {
+          "period": "2024Q1",
+          "d_npl_pp": -0.17,
+          "adjusted_change_pp": -0.17
+        },
+        {
+          "period": "2024Q2",
+          "d_npl_pp": 0.24,
+          "adjusted_change_pp": 0.341887
+        },
+        {
+          "period": "2024Q3",
+          "d_npl_pp": -0.27,
+          "adjusted_change_pp": -0.135861
+        },
+        {
+          "period": "2024Q4",
+          "d_npl_pp": -0.61,
+          "adjusted_change_pp": -0.184394
+        },
+        {
+          "period": "2025Q1",
+          "d_npl_pp": 0.54,
+          "adjusted_change_pp": 0.54
+        },
+        {
+          "period": "2025Q2",
+          "d_npl_pp": -0.77,
+          "adjusted_change_pp": -0.668113
+        },
+        {
+          "period": "2025Q3",
+          "d_npl_pp": -0.46,
+          "adjusted_change_pp": -0.325861
+        },
+        {
+          "period": "2025Q4",
+          "d_npl_pp": -0.18,
+          "adjusted_change_pp": 0.245606
+        },
+        {
+          "period": "2026Q1",
+          "d_npl_pp": 0.25,
+          "adjusted_change_pp": 0.25
+        },
+        {
+          "period": "2026Q2",
+          "d_npl_pp": -0.3,
+          "adjusted_change_pp": -0.198113
+        },
+        {
+          "period": "2026Q3",
+          "d_npl_pp": -0.16,
+          "adjusted_change_pp": -0.025861
+        }
+      ]
+    }
+  ],
+  "heterogeneity": {
+    "pre_period": "2021Q1–2022Q4",
+    "high_banks": [
+      "NVB",
+      "VPB",
+      "VBB",
+      "BVB",
+      "PGB",
+      "ABB",
+      "VIB",
+      "SHB",
+      "EIB",
+      "SGB",
+      "OCB",
+      "KLB",
+      "VAB"
+    ],
+    "q4_high_npl": {
+      "coef_pp": -0.336429,
+      "ci95": [
+        -0.836216,
+        0.163358
+      ],
+      "p": 0.17822563,
+      "p_wild_bootstrap": null,
+      "n": 388,
+      "clusters": 27
+    },
+    "q4_state": {
+      "coef_pp": -0.017434,
+      "ci95": [
+        -0.416318,
+        0.38145
+      ],
+      "p": 0.92910237,
+      "p_wild_bootstrap": null,
+      "n": 388,
+      "clusters": 27
+    }
+  },
+  "linkage": {
+    "roa_absent": true,
+    "coverage_q4": {
+      "coef_pp": 13.088636,
+      "ci95": [
+        6.213699,
+        19.963573
+      ],
+      "p": 0.0005858,
+      "p_wild_bootstrap": null,
+      "n": 574,
+      "clusters": 27
+    },
+    "nim_q4": {
+      "coef_pp": 0.009852,
+      "ci95": [
+        -0.044649,
+        0.064353
+      ],
+      "p": 0.7132265,
+      "p_wild_bootstrap": null,
+      "n": 585,
+      "clusters": 27
+    },
+    "loan_growth_q4": {
+      "coef_pp": -0.076852,
+      "ci95": [
+        -0.51614,
+        0.362436
+      ],
+      "p": 0.72204494,
+      "p_wild_bootstrap": null,
+      "n": 614,
+      "clusters": 27
+    },
+    "roa_q4": null
+  },
+  "market": {
+    "car_by_day": [
+      {
+        "group": "all",
+        "day": -10,
+        "n": 596,
+        "mean_car_pct": -0.118489,
+        "ci95": [
+          -0.261348,
+          0.024371
+        ]
+      },
+      {
+        "group": "all",
+        "day": -9,
+        "n": 596,
+        "mean_car_pct": -0.19957,
+        "ci95": [
+          -0.395263,
+          -0.003878
+        ]
+      },
+      {
+        "group": "all",
+        "day": -8,
+        "n": 596,
+        "mean_car_pct": -0.204843,
+        "ci95": [
+          -0.400943,
+          -0.008743
+        ]
+      },
+      {
+        "group": "all",
+        "day": -7,
+        "n": 596,
+        "mean_car_pct": -0.200246,
+        "ci95": [
+          -0.460517,
+          0.060025
+        ]
+      },
+      {
+        "group": "all",
+        "day": -6,
+        "n": 596,
+        "mean_car_pct": -0.297573,
+        "ci95": [
+          -0.558187,
+          -0.036958
+        ]
+      },
+      {
+        "group": "all",
+        "day": -5,
+        "n": 596,
+        "mean_car_pct": -0.230742,
+        "ci95": [
+          -0.54929,
+          0.087807
+        ]
+      },
+      {
+        "group": "all",
+        "day": -4,
+        "n": 596,
+        "mean_car_pct": -0.417404,
+        "ci95": [
+          -0.788875,
+          -0.045933
+        ]
+      },
+      {
+        "group": "all",
+        "day": -3,
+        "n": 596,
+        "mean_car_pct": -0.44298,
+        "ci95": [
+          -0.845953,
+          -0.040007
+        ]
+      },
+      {
+        "group": "all",
+        "day": -2,
+        "n": 596,
+        "mean_car_pct": -0.312834,
+        "ci95": [
+          -0.723745,
+          0.098077
+        ]
+      },
+      {
+        "group": "all",
+        "day": -1,
+        "n": 596,
+        "mean_car_pct": -0.161545,
+        "ci95": [
+          -0.536489,
+          0.213399
+        ]
+      },
+      {
+        "group": "all",
+        "day": 0,
+        "n": 596,
+        "mean_car_pct": -0.143951,
+        "ci95": [
+          -0.52727,
+          0.239367
+        ]
+      },
+      {
+        "group": "all",
+        "day": 1,
+        "n": 596,
+        "mean_car_pct": 0.040182,
+        "ci95": [
+          -0.312673,
+          0.393038
+        ]
+      },
+      {
+        "group": "all",
+        "day": 2,
+        "n": 596,
+        "mean_car_pct": 0.206318,
+        "ci95": [
+          -0.117852,
+          0.530488
+        ]
+      },
+      {
+        "group": "all",
+        "day": 3,
+        "n": 596,
+        "mean_car_pct": 0.16004,
+        "ci95": [
+          -0.171269,
+          0.49135
+        ]
+      },
+      {
+        "group": "all",
+        "day": 4,
+        "n": 596,
+        "mean_car_pct": 0.073913,
+        "ci95": [
+          -0.332938,
+          0.480765
+        ]
+      },
+      {
+        "group": "all",
+        "day": 5,
+        "n": 596,
+        "mean_car_pct": -0.023333,
+        "ci95": [
+          -0.402251,
+          0.355585
+        ]
+      },
+      {
+        "group": "all",
+        "day": 6,
+        "n": 596,
+        "mean_car_pct": 0.030209,
+        "ci95": [
+          -0.38328,
+          0.443698
+        ]
+      },
+      {
+        "group": "all",
+        "day": 7,
+        "n": 596,
+        "mean_car_pct": 0.061148,
+        "ci95": [
+          -0.336107,
+          0.458403
+        ]
+      },
+      {
+        "group": "all",
+        "day": 8,
+        "n": 596,
+        "mean_car_pct": -0.014779,
+        "ci95": [
+          -0.428875,
+          0.399317
+        ]
+      },
+      {
+        "group": "all",
+        "day": 9,
+        "n": 596,
+        "mean_car_pct": -0.378373,
+        "ci95": [
+          -0.799164,
+          0.042417
+        ]
+      },
+      {
+        "group": "all",
+        "day": 10,
+        "n": 596,
+        "mean_car_pct": -0.425803,
+        "ci95": [
+          -0.897944,
+          0.046337
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -10,
+        "n": 134,
+        "mean_car_pct": -0.062075,
+        "ci95": [
+          -0.465333,
+          0.341182
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -9,
+        "n": 134,
+        "mean_car_pct": -0.422939,
+        "ci95": [
+          -0.934267,
+          0.08839
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -8,
+        "n": 134,
+        "mean_car_pct": -0.788435,
+        "ci95": [
+          -1.363313,
+          -0.213557
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -7,
+        "n": 134,
+        "mean_car_pct": -0.914128,
+        "ci95": [
+          -1.59846,
+          -0.229795
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -6,
+        "n": 134,
+        "mean_car_pct": -0.60792,
+        "ci95": [
+          -1.273479,
+          0.057639
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -5,
+        "n": 134,
+        "mean_car_pct": -0.231415,
+        "ci95": [
+          -1.036791,
+          0.573962
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -4,
+        "n": 134,
+        "mean_car_pct": -0.269176,
+        "ci95": [
+          -1.17284,
+          0.634488
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -3,
+        "n": 134,
+        "mean_car_pct": 0.132999,
+        "ci95": [
+          -0.752997,
+          1.018994
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -2,
+        "n": 134,
+        "mean_car_pct": 0.332032,
+        "ci95": [
+          -0.546527,
+          1.210592
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": -1,
+        "n": 134,
+        "mean_car_pct": 0.329741,
+        "ci95": [
+          -0.469874,
+          1.129356
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 0,
+        "n": 134,
+        "mean_car_pct": 0.323246,
+        "ci95": [
+          -0.498354,
+          1.144845
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 1,
+        "n": 134,
+        "mean_car_pct": 0.617014,
+        "ci95": [
+          -0.327035,
+          1.561063
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 2,
+        "n": 134,
+        "mean_car_pct": 0.662521,
+        "ci95": [
+          -0.203059,
+          1.5281
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 3,
+        "n": 134,
+        "mean_car_pct": 0.802009,
+        "ci95": [
+          -0.103152,
+          1.70717
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 4,
+        "n": 134,
+        "mean_car_pct": 1.094277,
+        "ci95": [
+          0.112963,
+          2.075592
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 5,
+        "n": 134,
+        "mean_car_pct": 0.764916,
+        "ci95": [
+          -0.215595,
+          1.745428
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 6,
+        "n": 134,
+        "mean_car_pct": 0.714054,
+        "ci95": [
+          -0.304969,
+          1.733076
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 7,
+        "n": 134,
+        "mean_car_pct": 0.662356,
+        "ci95": [
+          -0.303102,
+          1.627815
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 8,
+        "n": 134,
+        "mean_car_pct": 0.50468,
+        "ci95": [
+          -0.451119,
+          1.460479
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 9,
+        "n": 134,
+        "mean_car_pct": 0.078133,
+        "ci95": [
+          -0.857604,
+          1.01387
+        ]
+      },
+      {
+        "group": "Q4",
+        "day": 10,
+        "n": 134,
+        "mean_car_pct": -0.079569,
+        "ci95": [
+          -1.079649,
+          0.92051
+        ]
+      }
+    ],
+    "regressions": {
+      "raw": {
+        "n": 567,
+        "clusters": 27,
+        "period": [
+          "2021Q2",
+          "2026Q3"
+        ],
+        "terms": {
+          "d_npl_pct": {
+            "coef_pp": -1.208524,
+            "ci95": [
+              -1.589773,
+              -0.827275
+            ],
+            "p": 6.6e-07,
+            "p_wild_bootstrap": null,
+            "n": 567,
+            "clusters": 27
+          }
+        },
+        "unavailable_reason": null
+      },
+      "raw_q4": {
+        "n": 131,
+        "clusters": 27,
+        "period": [
+          "2021Q4",
+          "2025Q4"
+        ],
+        "terms": {
+          "d_npl_pct": {
+            "coef_pp": -1.439603,
+            "ci95": [
+              -2.587743,
+              -0.291463
+            ],
+            "p": 0.01597948,
+            "p_wild_bootstrap": null,
+            "n": 131,
+            "clusters": 27
+          }
+        },
+        "unavailable_reason": null
+      },
+      "adjusted": {
+        "n": 567,
+        "clusters": 27,
+        "period": [
+          "2021Q2",
+          "2026Q3"
+        ],
+        "terms": {
+          "adjusted_d_npl_pct": {
+            "coef_pp": -1.154157,
+            "ci95": [
+              -1.644019,
+              -0.664295
+            ],
+            "p": 5.086e-05,
+            "p_wild_bootstrap": null,
+            "n": 567,
+            "clusters": 27
+          }
+        },
+        "unavailable_reason": null
+      },
+      "adjusted_q4": {
+        "n": 131,
+        "clusters": 27,
+        "period": [
+          "2021Q4",
+          "2025Q4"
+        ],
+        "terms": {
+          "adjusted_d_npl_pct": {
+            "coef_pp": -1.4622,
+            "ci95": [
+              -2.553575,
+              -0.370825
+            ],
+            "p": 0.01060115,
+            "p_wild_bootstrap": null,
+            "n": 131,
+            "clusters": 27
+          }
+        },
+        "unavailable_reason": null
+      }
+    },
+    "events_with_car": 596,
+    "eligible_bank_quarters": 614,
+    "period_start": "2021Q1",
+    "period_end": "2026Q3",
+    "reading_vi": "Có 596/614 sự kiện có CAR. Hệ số Quý 4 với NPL gốc là -1.44 (n=131, 27 cụm ngân hàng, KTC 95% [-2.59, -0.29], p=0.0160); với NPL đã khử mùa vụ là -1.46 (n=131, 27 cụm ngân hàng, KTC 95% [-2.55, -0.37], p=0.0106). Liên hệ trong Quý 4 vẫn có ý nghĩa ở ngưỡng 5% sau khi loại phần biến động NPL dự kiến.",
+    "reading_en": "596/614 events have a CAR. Q4 coefficient on the raw NPL change: -1.440. Q4 coefficient on the seasonally adjusted change: -1.462."
+  },
+  "forecast": {
+    "backtest": [
+      {
+        "period": "2025Q1",
+        "n": 25,
+        "npl_pct": 2.8364,
+        "predicted_npl_pct": 3.1993,
+        "last_value": 2.8868,
+        "seasonal_naive": 3.5196
+      },
+      {
+        "period": "2025Q2",
+        "n": 26,
+        "npl_pct": 2.6908,
+        "predicted_npl_pct": 3.0652,
+        "last_value": 2.8446,
+        "seasonal_naive": 3.72
+      },
+      {
+        "period": "2025Q3",
+        "n": 26,
+        "npl_pct": 2.6346,
+        "predicted_npl_pct": 2.7801,
+        "last_value": 2.6908,
+        "seasonal_naive": 3.5665
+      },
+      {
+        "period": "2025Q4",
+        "n": 24,
+        "npl_pct": 2.5125,
+        "predicted_npl_pct": 2.3915,
+        "last_value": 2.6183,
+        "seasonal_naive": 2.9
+      },
+      {
+        "period": "2026Q1",
+        "n": 26,
+        "npl_pct": 2.5254,
+        "predicted_npl_pct": 2.7202,
+        "last_value": 2.4096,
+        "seasonal_naive": 2.8419
+      },
+      {
+        "period": "2026Q2",
+        "n": 23,
+        "npl_pct": 2.2804,
+        "predicted_npl_pct": 2.625,
+        "last_value": 2.4017,
+        "seasonal_naive": 2.7587
+      },
+      {
+        "period": "2026Q3",
+        "n": 21,
+        "npl_pct": 2.2914,
+        "predicted_npl_pct": 2.2901,
+        "last_value": 2.1971,
+        "seasonal_naive": 2.6043
+      }
+    ],
+    "mae": {
+      "model": 0.403182,
+      "last_value": 0.337076,
+      "seasonal_naive": 0.894094
+    },
+    "train_through": "2024Q4",
+    "test_period": [
+      "2025Q1",
+      "2026Q3"
+    ],
+    "reading_vi": "Trên 171 ngân hàng-quý giai đoạn 2025Q1–2026Q3, MAE mô hình là 0.40 điểm %, so với 0.34 khi giữ mức gần nhất và 0.89 khi dùng cùng quý năm trước.",
+    "reading_en": "On 171 bank-quarters from 2025Q1 to 2026Q3, MAE is 0.40 pp for the model, 0.34 pp for the last value, and 0.89 pp for the same quarter last year."
+  },
+  "robustness": {
+    "leave_one_bank_out": {
+      "min": -0.468976,
+      "max": -0.397795
+    },
+    "drop_2021_2022": {
+      "coef_pp": -0.611502,
+      "ci95": [
+        -0.860848,
+        -0.362156
+      ],
+      "p": 3.016e-05,
+      "p_wild_bootstrap": 0.001,
+      "n": 388,
+      "clusters": 27
+    },
+    "state_vs_private": {
+      "state": {
+        "coef_pp": -0.448571,
+        "ci95": [
+          -0.825655,
+          -0.071488
+        ],
+        "p": 0.03611626,
+        "p_wild_bootstrap": 0.262,
+        "n": 64,
+        "clusters": 3
+      },
+      "private": {
+        "coef_pp": -0.422881,
+        "ci95": [
+          -0.592273,
+          -0.25349
+        ],
+        "p": 3.106e-05,
+        "p_wild_bootstrap": 0.001,
+        "n": 512,
+        "clusters": 24
+      }
+    },
+    "state_vs_private_effects": {
+      "state": [
+        {
+          "quarter": 2,
+          "coef_pp": -0.125385,
+          "ci95": [
+            -0.458715,
+            0.207945
+          ],
+          "p": 0.24697148,
+          "p_wild_bootstrap": 0.521,
+          "n": 64,
+          "clusters": 3
+        },
+        {
+          "quarter": 3,
+          "coef_pp": -0.054274,
+          "ci95": [
+            -0.31386,
+            0.205311
+          ],
+          "p": 0.46327549,
+          "p_wild_bootstrap": 0.478,
+          "n": 64,
+          "clusters": 3
+        },
+        {
+          "quarter": 4,
+          "coef_pp": -0.448571,
+          "ci95": [
+            -0.825655,
+            -0.071488
+          ],
+          "p": 0.03611626,
+          "p_wild_bootstrap": 0.262,
+          "n": 64,
+          "clusters": 3
+        }
+      ],
+      "private": [
+        {
+          "quarter": 2,
+          "coef_pp": -0.098722,
+          "ci95": [
+            -0.383138,
+            0.185693
+          ],
+          "p": 0.47996158,
+          "p_wild_bootstrap": 0.533,
+          "n": 512,
+          "clusters": 24
+        },
+        {
+          "quarter": 3,
+          "coef_pp": -0.1445,
+          "ci95": [
+            -0.225878,
+            -0.063122
+          ],
+          "p": 0.0012616,
+          "p_wild_bootstrap": 0.002,
+          "n": 512,
+          "clusters": 24
+        },
+        {
+          "quarter": 4,
+          "coef_pp": -0.422881,
+          "ci95": [
+            -0.592273,
+            -0.25349
+          ],
+          "p": 3.106e-05,
+          "p_wild_bootstrap": 0.001,
+          "n": 512,
+          "clusters": 24
+        }
+      ]
+    },
+    "drop_effects": [
+      {
+        "quarter": 2,
+        "coef_pp": -0.131325,
+        "ci95": [
+          -0.361936,
+          0.099287
+        ],
+        "p": 0.25239772,
+        "p_wild_bootstrap": 0.241,
+        "n": 388,
+        "clusters": 27
+      },
+      {
+        "quarter": 3,
+        "coef_pp": -0.233492,
+        "ci95": [
+          -0.370489,
+          -0.096496
+        ],
+        "p": 0.00168174,
+        "p_wild_bootstrap": 0.001,
+        "n": 388,
+        "clusters": 27
+      },
+      {
+        "quarter": 4,
+        "coef_pp": -0.611502,
+        "ci95": [
+          -0.860848,
+          -0.362156
+        ],
+        "p": 3.016e-05,
+        "p_wild_bootstrap": 0.001,
+        "n": 388,
+        "clusters": 27
+      }
+    ],
+    "median_regression": {
+      "coef_pp": -0.32,
+      "ci95": [
+        -0.394341,
+        -0.245659
+      ],
+      "p": 0.0,
+      "p_wild_bootstrap": null,
+      "n": 576,
+      "clusters": null
+    },
+    "year_fe": {
+      "coef_pp": -0.465511,
+      "ci95": [
+        -0.633763,
+        -0.297258
+      ],
+      "p": 5.54e-06,
+      "p_wild_bootstrap": 0.001,
+      "n": 576,
+      "clusters": 27
+    }
+  },
+  "method": [
+    {
+      "id": "M1",
+      "name_vi": "Mức NPL",
+      "name_en": "NPL level",
+      "spec_vi": "Trung vị và trung bình NPL, bao phủ và LDR theo quý, theo ngân hàng và theo sở hữu. Mỗi ngân hàng-quý một trọng số.",
+      "spec_en": "Median and mean of NPL, coverage and LDR by quarter, by bank and by ownership. Each bank-quarter has equal weight.",
+      "n": 27,
+      "reading_vi": "NPL trung vị là 1.58% ở 2021Q1 và 2.22% ở 2026Q3. Có 0 quan sát ROA hợp lệ. Bảng sở hữu cho mỗi ngân hàng-quý trọng số bằng nhau.",
+      "reading_en": "Median NPL is 1.58% in 2021Q1 and 2.22% in 2026Q3. Valid ROA observations: 0. Each bank-quarter has equal weight.",
+      "does_not_show_vi": "Trung vị và trung bình mẫu không phải tỷ lệ nợ xấu gộp theo dư nợ của toàn hệ thống.",
+      "does_not_show_en": "The sample median and mean are not the loan-weighted NPL ratio of the whole system."
+    },
+    {
+      "id": "M2",
+      "name_vi": "Hiệu ứng quý",
+      "name_en": "Quarter effect",
+      "spec_vi": "Biến động NPL (điểm phần trăm) trên biến giả quý và hiệu ứng cố định ngân hàng. Sai số chuẩn cụm theo ngân hàng. Quý tham chiếu là quý 1. Chỉ quý liên tiếp.",
+      "spec_en": "NPL change (percentage points) on quarter dummies and bank fixed effects. Standard errors clustered by bank. Reference quarter is Q1. Consecutive quarters only.",
+      "n": 576,
+      "reading_vi": "So với Quý 1 của cùng ngân hàng, hệ số biến động NPL Quý 4 là -0.43 (n=576, 27 cụm ngân hàng, KTC 95% [-0.58, -0.27], p<0.0001, p bootstrap=0.0010) điểm %.",
+      "reading_en": "Versus the same bank's Q1, the Q4 NPL-change coefficient is -0.426 pp (n=576, 27 bank clusters, 95% CI -0.577 to -0.275, p=<0.0001, wild bootstrap p=0.0010).",
+      "does_not_show_vi": "Hệ số mùa vụ mô tả biến động báo cáo. Nguyên nhân có thể gồm xử lý nợ, tăng dư nợ hoặc thay đổi chất lượng tín dụng.",
+      "does_not_show_en": "The quarter coefficient describes the reported change. The cause may include write-offs, loan growth, or a change in credit quality."
+    },
+    {
+      "id": "M3",
+      "name_vi": "Giảm rồi tăng",
+      "name_en": "Down then up",
+      "spec_vi": "Biến động quý 1 năm sau trên biến động quý 4, hiệu ứng cố định ngân hàng, và tỷ lệ cặp giảm rồi tăng.",
+      "spec_en": "Next Q1 change on the Q4 change, bank fixed effects, and the share of down-then-up pairs.",
+      "n": 132,
+      "reading_vi": "NPL giảm trong Quý 4 rồi tăng trong Quý 1 kế tiếp ở 73/132 cặp. Hệ số hồi quy Quý 1 lên Quý 4 là 0.46 (n=132, 27 cụm ngân hàng, KTC 95% [0.32, 0.60], p<0.0001).",
+      "reading_en": "NPL fell in Q4 and rose in the next Q1 in 73/132 pairs. The regression of the next Q1 change on the Q4 change is 0.458 (n=132, 27 bank clusters, 95% CI 0.317 to 0.600).",
+      "does_not_show_vi": "Hai chênh lệch dùng chung mức NPL tại Quý 4. Mối liên hệ không chứng minh nợ đã được chuyển kỳ.",
+      "does_not_show_en": "The two changes share the Q4 NPL level. The link does not prove that the loan was moved into the next quarter."
+    },
+    {
+      "id": "M4",
+      "name_vi": "Khác biệt theo nhóm",
+      "name_en": "Group differences",
+      "spec_vi": "Sau 2022, quý 4 tương tác với nhóm NPL cao giai đoạn 2021–2022 và với nhóm nhà nước.",
+      "spec_en": "After 2022, Q4 interacted with high 2021–2022 NPL and with state ownership.",
+      "n": 388,
+      "reading_vi": "Sau 2022, chênh lệch hiệu ứng Quý 4 của nhóm NPL cao so với nhóm còn lại là -0.34 (n=388, 27 cụm ngân hàng, KTC 95% [-0.84, 0.16], p=0.1782) điểm %. Chênh lệch của nhóm Nhà nước là -0.02 (n=388, 27 cụm ngân hàng, KTC 95% [-0.42, 0.38], p=0.9291) điểm %.",
+      "reading_en": "After 2022, the Q4 gap for the high-NPL group versus the rest is -0.336 pp. The state-group gap is -0.017 pp.",
+      "does_not_show_vi": "Tương tác so sánh mẫu hình theo nhóm. Thiết kế không nhận diện tác động nhân quả của sở hữu hoặc NPL ban đầu.",
+      "does_not_show_en": "The interaction compares patterns across groups. The design does not identify a causal effect of ownership or of the starting NPL."
+    },
+    {
+      "id": "M5",
+      "name_vi": "Liên hệ với tỷ lệ khác",
+      "name_en": "Link with other ratios",
+      "spec_vi": "Cùng thiết kế M2 cho biến động bao phủ, NIM và tăng trưởng dư nợ. ROA không có trong nguồn.",
+      "spec_en": "The M2 design on the change in coverage, NIM and loan growth. ROA is not in the vendor feed.",
+      "n": 574,
+      "reading_vi": "So với Quý 1, hệ số Quý 4 của thay đổi bao phủ là 13.09 (n=574, 27 cụm ngân hàng, KTC 95% [6.21, 19.96], p=0.0006) điểm %. Silver không có cặp ROA liên tiếp đủ để ước lượng mô hình.",
+      "reading_en": "Versus Q1, the Q4 coefficient on the coverage change is 13.089 pp (95% CI 6.214 to 19.964, n=574). Silver has no consecutive ROA pair, so that model is not estimated.",
+      "does_not_show_vi": "Các thay đổi đồng thời có thể phản ánh mẫu số chung, điều chỉnh kế toán hoặc yếu tố khác chưa đo được.",
+      "does_not_show_en": "Changes that move together can reflect a shared denominator, an accounting adjustment, or something else this file does not measure. ROA is absent from the vendor feed."
+    },
+    {
+      "id": "M6",
+      "name_vi": "Phản ứng giá",
+      "name_en": "Price reaction",
+      "spec_vi": "Lợi suất bất thường tích lũy so với VNINDEX, cửa sổ ước lượng -250 đến -30 phiên, cửa sổ sự kiện hạn công bố -10 đến +10.",
+      "spec_en": "Cumulative abnormal return versus VNINDEX. Estimation window -250 to -30 sessions. Event window deadline -10 to +10.",
+      "n": 596,
+      "reading_vi": "Có 596/614 sự kiện có CAR. Hệ số Quý 4 với NPL gốc là -1.44 (n=131, 27 cụm ngân hàng, KTC 95% [-2.59, -0.29], p=0.0160); với NPL đã khử mùa vụ là -1.46 (n=131, 27 cụm ngân hàng, KTC 95% [-2.55, -0.37], p=0.0106). Liên hệ trong Quý 4 vẫn có ý nghĩa ở ngưỡng 5% sau khi loại phần biến động NPL dự kiến.",
+      "reading_en": "596/614 events have a CAR. Q4 coefficient on the raw NPL change: -1.440. Q4 coefficient on the seasonally adjusted change: -1.462.",
+      "does_not_show_vi": "Cửa sổ lấy hạn công bố làm mốc. Mô hình không quan sát ngày công bố thực tế, kỳ vọng của nhà đầu tư hoặc loại trừ các tin tức khác trong cùng cửa sổ.",
+      "does_not_show_en": "The window is anchored on the disclosure deadline. The model does not observe the actual release date, what investors expected, or other news in the same window."
+    },
+    {
+      "id": "M7",
+      "name_vi": "Dự báo quý sau",
+      "name_en": "Next-quarter forecast",
+      "spec_vi": "NPL quý sau từ mức gần nhất cộng hiệu ứng quý và hiệu ứng ngân hàng, huấn luyện đến 2024Q4. Khoảng 80% từ phân vị sai số 10% và 90%.",
+      "spec_en": "Next-quarter NPL from the last level plus the quarter effect and the bank effect, trained through 2024Q4. The 80% band uses the 10th and 90th residual percentiles.",
+      "n": 171,
+      "reading_vi": "Trên 171 ngân hàng-quý giai đoạn 2025Q1–2026Q3, MAE mô hình là 0.40 điểm %, so với 0.34 khi giữ mức gần nhất và 0.89 khi dùng cùng quý năm trước.",
+      "reading_en": "On 171 bank-quarters from 2025Q1 to 2026Q3, MAE is 0.40 pp for the model, 0.34 pp for the last value, and 0.89 pp for the same quarter last year.",
+      "does_not_show_vi": "Kiểm định dùng dữ liệu lịch sử hiện có. Khoảng dự báo thực nghiệm không bảo đảm độ bao phủ trong tương lai.",
+      "does_not_show_en": "The test uses the history on file. The empirical forecast band does not guarantee future coverage."
+    }
+  ],
+  "limitations": [
+    {
+      "vi": "Trung vị và trung bình mẫu không phải tỷ lệ nợ xấu gộp theo dư nợ của toàn hệ thống.",
+      "en": "The sample median and mean are not the loan-weighted NPL ratio of the whole system."
+    },
+    {
+      "vi": "Hệ số mùa vụ mô tả biến động báo cáo. Nguyên nhân có thể gồm xử lý nợ, tăng dư nợ hoặc thay đổi chất lượng tín dụng.",
+      "en": "The quarter coefficient describes the reported change. The cause may include write-offs, loan growth, or a change in credit quality."
+    },
+    {
+      "vi": "Hai chênh lệch dùng chung mức NPL tại Quý 4. Mối liên hệ không chứng minh nợ đã được chuyển kỳ.",
+      "en": "The two changes share the Q4 NPL level. The link does not prove that the loan was moved into the next quarter."
+    },
+    {
+      "vi": "Tương tác so sánh mẫu hình theo nhóm. Thiết kế không nhận diện tác động nhân quả của sở hữu hoặc NPL ban đầu.",
+      "en": "The interaction compares patterns across groups. The design does not identify a causal effect of ownership or of the starting NPL."
+    },
+    {
+      "vi": "Các thay đổi đồng thời có thể phản ánh mẫu số chung, điều chỉnh kế toán hoặc yếu tố khác chưa đo được.",
+      "en": "Changes that move together can reflect a shared denominator, an accounting adjustment, or something else this file does not measure. ROA is absent from the vendor feed."
+    },
+    {
+      "vi": "Cửa sổ lấy hạn công bố làm mốc. Mô hình không quan sát ngày công bố thực tế, kỳ vọng của nhà đầu tư hoặc loại trừ các tin tức khác trong cùng cửa sổ.",
+      "en": "The window is anchored on the disclosure deadline. The model does not observe the actual release date, what investors expected, or other news in the same window."
+    },
+    {
+      "vi": "Kiểm định dùng dữ liệu lịch sử hiện có. Khoảng dự báo thực nghiệm không bảo đảm độ bao phủ trong tương lai.",
+      "en": "The test uses the history on file. The empirical forecast band does not guarantee future coverage."
+    }
+  ],
+  "legal": [
+    {
+      "ref": "Thông tư 96/2020/TT-BTC, khoản 3 Điều 14",
+      "text_vi": "Hạn công bố dùng trong nghiên cứu sự kiện là ngày kết thúc quý cộng 30 ngày cho báo cáo hợp nhất của công ty mẹ niêm yết.",
+      "text_en": "The event-study deadline is the quarter-end date plus 30 days for the consolidated report of a listed parent."
+    },
+    {
+      "ref": "Ghi chú nghiên cứu",
+      "text_vi": "Ghi chú nghiên cứu. Không phải khuyến nghị mua hoặc bán một ngân hàng.",
+      "text_en": "Research note. Not a recommendation to buy or sell a bank."
+    }
+  ],
+  "ai_use": [
+    {
+      "vi": "Hệ số, trung vị và tỷ lệ đảo chiều lấy từ results.json do statsmodels và pandas ước lượng. Mô hình ngôn ngữ không ước lượng các số đó.",
+      "en": "Coefficients, medians and reversal shares are copied from results.json, estimated with statsmodels and pandas. A language model did not estimate them."
+    },
+    {
+      "vi": "Trang này không gọi mô hình ngôn ngữ.",
+      "en": "This page does not call a language model."
+    }
+  ]
+}

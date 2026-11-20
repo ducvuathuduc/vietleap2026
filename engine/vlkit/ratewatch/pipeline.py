@@ -27,6 +27,7 @@ def main(argv=None):
     parser.add_argument("--credentials", type=Path, default=ROOT / ".env.local")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--snapshot", type=Path, default=ROOT / "web/seed/ratewatch/snapshot.json")
+    parser.add_argument("--geo", type=Path, help="Published province data from the geography pipeline")
     parser.add_argument("--fixture", type=Path, help="Fixture directory containing rates.csv and banks.yaml")
     parser.add_argument("--as-of", type=datetime.fromisoformat)
     args = parser.parse_args(argv)
@@ -38,6 +39,7 @@ def main(argv=None):
     rates_lake = args.rates_lake or args.lake
     bank_path = args.fixture / "banks.yaml" if args.fixture else args.banks
 
+    ingest_exit = 0
     if args.stage in {"all", "ingest"}:
         if args.fixture:
             parser.error("--fixture supports transform and publish")
@@ -63,8 +65,12 @@ def main(argv=None):
             ]
             log = ingest_sources(args.lake, run_id, providers)
         print(json.dumps(log, ensure_ascii=False))
-        if log["errors"] or rate_failed:
+        if rate_failed:
             return 1
+        if log["errors"]:
+            ingest_exit = 2 if log["records"] or not args.non_rate_only else 1
+        if args.stage == "ingest":
+            return ingest_exit
 
     db = args.out / "ratewatch.duckdb"
     if args.stage in {"all", "transform"}:
@@ -81,8 +87,11 @@ def main(argv=None):
         transform(db, rate_files, bank_path, sources)
     if args.stage in {"all", "publish"}:
         from .snapshot import publish
-        publish(db, args.snapshot, args.out, now=now)
-    return 0
+        logs = sorted((args.lake / "run_log").glob("*-nonrate.json"))
+        latest_log = json.loads(logs[-1].read_text(encoding="utf-8")) if logs and not args.fixture else None
+        geo = json.loads(args.geo.read_text(encoding="utf-8")) if args.geo else None
+        publish(db, args.snapshot, args.out, now=now, source_log=latest_log, geo=geo)
+    return ingest_exit
 
 
 if __name__ == "__main__":
