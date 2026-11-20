@@ -21,13 +21,6 @@ COPY <<'EOF' /usr/local/bin/pipeline-entrypoint
 set -e
 credentials=/usr/local/share/fiinquant.env
 
-if [ "$PIPELINE_MODE" = "ratewatch" ]; then
-  if [ -n "$FIINQUANT_USERNAME" ] && [ -n "$FIINQUANT_PASSWORD" ]; then
-    set -- --credentials "$credentials" "$@"
-  fi
-  exec python -m vlkit.ratewatch.pipeline "$@"
-fi
-
 : "${LAKE_BUCKET:?LAKE_BUCKET is required}"
 lake_uri="s3://$LAKE_BUCKET/lake/npl/"
 snapshot=web/seed/npl/snapshot.json
@@ -69,5 +62,3 @@ RUN chmod 755 /usr/local/bin/pipeline-entrypoint \
   && mkdir -p data/lake out web/seed/npl && chown -R pipeline:pipeline /job
 USER pipeline
 ENTRYPOINT ["pipeline-entrypoint"]
-# CMD args only apply to PIPELINE_MODE=ratewatch (--stage all); the default NPL chain is fixed.
-CMD ["--stage", "all"]

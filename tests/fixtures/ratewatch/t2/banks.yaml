@@ -1,7 +1,0 @@
-banks:
-  - code: STB
-    ticker: STB
-    name_vi: Ngân hàng TMCP Sài Gòn Thương Tín
-    name_en: Sacombank
-    ownership: private
-    rate_page: https://www.sacombank.com.vn/

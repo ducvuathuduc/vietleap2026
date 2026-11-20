@@ -14,7 +14,8 @@ from .notes_contract import GROUP_FIELDS, NPL_FIELDS
 GATE_COLUMNS = ["bank", "period", "gate", "status", "detail", "value", "threshold"]
 GROUP_TOL = 0.005
 ROLLFORWARD_TOL = 0.01
-NPL_TOL_PP = 0.10          # 10 basis points, in percentage points
+NPL_TOL_PP = 0.10          # the brief's tolerance, in percentage points (10 basis points)
+NPL_TOL_BP = 100.0 * NPL_TOL_PP   # the gate measures the gap in bp, so this is what it compares against
 
 
 def values_of(rows):
@@ -65,17 +66,17 @@ def our_npl_ratio(values):
 
 
 def npl_gate(values, vendor_pct):
-    """Our notes NPL ratio against the vendor's published ratio, both in percent."""
+    """Our notes NPL ratio against the vendor's published ratio, both in percent, compared in basis points."""
     ours = our_npl_ratio(values)
     if ours is None or vendor_pct is None:
         return {"gate": "npl_vs_vendor", "status": "skipped",
                 "detail": f"our ratio {_pct(ours)} vs vendor {_pct(vendor_pct)}", "value": None,
-                "threshold": NPL_TOL_PP}
-    gap_pp = 100.0 * (ours - vendor_pct)
-    status = "pass" if abs(gap_pp) <= NPL_TOL_PP else "fail"
+                "threshold": NPL_TOL_BP}
+    gap_bp = 100.0 * (ours - vendor_pct)
+    status = "pass" if abs(gap_bp) <= NPL_TOL_BP else "fail"
     return {"gate": "npl_vs_vendor", "status": status,
-            "detail": f"ours {ours:.2f}% vs vendor {vendor_pct:.2f}% (gap {gap_pp:+.1f} bp)",
-            "value": round(gap_pp, 4), "threshold": NPL_TOL_PP}
+            "detail": f"ours {ours:.2f}% vs vendor {vendor_pct:.2f}% (gap {gap_bp:+.1f} bp)",
+            "value": round(gap_bp, 4), "threshold": NPL_TOL_BP}
 
 
 def unit_gate(rows):

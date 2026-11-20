@@ -40,6 +40,10 @@ def test_numbers_and_units_follow_the_vietnamese_format():
     assert contract.unit_scale("Đơn vị: tỷ đồng") == 1.0
     assert contract.unit_scale("Đơn vị tính: Nghìn đồng") == 1e-6
     assert contract.unit_scale("no unit line") == 1.0
+    # the vision model copies the unit value, not the whole "Đơn vị tính:" line: TCB 2025Q3 came back "triệu đồng"
+    assert contract.unit_of("triệu đồng") == (0.001, "trieu")
+    assert contract.unit_of("Đơn vị tính: triệu đồng") == (0.001, "trieu")
+    assert contract.unit_of("triệu đồng. Cho vay khách hàng 766.709.929 và dự phòng rủi ro") == (1.0, "unknown")
 
 
 def test_text_reader_reads_loans_groups_and_the_provision_movement():
@@ -57,8 +61,10 @@ def test_text_reader_reads_loans_groups_and_the_provision_movement():
 def test_table_reader_skips_the_ma_so_column_and_uses_the_page_unit():
     tables = [(1, [["Chỉ tiêu", "Mã số", "Năm nay", "Năm trước"],
                    ["Cho vay khách hàng", "130", "1.234.567", "1.100.000"]])]
-    found = notes_text.read_tables(tables, scales={1: 0.001})
-    assert found["loans_customer"] == {"value_vnd_bn": 1234.567, "page": 1, "reader": "table", "unit": "unknown"}
+    found = notes_text.read_tables(tables, scales={1: 0.001}, units={1: "trieu"})
+    assert found["loans_customer"] == {"value_vnd_bn": 1234.567, "page": 1, "reader": "table", "unit": "trieu"}
+    # a page whose unit line the caller could not read is not silently labelled tỷ đồng
+    assert notes_text.read_tables(tables, scales={1: 0.001})["loans_customer"]["unit"] == "unknown"
 
 
 def test_provision_uses_are_magnitudes_while_a_reversal_stays_negative():

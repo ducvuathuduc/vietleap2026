@@ -1,9 +1,0 @@
-dataset: listed_firms
-analysis_table: gold.obt_integrated_listed_firms
-keys:
-  ticker: [Mã CK, Mã chứng khoán, ticker, symbol, stock code]
-sources:
-  - name: statements
-    kind: file
-    uri: ../../data/practice/vn_firms_2021.xlsx
-    license: Practice workbook; see docs/licenses.md for upstream terms before redistribution

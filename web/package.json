@@ -9,7 +9,6 @@
     "lint": "eslint",
     "test": "node --test \"src/**/*.test.ts\"",
     "e2e": "playwright test",
-    "eval:ai": "node src/lib/ratewatch/agent/eval/run-eval.ts",
     "eval:npl": "node src/lib/npl/agent/eval/run-eval.ts"
   },
   "dependencies": {

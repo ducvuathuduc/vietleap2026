@@ -1,7 +1,15 @@
+from contextlib import nullcontext
+
 import pytest
 
 from vlkit.npl.ingest.fiin import Collector, IngestError
-from tools.fiinquant.fetch_fiinquant import AuthError
+from tools.fiinquant.fetch_fiinquant import AuthError, HttpPolicy
+
+
+@pytest.fixture(autouse=True)
+def stub_vendor_transport(monkeypatch):
+    # Each operation below is a fake. The SDK's HTTP transports are never used.
+    monkeypatch.setattr(HttpPolicy, "install", lambda self: nullcontext())
 
 
 def fake_frame():

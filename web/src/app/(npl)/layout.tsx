@@ -12,7 +12,7 @@ export default async function NplLayout({ children }: { children: React.ReactNod
       <Suspense fallback={<header className="h-14 border-b border-border" />}>
         <SiteBar bankCount={snapshot.meta.n_banks} yearStart={yearStart} yearEnd={yearEnd} />
       </Suspense>
-      <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-3">{children}</div>
+      <main id="content" className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-3">{children}</main>
     </div>
   )
 }

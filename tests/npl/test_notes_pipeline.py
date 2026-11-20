@@ -182,6 +182,8 @@ def test_a_scan_without_the_vision_reader_reports_the_gap_instead_of_rows(tmp_pa
 
 
 def test_run_notes_writes_silver_gates_run_log_and_watermark_then_skips_the_same_bank_quarter(tmp_path, monkeypatch):
+    write_silver(tmp_path, "bank_quarter.parquet", pd.DataFrame([
+        {"ticker": "VCB", "period": period, "npl": 0.01} for period in ("2025Q1", "2025Q2")]))
     write_silver(tmp_path, notes_runner.LINKS, pd.DataFrame([
         {"bank": "VCB", "period": "2025Q1", "statement_type": "consolidated", "url": "https://x.test/q1.pdf",
          "found_by": "vietstock_static", "found_at": "now", "http_status": 200},
@@ -199,7 +201,7 @@ def test_run_notes_writes_silver_gates_run_log_and_watermark_then_skips_the_same
     gates = pd.read_csv(tmp_path / "silver/notes_gate.csv")
     status = dict(zip(gates["gate"], gates["status"]))
     assert status["groups_sum_to_loans"] == "pass" and status["provision_rollforward"] == "pass"
-    assert status["npl_vs_vendor"] == "skipped"      # no vendor panel in this lake: skipped, never passed
+    assert status["npl_vs_vendor"] == "pass"        # the vendor panel prints the ratio as a fraction, read as percent
     assert status["unit_scale"] == "pass"
     assert (tmp_path / "run_log" / f"{log['run_id']}.json").exists()
     marks = json.loads((tmp_path / "state/watermarks.json").read_text(encoding="utf-8"))
@@ -436,3 +438,95 @@ def test_gate_rows_accumulate_per_bank_quarter_instead_of_being_overwritten(tmp_
     assert set(gates["bank"]) == {"VCB", "STB"}          # the second run did not wipe the first bank's gates
     silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
     assert set(silver["bank"]) == {"VCB", "STB"}
+
+
+def _row(bank, period, unit, value=1000.0):
+    return {"bank": bank, "period": period, "field": "loans_customer", "basis": "point",
+            "value_vnd_bn": value, "page": 1, "source_url": "https://x.test/a.pdf",
+            "statement_type": "consolidated", "unit": unit, "reader": "vision_a,vision_b",
+            "grade": "verified", "raw_sha256": "sha"}
+
+
+def _gates(bank, period, status):
+    return [{"bank": bank, "period": period, "gate": gate, "status": status, "detail": "", "value": None,
+             "threshold": None} for gate in ("groups_sum_to_loans", "npl_vs_vendor", "unit_scale")]
+
+
+def test_a_fresh_read_beats_the_stale_quarantined_copy_of_the_same_grade(tmp_path):
+    stale = tmp_path / "stale"
+    stale.mkdir()
+    (stale / "a.json").write_text(json.dumps({"rows": [_row("TCB", "2025Q3", "unknown", 766.7)],
+                                              "gates": _gates("TCB", "2025Q3", "fail"), "stats": {}}),
+                                  encoding="utf-8")
+    notes_runner.merge_fragment_dir(tmp_path, stale, "run1")
+    assert set(pd.read_parquet(tmp_path / "silver/notes_quarantine.parquet")["bank"]) == {"TCB"}
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    (fresh / "b.json").write_text(json.dumps({"rows": [_row("TCB", "2025Q3", "trieu", 766700.0)],
+                                              "gates": _gates("TCB", "2025Q3", "pass"), "stats": {}}),
+                                  encoding="utf-8")
+    notes_runner.merge_fragment_dir(tmp_path, fresh, "run2")
+    silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
+    assert silver.iloc[0]["unit"] == "trieu" and silver.iloc[0]["value_vnd_bn"] == 766700.0
+    assert len(pd.read_parquet(tmp_path / "silver/notes_quarantine.parquet")) == 0
+
+
+def test_run_notes_upserts_gates_and_quarantines_bank_quarters_that_do_not_pass(tmp_path, monkeypatch):
+    write_silver(tmp_path, "bank_quarter.parquet", pd.DataFrame([
+        {"ticker": bank, "period": "2025Q1", "npl": 0.01} for bank in ("VCB", "MBB")]))
+    write_silver(tmp_path, notes_runner.LINKS, pd.DataFrame([
+        {"bank": bank, "period": "2025Q1", "statement_type": "consolidated",
+         "url": f"https://x.test/{bank}.pdf", "found_by": "vietstock_static", "found_at": "now",
+         "http_status": 200} for bank in ("VCB", "MBB")]))
+    fetcher, _ = fake_fetcher({"https://x.test/VCB.pdf": b"%PDF-vcb", "https://x.test/MBB.pdf": b"%PDF-mbb"})
+    monkeypatch.setattr(notes_runner, "fast_page_texts", lambda content: fixtures(content)[0])
+    monkeypatch.setattr(notes_runner, "page_tables", lambda content, only=None: fixtures(content)[1])
+    for bank in ("VCB", "MBB"):
+        notes_runner.run_notes(lake=tmp_path, banks=[bank], periods=["2025Q1"], fetcher=fetcher,
+                               vision=object(), use_vision=False)
+    gates = pd.read_csv(tmp_path / "silver/notes_gate.csv")
+    assert set(gates["bank"]) == {"VCB", "MBB"}          # the second run did not wipe the first bank's gates
+    silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
+    assert set(silver["bank"]) == {"VCB", "MBB"}
+    marks = json.loads((tmp_path / "state/watermarks.json").read_text(encoding="utf-8"))
+    assert marks["notes_bank_last"] == {"VCB": "2025Q1", "MBB": "2025Q1"}
+
+
+def test_run_notes_keeps_a_bank_quarter_whose_unit_line_is_unreadable_out_of_silver(tmp_path, monkeypatch):
+    write_silver(tmp_path, notes_runner.LINKS, pd.DataFrame([
+        {"bank": "VCB", "period": "2025Q1", "statement_type": "consolidated", "url": "https://x.test/q1.pdf",
+         "found_by": "vietstock_static", "found_at": "now", "http_status": 200}]))
+    fetcher, _ = fake_fetcher({"https://x.test/q1.pdf": b"%PDF-q1"})
+    monkeypatch.setattr(notes_runner, "fast_page_texts",
+                        lambda content: [page.replace("Đơn vị tính: Triệu VND\n", "") for page in fixtures(content)[0]])
+    monkeypatch.setattr(notes_runner, "page_tables", lambda content, only=None: [])
+    notes_runner.run_notes(lake=tmp_path, banks=["VCB"], periods=["2025Q1"], fetcher=fetcher,
+                           vision=object(), use_vision=False)
+    quarantine = pd.read_parquet(tmp_path / "silver/notes_quarantine.parquet")
+    assert set(quarantine["bank"]) == {"VCB"} and "unknown" in set(quarantine["unit"])
+    silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
+    assert len(silver) == 0
+
+
+def test_the_npl_gate_tolerance_is_ten_basis_points_not_ten_hundredths():
+    # the gap is reported in bp (x100), so a 5 bp miss passes and an 11 bp miss fails: comparing bp with 0.10
+    # made the gate ten times stricter than the brief and failed CTG 2025Q4 at -2.9 bp
+    assert notes_gates.npl_gate(values(), 5.05)["status"] == "pass"
+    assert notes_gates.npl_gate(values(), 4.95)["status"] == "pass"
+    assert notes_gates.npl_gate(values(), 5.11)["status"] == "fail"
+    assert notes_gates.npl_gate(values(), 5.05)["threshold"] == 10.0
+
+
+def test_a_text_layer_with_no_readable_label_falls_back_to_the_vision_reader(tmp_path, monkeypatch):
+    # MBB's PDFs carry a text layer whose font has no ToUnicode map, so it extracts to U+FFFD and no label matches:
+    # returning zero rows there loses a bank that a scan read would have read
+    links = pd.DataFrame([{"bank": "MBB", "period": "2025Q2", "statement_type": "consolidated",
+                           "url": "https://x.test/broken.pdf", "found_by": "html", "found_at": "now"}])
+    fetcher, _ = fake_fetcher({"https://x.test/broken.pdf": b"%PDF-broken"})
+    monkeypatch.setattr(notes_runner, "fast_page_texts", lambda content: ["\ufffd\ufffd " * 120, "\ufffd" * 300])
+    monkeypatch.setattr(notes_runner, "render_strip", lambda content, pages, **kwargs: b"strip")
+    monkeypatch.setattr(notes_runner, "render_pages", lambda content, pages, scale=2.0: {page: b"png" for page in pages})
+    vision = FakeVision({"values": {"loans_customer": 1000.0}}, {"values": {"loans_customer": 1000.0}}, located=(2,))
+    frame, _, stats = notes_runner.harvest(tmp_path, links, fetcher, "notes-test", vision=vision)
+    assert set(frame["field"]) == {"loans_customer"} and frame.iloc[0]["grade"] == "verified"
+    assert stats["vision_calls"] == 3 and "falling back to vision" in json.dumps(stats["errors"])

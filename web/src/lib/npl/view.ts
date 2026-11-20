@@ -180,8 +180,8 @@ export type DataRow = {
 }
 
 const ABSENT_WILD = {
-  vi: "Phép wild bootstrap theo cụm chưa có trong bản chụp này.",
-  en: "The wild cluster bootstrap is not in this snapshot.",
+  vi: "Phép wild bootstrap theo cụm chưa có trong bản số liệu này.",
+  en: "The wild cluster bootstrap is not in these figures.",
 }
 
 export function langFromQuery(value: string | string[] | undefined): Lang {
@@ -532,8 +532,8 @@ function decisionSentence(term: Term, lang: Lang): string {
       ? `khoảng 95% ${formatNumber(span[0], lang)} đến ${formatNumber(span[1], lang)}`
       : `95% interval ${formatNumber(span[0], lang)} to ${formatNumber(span[1], lang)}`
     : lang === "vi"
-      ? "khoảng 95% chưa có trong bản chụp"
-      : "95% interval is not in this snapshot"
+      ? "khoảng 95% chưa có"
+      : "95% interval is not in these figures"
   return lang === "vi"
     ? `Chưa coi mức giảm NPL quý 4 là cải thiện bền. Đọc phần thay đổi sau hiệu ứng quý: ${formatNumber(term.coef_pp, lang)} điểm phần trăm so với quý 1 (${range}, n = ${term.n}).`
     : `Do not treat the Q4 NPL decline as a lasting improvement. Read the change after the quarter effect: ${formatNumber(term.coef_pp, lang)} pp versus Q1 (${range}, n = ${term.n}).`
@@ -566,10 +566,10 @@ function evidenceLine(term: Term, lang: Lang): string {
   const span = interval(term.ci95)
   const range = span
     ? `${formatNumber(span[0], lang, 2)} ${lang === "vi" ? "đến" : "to"} ${formatNumber(span[1], lang, 2)}`
-    : lang === "vi" ? "chưa có" : "not in this snapshot"
+    : lang === "vi" ? "chưa có" : "not in these figures"
   const wild = term.p_wild_bootstrap
   const wildText = wild == null
-    ? lang === "vi" ? "p wild bootstrap chưa có" : "wild bootstrap p is not in this snapshot"
+    ? lang === "vi" ? "p wild bootstrap chưa có" : "wild bootstrap p is not in these figures"
     : lang === "vi" ? `p wild bootstrap ${formatNumber(wild, lang, 3)}` : `wild bootstrap p ${formatNumber(wild, lang, 3)}`
   return lang === "vi"
     ? `Hồi quy hiệu ứng cố định theo ngân hàng; khoảng tin cậy 95% ${range}; n = ${term.n}; ${wildText}.`
@@ -771,8 +771,8 @@ export function overviewModel(snapshot: Snapshot, lang: Lang, selection: Selecti
     dropReason: dropEnabled
       ? null
       : lang === "vi"
-        ? "Công tắc bỏ 2021–2022 đang tắt vì hệ số đó chưa có trong bản chụp."
-        : "The 2021–2022 switch is off because that coefficient is not in this snapshot.",
+        ? "Công tắc bỏ 2021–2022 đang tắt vì bản số liệu chưa có hệ số đó."
+        : "The 2021–2022 switch is off because that coefficient is not in these figures.",
     repeat,
     footer: {
       generatedAt: snapshot.meta.generated_at,
@@ -892,6 +892,33 @@ const REGRESSION_LABEL: Record<string, { vi: string; en: string }> = {
   adjusted: { vi: "CAR trên biến động NPL đã khử mùa vụ", en: "CAR on the seasonally adjusted NPL change" },
   raw_q4: { vi: "CAR quý 4 trên biến động NPL gốc", en: "Q4 CAR on the raw NPL change" },
   adjusted_q4: { vi: "CAR quý 4 trên biến động NPL đã khử mùa vụ", en: "Q4 CAR on the seasonally adjusted NPL change" },
+  reported_or_deadline: { vi: "Ngày công bố nếu có, nếu không thì hạn", en: "Filing date when known, otherwise the deadline" },
+  deadline_only: { vi: "Chỉ dùng hạn công bố", en: "Deadline only" },
+  reported_or_deadline_q4: { vi: "Quý 4, ngày công bố nếu có", en: "Q4, filing date when known" },
+  deadline_only_q4: { vi: "Quý 4, chỉ dùng hạn công bố", en: "Q4, deadline only" },
+  actual_dates: { vi: "Quanh ngày công bố thực tế", en: "Around the actual filing date" },
+  matched_actual: { vi: "Mẫu ghép theo ngày thực tế", en: "Sample matched on the actual date" },
+  matched_deadline: { vi: "Mẫu ghép theo hạn công bố", en: "Sample matched on the deadline" },
+}
+
+const TERM_LABEL: Record<string, { vi: string; en: string }> = {
+  d_npl_pct: { vi: "Hệ số", en: "Coefficient" },
+  expected_d_npl_pct: { vi: "Phần dự kiến", en: "Expected change" },
+  surprise_d_npl_pct: { vi: "Phần bất ngờ", en: "Surprise" },
+}
+
+function regressionBits(block: Snapshot["market"]["regressions"][string], lang: Lang): string[] {
+  return Object.entries(block.terms).flatMap(([name, item]) => {
+    if (!item || item.coef_pp == null) return []
+    const title = TERM_LABEL[name]?.[lang] ?? (lang === "vi" ? "Hệ số" : "Coefficient")
+    const span = interval(item.ci95)
+    const range = span
+      ? lang === "vi"
+        ? ` (khoảng 95% ${formatNumber(span[0], lang)} đến ${formatNumber(span[1], lang)})`
+        : ` (95% interval ${formatNumber(span[0], lang)} to ${formatNumber(span[1], lang)})`
+      : ""
+    return [`${title} ${formatNumber(item.coef_pp, lang)}${range}`]
+  })
 }
 
 export function marketModel(snapshot: Snapshot, lang: Lang) {
@@ -910,16 +937,16 @@ export function marketModel(snapshot: Snapshot, lang: Lang) {
     }
   })
   const rows = Object.entries(snapshot.market.regressions).map(([id, block]) => {
+    const bits = regressionBits(block, lang)
+    const label = REGRESSION_LABEL[id]?.[lang] ?? (lang === "vi" ? "Phép hồi quy" : "Regression")
     const term = Object.values(block.terms).find((item) => item && item.coef_pp != null) ?? null
-    const label = REGRESSION_LABEL[id]?.[lang] ?? id
-    const span = term ? interval(term.ci95) : null
-    const text = !term
+    const text = bits.length
       ? lang === "vi"
-        ? `${label}: phép hồi quy này chưa có trong bản chụp.`
-        : `${label}: this regression is not in this snapshot.`
+        ? `${label}: ${bits.join("; ")}, n = ${block.n ?? "—"}. Đây không phải quy tắc giao dịch.`
+        : `${label}: ${bits.join("; ")}, n = ${block.n ?? "—"}. This is not a trading rule.`
       : lang === "vi"
-        ? `${label}: hệ số ${formatNumber(term.coef_pp, lang)}${span ? ` (khoảng 95% ${formatNumber(span[0], lang)} đến ${formatNumber(span[1], lang)})` : ""}, n = ${block.n ?? "—"}. Đây không phải quy tắc giao dịch.`
-        : `${label}: coefficient ${formatNumber(term.coef_pp, lang)}${span ? ` (95% interval ${formatNumber(span[0], lang)} to ${formatNumber(span[1], lang)})` : ""}, n = ${block.n ?? "—"}. This is not a trading rule.`
+        ? `${label}: chưa có số cho phép này.`
+        : `${label}: this regression has no figure yet.`
     return { id, text, coef: term?.coef_pp ?? null }
   })
   return {
@@ -933,7 +960,7 @@ export function marketModel(snapshot: Snapshot, lang: Lang) {
 }
 
 function termText(term: Term | null, lang: Lang): string {
-  if (!term) return lang === "vi" ? "chưa có trong bản chụp" : "not in this snapshot"
+  if (!term) return lang === "vi" ? "chưa có số" : "not in these figures"
   const span = interval(term.ci95)
   return lang === "vi"
     ? `${formatNumber(term.coef_pp, lang)} điểm phần trăm${span ? `, khoảng 95% ${formatNumber(span[0], lang)} đến ${formatNumber(span[1], lang)}` : ""}, n = ${term.n}`

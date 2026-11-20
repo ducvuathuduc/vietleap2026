@@ -1,5 +1,0 @@
-run_id,bank_code,term_months,channel,tier,rate_pct,interest_basis,sheet_date,observed_at,reader,source_url,raw_sha256
-rw-20261120T1230,STB,6,counter,duoi_500tr,5.70,at_maturity,2026-10-20,2026-11-20T12:30:00+07:00,bank_pdf,https://www.sacombank.com.vn/,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-rw-20261120T1230,STB,6,counter,duoi_500tr,5.70,at_maturity,2026-10-20,2026-11-20T12:31:00+07:00,tinyfish,https://www.sacombank.com.vn/,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-rw-20261120T1230,STB,5,counter,duoi_500tr,4.50,at_maturity,,2026-11-20T12:32:00+07:00,bank_pdf,https://www.sacombank.com.vn/,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-rw-20261120T1230,STB,5,counter,duoi_500tr,4.60,at_maturity,,2026-11-20T12:30:00+07:00,aggregator,https://laisuattietkiem.vn/,cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

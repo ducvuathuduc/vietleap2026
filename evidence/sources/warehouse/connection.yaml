@@ -1,9 +1,0 @@
-# VietLeap warehouse via the Parquet lake (in-memory DuckDB).
-# Evidence v40 bundles DuckDB 1.4, which cannot read the warehouse file
-# written by DuckDB 2.0 (storage-format mismatch), so queries read the gold /
-# silver Parquet files directly — same tables, same rows, version-proof.
-# read_parquet paths resolve against the project root (where `evidence` runs).
-name: warehouse
-type: duckdb
-options:
-  filename: ":memory:"

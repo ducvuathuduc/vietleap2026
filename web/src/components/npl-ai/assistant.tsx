@@ -87,8 +87,9 @@ export function NplAskDock(): React.JSX.Element {
     }}>
       <SheetTrigger
         render={
-          <Button ref={triggerRef} type="button" variant="outline" size="sm">
-            {pageVi ? "Hỏi về dữ liệu" : "Ask the data"}
+          <Button ref={triggerRef} type="button" variant="outline" size="sm" className="min-h-11 shrink-0 px-2.5" aria-label={pageVi ? "Hỏi về dữ liệu" : "Ask the data"}>
+            <span className="md:hidden">{pageVi ? "Hỏi" : "Ask"}</span>
+            <span className="hidden md:inline">{pageVi ? "Hỏi về dữ liệu" : "Ask the data"}</span>
           </Button>
         }
       />

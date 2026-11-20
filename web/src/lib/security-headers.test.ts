@@ -38,14 +38,17 @@ test("development CSP keeps unsafe-eval and the Next dev socket", async () => {
   assert.match(csp, /frame-ancestors 'none'/)
 })
 
-test("production disables legacy aliases unless the lab is enabled", async () => {
+test("retired aliases and FastAPI rewrites stay disabled with legacy settings", async () => {
   const original = process.env
   try {
-    process.env = { ...original, NODE_ENV: "production", ENABLE_LAB: "0" }
-    assert.deepEqual(await nextConfig.redirects!(), [])
-    process.env.ENABLE_LAB = "1"
-    const redirects = await nextConfig.redirects!()
-    assert.ok(redirects.some(({ source, destination }) => source === "/analyst" && destination === "/lab/analyst"))
+    process.env = {
+      ...original,
+      NODE_ENV: "production",
+      ENABLE_LAB: "1",
+      EXTERNAL_API_URL: "http://localhost:8000",
+    }
+    assert.deepEqual(await nextConfig.redirects?.() ?? [], [])
+    assert.deepEqual(await nextConfig.rewrites?.() ?? [], [])
   } finally {
     process.env = original
   }

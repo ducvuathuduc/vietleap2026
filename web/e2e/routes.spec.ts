@@ -1,18 +1,15 @@
 import { expect, test, type Page } from "@playwright/test"
 
 import {
-  FORBIDDEN_TEXT, LANGS, NPL_BANK_CODES, NPL_ROUTES, RATEWATCH_BANK_CODES, RATEWATCH_ROUTES,
-  isProductionTarget, monitor, switchTo, withLang, type Lang,
+  FORBIDDEN_TEXT, LANGS, NPL_BANK_CODES, NPL_ROUTES, monitor, switchTo, withLang, type Lang,
 } from "./helpers"
 
 const NPL_PAGES = [...NPL_ROUTES, ...NPL_BANK_CODES.map((code) => `/ngan-hang/${code}`)]
-const RATEWATCH_PAGES = [...RATEWATCH_ROUTES, ...RATEWATCH_BANK_CODES.map((code) => `/lai-suat/ngan-hang/${code}`)]
 
-async function expectHealthyPage(page: Page, route: string, lang: Lang, legacyGated: boolean) {
+async function expectHealthyPage(page: Page, route: string, lang: Lang) {
   const failures = monitor(page)
   await page.setViewportSize({ width: 390, height: 844 })
   const response = await page.goto(withLang(route, lang), { waitUntil: "networkidle" })
-  test.skip(legacyGated && response?.status() === 404, "legacy route is gated in production")
   expect(response?.status()).toBe(200)
   expect(new URL(page.url()).pathname).toBe(route)
 
@@ -27,34 +24,26 @@ async function expectHealthyPage(page: Page, route: string, lang: Lang, legacyGa
   expect.soft(failures.failedRequests, "failed or unsuccessful requests").toEqual([])
 }
 
-for (const route of [...NPL_PAGES, ...RATEWATCH_PAGES]) {
-  const legacy = RATEWATCH_PAGES.includes(route)
+for (const route of NPL_PAGES) {
   for (const lang of LANGS) {
-    test(`public route ${route} [${lang}] is healthy at 390px`, { tag: legacy ? "@legacy" : [] }, async ({ page, baseURL }) => {
-      await expectHealthyPage(page, route, lang, legacy && isProductionTarget(baseURL))
+    test(`public route ${route} [${lang}] is healthy at 390px`, async ({ page }) => {
+      await expectHealthyPage(page, route, lang)
     })
   }
 }
 
 const NAV = {
-  npl: {
-    vi: ["Tổng quan", "Ngân hàng", "Thị trường", "Phương pháp", "Dữ liệu"],
-    en: ["Overview", "Banks", "Market", "Method", "Data"],
-    brand: { vi: "Sau tỷ lệ nợ xấu", en: "Behind the NPL Ratio" },
-  },
-  ratewatch: {
-    vi: ["Lãi suất hôm nay", "Bản đồ", "Chính sách", "Phương pháp"],
-    en: ["Rates today", "Map", "Policy", "Method"],
-    brand: { vi: "Lãi suất hôm nay", en: "Deposit rates" },
-  },
+  vi: ["Tổng quan", "Ngân hàng", "Thị trường", "Phương pháp", "Dữ liệu"],
+  en: ["Overview", "Banks", "Market", "Method", "Data"],
+  brand: { vi: "Sau tỷ lệ nợ xấu", en: "Behind the NPL Ratio" },
 }
 
-async function expectLocalizedHeader(page: Page, product: keyof typeof NAV, lang: Lang) {
+async function expectLocalizedHeader(page: Page, lang: Lang) {
   const nav = page.getByRole("navigation", { name: lang === "vi" ? "Mục" : "Sections", exact: true })
   const header = page.getByRole("banner").filter({ has: nav })
   await expect(nav).toBeVisible()
-  expect.soft(await nav.getByRole("link").allInnerTexts()).toEqual(NAV[product][lang])
-  await expect.soft(header.getByText(NAV[product].brand[lang], { exact: true }).first()).toBeVisible()
+  expect.soft(await nav.getByRole("link").allInnerTexts()).toEqual(NAV[lang])
+  await expect.soft(header.getByText(NAV.brand[lang], { exact: true }).first()).toBeVisible()
   const language = page.getByRole("group", { name: lang === "vi" ? "Ngôn ngữ" : "Language", exact: true })
   await expect.soft(language.getByRole("button", { name: lang.toUpperCase(), exact: true })).toHaveAttribute("aria-pressed", "true")
 }
@@ -80,8 +69,8 @@ async function visiblePageLabels(page: Page) {
 }
 
 const INVARIANT_LABELS = new Set([
-  ...NPL_BANK_CODES, ...RATEWATCH_BANK_CODES,
-  "VI", "EN", "NPL", "NIM", "LDR", "ROA", "P/B", "RateWatch",
+  ...NPL_BANK_CODES,
+  "VI", "EN", "NPL", "NIM", "LDR", "ROA", "P/B",
   "Agribank", "Eximbank", "HDBank", "PVcomBank", "Sacombank", "Techcombank", "VCBNeo", "VietBank",
   "Open Next.js Dev Tools",
 ])
@@ -91,34 +80,29 @@ function isInvariant(label: string) {
   return INVARIANT_LABELS.has(label) || /^(?:https?:\/\/\S+|[\d.,%+−\-\s]+|20\d{2}Q[1-4]|—)$/.test(label)
 }
 
-for (const [product, routes] of [
-  ["npl", NPL_PAGES],
-  ["ratewatch", RATEWATCH_PAGES],
-] as const) {
-  for (const route of routes) {
-    test(`VI/EN toggle on ${route} translates the navigation, headings and visible controls`, { tag: product === "ratewatch" ? "@legacy" : [] }, async ({ page, baseURL }) => {
-      const response = await page.goto(route)
-      test.skip(product === "ratewatch" && isProductionTarget(baseURL) && response?.status() === 404, "legacy route is gated in production")
-      await expect(page.locator("html")).toHaveAttribute("lang", "vi")
-      await expectLocalizedHeader(page, product, "vi")
-      const vi = await visiblePageLabels(page)
-      expect(vi[0].labels.length).toBeGreaterThan(0)
+for (const route of NPL_PAGES) {
+  test(`VI/EN toggle on ${route} translates the navigation, headings and visible controls`, async ({ page }) => {
+    const response = await page.goto(route)
+    expect(response?.status()).toBe(200)
+    await expect(page.locator("html")).toHaveAttribute("lang", "vi")
+    await expectLocalizedHeader(page, "vi")
+    const vi = await visiblePageLabels(page)
+    expect(vi[0].labels.length).toBeGreaterThan(0)
 
-      await switchTo(page, "en")
-      await expectLocalizedHeader(page, product, "en")
-      const en = await visiblePageLabels(page)
-      for (const [index, { role, labels }] of vi.entries()) {
-        const englishLabels = en[index].labels
-        const unchanged = labels.filter((label) => !isInvariant(label) && englishLabels.includes(label))
-        expect.soft(unchanged, `${role} labels unchanged across locales`).toEqual([])
-        if (role === "heading" || role === "columnheader") {
-          expect.soft(englishLabels, `number of distinct ${role} labels after changing language`).toHaveLength(labels.length)
-        }
+    await switchTo(page, "en")
+    await expectLocalizedHeader(page, "en")
+    const en = await visiblePageLabels(page)
+    for (const [index, { role, labels }] of vi.entries()) {
+      const englishLabels = en[index].labels
+      const unchanged = labels.filter((label) => !isInvariant(label) && englishLabels.includes(label))
+      expect.soft(unchanged, `${role} labels unchanged across locales`).toEqual([])
+      if (role === "heading" || role === "columnheader") {
+        expect.soft(englishLabels, `number of distinct ${role} labels after changing language`).toHaveLength(labels.length)
       }
+    }
 
-      await switchTo(page, "vi")
-      await expectLocalizedHeader(page, product, "vi")
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(vi[0].labels[0])
-    })
-  }
+    await switchTo(page, "vi")
+    await expectLocalizedHeader(page, "vi")
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(vi[0].labels[0])
+  })
 }

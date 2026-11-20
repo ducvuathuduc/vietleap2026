@@ -34,8 +34,16 @@ def main(argv=None):
     parser.add_argument("--notes-fragment", type=Path, help="write harvested rows to this JSON instead of silver")
     parser.add_argument("--notes-merge", type=Path, help="merge every fragment JSON in this folder into silver")
     parser.add_argument("--notes-annual", help="comma-separated years to probe the audited annual (NAM) statements")
+    parser.add_argument("--screening", action="store_true",
+                        help="pull the FiinQuant screening note fields for every bank (no PDFs)")
     parser.add_argument("--out", type=Path, default=ROOT / "out/npl/eda")
     args = parser.parse_args(argv)
+    if args.screening:
+        from .fiin_screening import run_screening
+
+        log = run_screening(lake=args.lake, credentials=args.credentials)
+        print(json.dumps(log, ensure_ascii=False, indent=2, default=str))
+        return 0 if log["rows"] else 1
     if args.notes and args.notes_merge:
         from .notes_runner import merge_fragment_dir
         from .files import now

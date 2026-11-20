@@ -1,4 +1,4 @@
-# Supply-chain & secret scanning (docs/security/threat-model.md A06/LLM03, T067). Free for public repos.
+# Supply-chain and secret scanning.
 name: Security
 on:
   push:

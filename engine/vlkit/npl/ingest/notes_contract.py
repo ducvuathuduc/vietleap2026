@@ -59,14 +59,15 @@ def unit_of(text):
     """(multiplier to VND billion, label) where label is ty / trieu / nghin / dong / unknown.
 
     The label matters as much as the multiplier: a statement whose unit line cannot be read must not be scaled on a
-    silent default, so the caller can flag it instead of publishing a number that is out by a thousand.
+    silent default, so the caller can flag it instead of publishing a number that is out by a thousand. A bare unit
+    phrase ("triệu đồng", which is what a vision model copies when it reads the line) is a unit line too; a long page
+    without the printed marker is not searched for unit words, or a table label would pass for a unit.
     """
     from ...vn import ascii_key
 
-    match = UNIT_LINE.search(ascii_key(text or ""))
-    if match is None:
-        return 1.0, "unknown"
-    tail = match.group(1)
+    key = ascii_key(text or "")
+    match = UNIT_LINE.search(key)
+    tail = match.group(1) if match else (key if len(key) <= 32 else "")
     for pattern, scale, label in ((r"nghin", 1e-6, "nghin"), (r"trieu", 1e-3, "trieu"), (r"ty|ti", 1.0, "ty")):
         if re.search(pattern, tail):
             return scale, label

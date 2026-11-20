@@ -343,6 +343,42 @@ test("market sentences use the regression coefficient and both CAR groups", () =
   assert.equal(model.reading, "M6 READING")
 })
 
+test("market rows name both effects and do not say snapshot or a model id", () => {
+  const snapshot = mini()
+  snapshot.market.regressions = {
+    reported_or_deadline: {
+      n: 567,
+      clusters: 27,
+      period: ["2021Q2", "2026Q3"],
+      terms: {
+        expected_d_npl_pct: term(-2.816),
+        surprise_d_npl_pct: term(-1.238),
+      },
+      unavailable_reason: null,
+    },
+    actual_dates: { n: 0, clusters: 0, period: null, terms: {}, unavailable_reason: "no_observations" },
+  }
+  const text = marketModel(snapshot, "en").rows.map((row) => row.text).join("\n")
+  assert.match(text, /Expected change/)
+  assert.match(text, /Surprise/)
+  assert.match(text, /-2\.816/)
+  assert.match(text, /-1\.238/)
+  assert.match(text, /no figure yet/)
+  assert.doesNotMatch(text, /snapshot|fixture|\bactual_dates\b|\bM[1-7]\b|\bS[1-4]\b/)
+  const vi = marketModel(snapshot, "vi").rows.map((row) => row.text).join("\n")
+  assert.match(vi, /Phần dự kiến/)
+  assert.match(vi, /Phần bất ngờ/)
+  assert.doesNotMatch(vi, /snapshot|bản chụp|fixture|\bactual_dates\b|\bM[1-7]\b|\bS[1-4]\b/)
+})
+
+test("missing-figure copy does not say snapshot", () => {
+  const dropped = overviewModel(mini({ drop: null }), "en")
+  assert.doesNotMatch(dropped.dropReason ?? "", /snapshot/)
+  const quiet = overviewModel(mini({ wild: null }), "en")
+  assert.doesNotMatch(quiet.evidenceLine, /snapshot/)
+  assert.doesNotMatch(quiet.decision, /snapshot/)
+})
+
 test("method cards are M1 through M7 and copy the snapshot reading", () => {
   const model = methodModel(mini(), "vi")
   assert.deepEqual(model.models.map((item) => item.id), ["M1", "M2", "M3", "M4", "M5", "M6", "M7"])
@@ -647,12 +683,23 @@ test("the page shell clips horizontal overflow", () => {
   const banks = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/ngan-hang/page.tsx"), "utf8")
   assert.match(banks, /"Ngân hàng"/)
   assert.doesNotMatch(banks, /"Mã"/)
+  assert.match(banks, /HowToRead/)
+  assert.match(banks, /Cách đọc/)
   const data = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/data-table.tsx"), "utf8")
   assert.doesNotMatch(data, /vi: "Mã"/)
   const bar = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/site-bar.tsx"), "utf8")
   assert.match(bar, /Sau tỷ lệ nợ xấu/)
   assert.match(bar, /Behind the NPL Ratio/)
   assert.doesNotMatch(bar, / · /)
+  assert.match(bar, /md:hidden/)
+  assert.match(bar, /hidden md:flex/)
+  assert.match(bar, /flex-nowrap/)
+  assert.match(bar, /NplAskDock/)
+  assert.match(bar, /href="#content"/)
+  const bankPage = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/ngan-hang/[code]/page.tsx"), "utf8")
+  assert.doesNotMatch(bankPage, /[Bb]ản chụp|snapshot|fixture/)
+  assert.match(charts, /HowToRead/)
+  assert.ok((charts.match(/<HowToRead/g) ?? []).length >= 3)
   const method = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/phuong-phap/page.tsx"), "utf8")
   assert.match(method, /Kiểm tra độ vững/)
   assert.match(method, /QuarterChart/)

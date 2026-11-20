@@ -9,7 +9,7 @@ export const instant = false
 
 export const metadata: Metadata = {
   title: "Giải mã nợ xấu",
-  description: "Cờ nợ xấu của mọi ngân hàng niêm yết, mọi quý trong bản chụp.",
+  description: "Cờ nợ xấu của mọi ngân hàng niêm yết, mọi quý đã có số.",
 }
 
 type Query = Record<string, string | string[] | undefined>

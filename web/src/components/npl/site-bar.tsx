@@ -16,56 +16,75 @@ export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; 
     document.documentElement.lang = vi ? "vi" : "en"
   }, [vi])
 
-  function choose(next: "vi" | "en") {
-    const url = new URL(window.location.href)
-    if (next === "en") url.searchParams.set("lang", "en")
-    else url.searchParams.delete("lang")
-    window.location.assign(url.toString())
+  function hrefFor(path: string, next: "vi" | "en", stripOwn: boolean) {
+    const params = new URLSearchParams(search.toString())
+    if (stripOwn) params.delete("own")
+    params.delete("drop")
+    if (next === "en") params.set("lang", "en")
+    else params.delete("lang")
+    const query = params.toString()
+    return query ? `${path}?${query}` : path
   }
 
-  function open(path: string) {
-    const url = new URL(window.location.href)
-    url.pathname = path
-    if (path === "/") url.searchParams.delete("own")
-    url.searchParams.delete("drop")
-    window.location.assign(url.toString())
+  function langHref(next: "vi" | "en") {
+    const params = new URLSearchParams(search.toString())
+    if (next === "en") params.set("lang", "en")
+    else params.delete("lang")
+    const query = params.toString()
+    return query ? `${pathname}?${query}` : pathname
+  }
+
+  function sections(block: boolean) {
+    return NPL_NAV.map((item) => {
+      const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(`${item.url}/`)
+      return (
+        <a
+          key={item.url}
+          href={hrefFor(item.url, vi ? "vi" : "en", item.url === "/")}
+          className={cn(buttonVariants({ variant: active ? "secondary" : "ghost", size: "sm" }), "min-h-11", block && "w-full justify-start")}
+          aria-current={active ? "page" : undefined}
+        >
+          {vi ? item.title : item.en}
+        </a>
+      )
+    })
   }
 
   return (
     <header className="border-b border-border">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-2 px-4 py-2">
-        <div className="mr-auto">
-          <p className="text-base font-semibold leading-tight">{vi ? "Sau tỷ lệ nợ xấu" : "Behind the NPL Ratio"}</p>
-          <p className="text-xs text-muted-foreground">{vi ? `${bankCount} ngân hàng niêm yết, ${yearStart}–${yearEnd}` : `${bankCount} listed banks, ${yearStart}–${yearEnd}`}</p>
+      <a href="#content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-background focus:px-3 focus:py-2">
+        {vi ? "Đến nội dung" : "Skip to content"}
+      </a>
+      <div className="mx-auto w-full max-w-6xl px-4 py-2">
+        <div className="flex flex-nowrap items-center gap-2 md:flex-wrap">
+          <div className="mr-auto min-w-0 flex-1 md:flex-none">
+            <p className="text-base font-semibold leading-tight">{vi ? "Sau tỷ lệ nợ xấu" : "Behind the NPL Ratio"}</p>
+            <p className="hidden text-xs text-muted-foreground md:block">{vi ? `${bankCount} ngân hàng niêm yết, ${yearStart}–${yearEnd}` : `${bankCount} listed banks, ${yearStart}–${yearEnd}`}</p>
+          </div>
+          <nav className="hidden md:flex flex-wrap gap-1" aria-label={vi ? "Mục" : "Sections"}>
+            {sections(false)}
+          </nav>
+          <details className="relative shrink-0 md:hidden">
+            <summary className={cn(buttonVariants({ variant: "outline", size: "sm" }), "min-h-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden")}>
+              {vi ? "Mục" : "Menu"}
+            </summary>
+            <nav className="absolute right-0 z-50 mt-1 flex w-52 flex-col rounded-lg border border-border bg-background p-1 shadow-md" aria-label={vi ? "Mục" : "Sections"}>
+              {sections(true)}
+            </nav>
+          </details>
+          <div className="shrink-0">
+            <NplAskDock />
+          </div>
+          <div className="flex shrink-0 rounded-lg border border-border p-0.5" role="group" aria-label={vi ? "Ngôn ngữ" : "Language"}>
+            <a href={langHref("vi")} className={cn(buttonVariants({ variant: vi ? "secondary" : "ghost", size: "sm" }), "min-h-11 min-w-11")} aria-current={vi ? "true" : undefined}>
+              VI
+            </a>
+            <a href={langHref("en")} className={cn(buttonVariants({ variant: vi ? "ghost" : "secondary", size: "sm" }), "min-h-11 min-w-11")} aria-current={vi ? undefined : "true"}>
+              EN
+            </a>
+          </div>
         </div>
-        <nav className="flex flex-wrap gap-1" aria-label={vi ? "Mục" : "Sections"}>
-          {NPL_NAV.map((item) => {
-            const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(`${item.url}/`)
-            return (
-              <a
-                key={item.url}
-                href={item.url}
-                className={cn(buttonVariants({ variant: active ? "secondary" : "ghost", size: "sm" }), "min-h-11")}
-                aria-current={active ? "page" : undefined}
-                onClick={(event) => {
-                  event.preventDefault()
-                  open(item.url)
-                }}
-              >
-                {vi ? item.title : item.en}
-              </a>
-            )
-          })}
-        </nav>
-        <NplAskDock />
-        <div className="flex rounded-lg border border-border p-0.5" role="group" aria-label={vi ? "Ngôn ngữ" : "Language"}>
-          <button type="button" className={cn(buttonVariants({ variant: vi ? "secondary" : "ghost", size: "sm" }), "min-h-11 min-w-11")} aria-pressed={vi} onClick={() => choose("vi")}>
-            VI
-          </button>
-          <button type="button" className={cn(buttonVariants({ variant: vi ? "ghost" : "secondary", size: "sm" }), "min-h-11 min-w-11")} aria-pressed={!vi} onClick={() => choose("en")}>
-            EN
-          </button>
-        </div>
+        <p className="pt-1 text-xs text-muted-foreground md:hidden">{vi ? `${bankCount} ngân hàng niêm yết, ${yearStart}–${yearEnd}` : `${bankCount} listed banks, ${yearStart}–${yearEnd}`}</p>
       </div>
     </header>
   )

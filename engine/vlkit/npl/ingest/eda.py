@@ -58,7 +58,7 @@ def build(lake, out):
     core = _core_columns(frame, field_map)
     out.mkdir(parents=True, exist_ok=True)
 
-    from ydata_profiling import ProfileReport
+    from data_profiling import ProfileReport
 
     ProfileReport(frame, title="NPL bank-quarter silver", minimal=True).to_file(
         out / "bank_quarter_profile.html")

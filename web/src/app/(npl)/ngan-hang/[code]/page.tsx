@@ -26,7 +26,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const vi = lang === "vi"
   const adjusted = model.adjusted == null
     ? (vi
-      ? "Bản chụp không có phần thay đổi sau khi trừ nhịp chung của quý."
+      ? "Bản số liệu không có phần thay đổi sau khi trừ nhịp chung của quý."
       : "These figures do not include the change after the usual quarter pattern is removed.")
     : (vi
       ? (model.latestPeriod
@@ -49,6 +49,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Trung bình theo quý của ngân hàng này, chấm là hệ số cả nhóm" : "This bank's quarterly mean, dots are the panel coefficients"}</h2>
         <BankCompareChart rows={model.chart} lang={lang} />
+        <HowToRead
+          label={vi ? "Cách đọc" : "How to read"}
+          sentences={vi
+            ? ["Cột là thay đổi trung bình của ngân hàng này theo quý, chấm là hệ số cả nhóm.", "Vạch 0 là không đổi. Chấm nằm ngoài cột khi ngân hàng này lệch khỏi cả nhóm."]
+            : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The zero line is no change. A dot sits off its bar when this bank differs from the panel."]}
+        />
       </section>
       {model.lines ? (
         <section className="flex min-w-0 flex-col gap-2">
@@ -61,16 +67,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           {vi ? "Chuỗi NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ gốc của từng ngân hàng chưa được phép công bố. Trang này chỉ hiện số đã tính." : "Per-bank raw NPL, coverage, LDR, NIM and loan-growth series are not cleared for publication. This page shows derived figures only."}
         </p>
       )}
-      <HowToRead
-        label={vi ? "Cách đọc" : "How to read"}
-        sentences={model.lines
-          ? (vi
-            ? ["Cột là thay đổi trung bình của ngân hàng này theo quý, chấm là hệ số cả nhóm.", "Đường là NPL, NIM, bao phủ, LDR và tăng trưởng dư nợ của ngân hàng này theo thời gian."]
-            : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The lines are this bank's NPL, NIM, coverage, LDR and loan growth over time."])
-          : (vi
+      {model.lines ? null : (
+        <HowToRead
+          label={vi ? "Cách đọc" : "How to read"}
+          sentences={vi
             ? ["Cột là thay đổi trung bình của ngân hàng này theo quý, chấm là hệ số cả nhóm.", "Chuỗi NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ theo quý chưa được đưa ra trang này."]
-            : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The quarterly NPL, coverage, LDR, NIM and loan-growth lines are not on this page."])}
-      />
+            : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The quarterly NPL, coverage, LDR, NIM and loan-growth lines are not on this page."]}
+        />
+      )}
       <p>{adjusted}</p>
       <section className="flex flex-col gap-1">
         <h2 className="text-base font-semibold">{vi ? "Quý kế" : "Next quarter"}</h2>

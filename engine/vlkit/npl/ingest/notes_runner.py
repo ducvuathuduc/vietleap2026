@@ -25,7 +25,7 @@ from .notes_contract import GROUP_FIELDS, NPL_FIELDS
 
 PROVISION_MOVEMENT_LITE = ("provision_opening", "provision_charge", "provision_used_writeoff")
 from .notes_contract import (FIELDS, SILVER_COLUMNS, agreement, grade, kind_of, to_quarterly,
-                             unit_scale)
+                             unit_of)
 from .notes_gates import GATE_COLUMNS, GROUP_TOL, ROLLFORWARD_TOL, passes_silver, run_gates
 from .notes_links import (CATALOGUE, COLUMNS as LINK_COLUMNS, agent_goal, agent_schema, hits_only,
                           prefer_consolidated, probe_statement, rows_from_agent, rows_from_page,
@@ -318,14 +318,20 @@ def read_pdf(content, vision=None, use_vision=True, page_cap=VISION_PAGE_CAP, lo
     if has_text_layer(texts):
         found = read_text(texts)
         pages = sorted({item["page"] for item in found.values()})
-        scales = {index: unit_scale(text) for index, text in enumerate(texts, start=1)}
+        units = {index: unit_of(text) for index, text in enumerate(texts, start=1)}
+        scales = {index: value[0] for index, value in units.items()}
+        labels = {index: value[1] for index, value in units.items()}
         tables = page_tables(content, only=pages) if pages else []
-        for reader, values in (("text", found), ("table", read_tables(tables, scales))):
+        for reader, values in (("text", found), ("table", read_tables(tables, scales, labels))):
             for field, item in values.items():
                 readings.append({"field": field, **item})
-        if not readings:
-            errors["text"] = f"text layer on {len(texts)} pages but no label matched"
-        return readings, errors
+        if readings or not use_vision or vision is None:
+            if not readings:
+                errors["text"] = f"text layer on {len(texts)} pages but no label matched"
+            return readings, errors
+        # a text layer that is present but unreadable (a font without a ToUnicode map extracts to (U+FFFD)) is a
+        # scan for our purposes: without this fallback MBB's statements read as "no label matched" and no row at all
+        errors["text"] = f"text layer on {len(texts)} pages with no label; falling back to vision"
     if not use_vision or vision is None:
         errors["scan"] = f"no text layer on {len(texts)} pages and the vision reader is off"
         return readings, errors
@@ -508,6 +514,43 @@ def split_by_gates(merged, gates):
     return merged[clean], merged[~clean]
 
 
+def publish(lake, frame, gates, run_id, meta=None):
+    """Upsert the gates, fold in the old quarantine and write silver/quarantine split by the gates that now hold.
+
+    Only a bank-quarter whose protective gates pass reaches silver; the rest stays in the quarantine table with its
+    failing gate in notes_gate.csv. The gate table accumulates across runs (a run for one bank must not wipe another
+    bank's gate rows), and a freshly read row of the same grade beats the stale quarantined copy, so a re-read (a
+    fixed unit line) promotes a bank-quarter instead of being shadowed by its old rows.
+    """
+    lake = Path(lake)
+    existing = read_silver(lake, SILVER)
+    old_quarantine = read_silver(lake, QUARANTINE)
+    if not len(frame) and not len(gates) and not (existing is not None and len(existing)) \
+            and not (old_quarantine is not None and len(old_quarantine)):
+        return pd.DataFrame(columns=SILVER_COLUMNS), pd.DataFrame(columns=SILVER_COLUMNS), gates
+    earlier = read_silver(lake, GATES)
+    if earlier is not None and len(earlier):
+        gates = pd.concat([earlier, gates], ignore_index=True) if len(gates) else earlier
+    if len(gates):
+        gates = gates.drop_duplicates(["bank", "period", "gate"], keep="last").sort_values(
+            ["bank", "period", "gate"], ignore_index=True)
+        write_silver(lake, GATES, gates, {"run_id": run_id})
+    merged = merge_silver(existing, frame)
+    frames = [block for block in (old_quarantine, merged) if block is not None and len(block)]
+    merged = pd.concat(frames, ignore_index=True) if frames else merged
+    merged = merge_silver(None, merged) if len(merged) else merged
+    clean, quarantine = split_by_gates(merged, gates)
+    if clean is None:
+        clean = pd.DataFrame(columns=SILVER_COLUMNS)
+    if quarantine is None:
+        quarantine = pd.DataFrame(columns=SILVER_COLUMNS)
+    # both tables are written even when empty: a bank-quarter that lost its gates must not linger in silver as a
+    # stale row from an earlier run
+    write_silver(lake, SILVER, clean, {"run_id": run_id, **(meta or {})})
+    write_silver(lake, QUARANTINE, quarantine, {"run_id": run_id, "reason": "a protective gate did not pass"})
+    return clean, quarantine, gates
+
+
 def merge_fragment_dir(lake, folder, run_id):
     """Merge every fragment JSON in `folder` into silver + quarantine + gates + watermark, and return the run log.
 
@@ -518,36 +561,14 @@ def merge_fragment_dir(lake, folder, run_id):
     folder = Path(folder)
     paths = sorted(folder.glob("*.json")) if folder.exists() else []
     frame, gates = merge_fragments(paths)
-    earlier = read_silver(lake, GATES)
-    if earlier is not None and len(earlier):
-        gates = pd.concat([earlier, gates], ignore_index=True) if len(gates) else earlier
-    if len(gates):
-        gates = gates.drop_duplicates(["bank", "period", "gate"], keep="last").sort_values(
-            ["bank", "period", "gate"], ignore_index=True)
-        write_silver(lake, GATES, gates, {"run_id": run_id})
-    existing = read_silver(lake, SILVER)
-    old_quarantine = read_silver(lake, QUARANTINE)
-    merged = merge_silver(existing, frame)
-    merged = pd.concat([merged, old_quarantine], ignore_index=True) if old_quarantine is not None and len(old_quarantine) else merged
-    merged = merge_silver(None, merged) if len(merged) else merged
-    clean, quarantine = split_by_gates(merged, gates)
-    if clean is None:
-        clean = pd.DataFrame(columns=SILVER_COLUMNS)
-    if quarantine is None:
-        quarantine = pd.DataFrame(columns=SILVER_COLUMNS)
-    # both tables are written even when empty: a bank-quarter that lost its gates must not linger in silver as a
-    # stale row from an earlier run
-    write_silver(lake, SILVER, clean, {"run_id": run_id, "fragments": [path.name for path in paths]})
-    write_silver(lake, QUARANTINE, quarantine, {"run_id": run_id, "reason": "a protective gate did not pass"})
-    merged = clean
+    merged, quarantine, gates = publish(lake, frame, gates, run_id, {"fragments": [path.name for path in paths]})
     if len(merged):
         marks = load(lake / "state/watermarks.json")
         marks["notes_bank_quarter"] = str(merged["period"].max())
         marks["notes_bank_last"] = {bank: str(block["period"].max()) for bank, block in merged.groupby("bank")}
         save(lake / "state/watermarks.json", marks)
     stats = {"fragments": len(paths), "rows": len(frame), "gates": len(gates),
-             "silver_rows": int(len(clean)) if clean is not None else 0,
-             "quarantine_rows": int(len(quarantine)) if quarantine is not None else 0}
+             "silver_rows": int(len(merged)), "quarantine_rows": int(len(quarantine))}
     return {"run_id": run_id, "datasets": {"notes_merge": stats},
             "silver": {"rows": len(merged), "banks": int(merged["bank"].nunique()) if len(merged) else 0,
                        "periods": int(merged["period"].nunique()) if len(merged) else 0,
@@ -682,11 +703,7 @@ def run_notes(lake=LAKE, banks=None, periods=None, fetcher=None, vision=None, us
         atomic(lake / "run_log" / f"{run_id}.json",
                json.dumps(log, ensure_ascii=False, indent=2, default=str).encode("utf-8"))
         return log
-    merged = merge_silver(existing, frame)
-    if len(merged):
-        write_silver(lake, SILVER, merged, {"run_id": run_id})
-    if len(gates):
-        write_silver(lake, GATES, gates, {"run_id": run_id})
+    merged, quarantine, gates = publish(lake, frame, gates, run_id)
     if len(merged):                     # an empty run must not move (or invent) the watermark
         marks = load(lake / "state/watermarks.json")
         marks["notes_bank_quarter"] = str(merged["period"].max())
@@ -694,6 +711,7 @@ def run_notes(lake=LAKE, banks=None, periods=None, fetcher=None, vision=None, us
         save(lake / "state/watermarks.json", marks)
     log["silver"] = {"rows": len(merged), "banks": int(merged["bank"].nunique()) if len(merged) else 0,
                      "periods": int(merged["period"].nunique()) if len(merged) else 0,
+                     "quarantine_rows": int(len(quarantine)),
                      "verified_share": round(float((merged["grade"] == "verified").mean()), 4) if len(merged) else 0}
     log["coverage"] = coverage(frame).to_dict("records")[:60]
     log["http_calls"] = len(getattr(fetcher, "calls", []))

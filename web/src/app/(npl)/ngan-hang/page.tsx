@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 import { DrillBoard } from "@/components/npl/drill-board"
+import { HowToRead } from "@/components/npl/how-to-read"
 import { buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { loadSnapshot } from "@/lib/npl/load"
@@ -55,6 +56,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
         {vi ? "Cột đậm là trung vị thay đổi quý 4. Cột nhạt là trung vị quý 1. Sắp từ mức giảm quý 4 lớn nhất. Bấm một ngân hàng để mở trang của ngân hàng đó." : "The first bar is the median Q4 change. The second is the median Q1 change. Sorted from the largest Q4 decline. Choose a bank to open its page."}
       </p>
       <DrillBoard rows={rows} lang={lang} />
+      <HowToRead
+        label={vi ? "Cách đọc" : "How to read"}
+        sentences={vi
+          ? ["Cột đậm là trung vị thay đổi quý 4. Cột nhạt là trung vị quý 1.", "Cột âm là nợ xấu giảm. Bấm một cột hoặc mã để mở trang ngân hàng."]
+          : ["The first bar is the median Q4 change. The second is the median Q1 change.", "A negative bar is a fall in bad debt. Choose a bar or a code to open that bank."]}
+      />
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">
           {vi

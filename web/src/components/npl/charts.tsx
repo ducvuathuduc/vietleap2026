@@ -3,6 +3,7 @@
 import { Area, Bar, BarChart, CartesianGrid, ComposedChart, ErrorBar, Line, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts"
 
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
+import { HowToRead } from "@/components/npl/how-to-read"
 import { formatNumber, type Lang } from "@/lib/npl/view"
 
 type TipItem = { name?: string; value?: number | string; color?: string; dataKey?: string | number }
@@ -222,6 +223,12 @@ export function BankLines({ rows, lang }: { rows: BankLineRow[]; lang: Lang }) {
           <Line dataKey="nim" name="NIM" stroke="var(--color-nim)" dot={false} strokeWidth={2} connectNulls={false} />
         </ComposedChart>
       </ChartContainer>
+      <HowToRead
+        label={lang === "vi" ? "Cách đọc" : "How to read"}
+        sentences={lang === "vi"
+          ? ["Một đường là tỷ lệ nợ xấu, đường kia là NIM.", "Hai đường cùng thang phần trăm. Chỗ đứt là quý chưa có số."]
+          : ["One line is the NPL ratio and the other is NIM.", "Both use the percent scale. A break is a quarter without a figure."]}
+      />
       <p className="text-sm font-medium">{lang === "vi" ? "Bao phủ, LDR" : "Coverage, LDR"}</p>
       <ChartContainer config={balanceConfig} className="aspect-auto h-48 w-full min-w-0" initialDimension={{ width: 640, height: 192 }}>
         <ComposedChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -233,6 +240,12 @@ export function BankLines({ rows, lang }: { rows: BankLineRow[]; lang: Lang }) {
           <Line dataKey="ldr" name="LDR" stroke="var(--color-ldr)" dot={false} strokeWidth={2} connectNulls={false} />
         </ComposedChart>
       </ChartContainer>
+      <HowToRead
+        label={lang === "vi" ? "Cách đọc" : "How to read"}
+        sentences={lang === "vi"
+          ? ["Một đường là tỷ lệ bao phủ, đường kia là LDR.", "Cùng thang phần trăm. Bao phủ trên 100% nghĩa là dự phòng lớn hơn nợ xấu."]
+          : ["One line is coverage and the other is LDR.", "They share the percent scale. Coverage above 100% means provisions exceed bad debt."]}
+      />
       <p className="text-sm font-medium">{growthLabel}</p>
       <ChartContainer config={growthConfig} className="aspect-auto h-48 w-full min-w-0" initialDimension={{ width: 640, height: 192 }}>
         <ComposedChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -244,6 +257,12 @@ export function BankLines({ rows, lang }: { rows: BankLineRow[]; lang: Lang }) {
           <Line dataKey="loanGrowth" name={growthLabel} stroke="var(--color-loanGrowth)" dot={false} strokeWidth={2} connectNulls={false} />
         </ComposedChart>
       </ChartContainer>
+      <HowToRead
+        label={lang === "vi" ? "Cách đọc" : "How to read"}
+        sentences={lang === "vi"
+          ? ["Đường là tăng trưởng dư nợ so với cùng kỳ.", "Vạch 0 là dư nợ không đổi."]
+          : ["The line is loan growth versus a year earlier.", "The zero line is unchanged loans."]}
+      />
     </div>
   )
 }

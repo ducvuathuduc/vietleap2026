@@ -148,21 +148,23 @@ def read_text(pages):
     return found
 
 
-def read_tables(tables, scales=None):
+def read_tables(tables, scales=None, units=None):
     """field -> {value_vnd_bn, page, reader} from pdfplumber cell grids: `tables` = [(page, rows)], rows = cells.
 
-    `scales` maps a page number to its unit multiplier (read from that page's "Đơn vị tính" line by the caller);
-    a page without one is taken as tỷ đồng, the unit most banks print.
+    `scales` maps a page number to its unit multiplier and `units` to the unit label, both read from that page's
+    "Đơn vị tính" line by the caller; a page without one keeps the multiplier's default but is labelled unknown,
+    because a unit the statement did not print must reach the unit gate, not disappear behind a row's own text.
     """
     found = {}
     scales = scales or {}
+    units = units or {}
     for page, rows in tables or []:
         keys = [key_of(" ".join(str(cell) for cell in row if cell and not is_number_cell(cell))) for row in rows]
         group_hits = sum(1 for key in keys for field in GROUPS if matches(key, field))
         movement_here = any(any(variant in key for variant in ("so du dau ky", "so du cuoi ky")) for key in keys)
         group_pages = {page} if group_hits else set()
         movement_pages = {page} if movement_here else set()
-        text_scale, label = unit_of(" ".join(" ".join(str(cell or "") for cell in row) for row in rows))
+        label = units.get(page, "unknown")
         scale = float(scales.get(page) or unit_scale(" ".join(
             " ".join(str(cell or "") for cell in row) for row in rows)))
         for row, key in zip(rows, keys):
