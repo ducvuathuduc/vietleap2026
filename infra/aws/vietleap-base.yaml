@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: VietLeap NPL - ECR repositories, private data-lake bucket, app secret, log groups, IAM roles, ECS cluster, budget alarm.
+
+Parameters:
+  EmailAddress:
+    Type: String
+    AllowedPattern: "^[^@]+@[^@]+\\.[^@]+$"
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 20
+
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: vietleap
+
+  EcrRepoWeb:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: vietleap-web
+      ImageScanningConfiguration: { ScanOnPush: true }
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep 10","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+
+  EcrRepoPipeline:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: vietleap-pipeline
+      ImageScanningConfiguration: { ScanOnPush: true }
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep 10","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+
+  LakeBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub "vietleap-lake-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: { Status: Enabled }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+
+  AppSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: vietleap/app
+      Description: Runtime keys (filled after creation, never in images or code).
+
+  LogGroupWeb:
+    Type: AWS::Logs::LogGroup
+    Properties: { LogGroupName: /ecs/vietleap-web, RetentionInDays: 14 }
+
+  LogGroupPipeline:
+    Type: AWS::Logs::LogGroup
+    Properties: { LogGroupName: /ecs/vietleap-pipeline, RetentionInDays: 14 }
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vietleap-execution
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - { Effect: Allow, Principal: { Service: ecs-tasks.amazonaws.com }, Action: sts:AssumeRole }
+      Policies:
+        - PolicyName: execution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: ecr:GetAuthorizationToken, Resource: "*" }
+              - Effect: Allow
+                Action: [ecr:BatchCheckLayerAvailability, ecr:GetDownloadUrlForLayer, ecr:BatchGetImage]
+                Resource: [!GetAtt EcrRepoWeb.Arn, !GetAtt EcrRepoPipeline.Arn]
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: [!Sub "${LogGroupWeb.Arn}:*", !Sub "${LogGroupPipeline.Arn}:*"]
+              - { Effect: Allow, Action: secretsmanager:GetSecretValue, Resource: !Ref AppSecret }
+
+  WebTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vietleap-web-task
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - { Effect: Allow, Principal: { Service: ecs-tasks.amazonaws.com }, Action: sts:AssumeRole }
+      Policies:
+        - PolicyName: snapshot-read
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: s3:GetObject, Resource: !Sub "${LakeBucket.Arn}/snapshots/*" }
+
+  PipelineTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vietleap-pipeline-task
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - { Effect: Allow, Principal: { Service: ecs-tasks.amazonaws.com }, Action: sts:AssumeRole }
+      Policies:
+        - PolicyName: lake-readwrite
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: s3:ListBucket, Resource: !GetAtt LakeBucket.Arn }
+              - Effect: Allow
+                Action: [s3:GetObject, s3:PutObject]
+                Resource:
+                  - !Sub "${LakeBucket.Arn}/lake/*"
+                  - !Sub "${LakeBucket.Arn}/out/*"
+                  - !Sub "${LakeBucket.Arn}/snapshots/*"
+
+  InfrastructureRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vietleap-express-infrastructure
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - { Effect: Allow, Principal: { Service: ecs.amazonaws.com }, Action: sts:AssumeRole }
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices
+
+  Budget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: vietleap-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit: { Amount: !Ref MonthlyBudgetUsd, Unit: USD }
+      NotificationsWithSubscribers:
+        - Notification: { NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 80, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref EmailAddress }]
+
+Outputs:
+  LakeBucketName: { Value: !Ref LakeBucket }
+  AppSecretArn: { Value: !Ref AppSecret }
+  WebRepoUri: { Value: !GetAtt EcrRepoWeb.RepositoryUri }
+  PipelineRepoUri: { Value: !GetAtt EcrRepoPipeline.RepositoryUri }
+  ExecutionRoleArn: { Value: !GetAtt ExecutionRole.Arn }
+  WebTaskRoleArn: { Value: !GetAtt WebTaskRole.Arn }
+  PipelineTaskRoleArn: { Value: !GetAtt PipelineTaskRole.Arn }
+  InfrastructureRoleArn: { Value: !GetAtt InfrastructureRole.Arn }
+  ClusterName: { Value: !Ref Cluster }

@@ -13,6 +13,7 @@ import duckdb
 from jsonschema import Draft202012Validator, FormatChecker
 import yaml
 
+from .decoder import VENDOR_LEVEL_FIELDS
 from .real_data import DEADLINE_SOURCE, RATIOS
 from .snapshot_metrics import dashboard_metrics, json_safe
 
@@ -42,6 +43,15 @@ SOURCE_SPECS = {
                       FIIN + "/ham-va-cong-thuc/1.-danh-muc-and-thong-tin-co-ban/1.5.-lay-du-lieu-room-ndtnn"),
     "report_calendar": ("Lịch hạn công bố / disclosure deadline calendar", DEADLINE_SOURCE),
 }
+EXTRA_SOURCES = {
+    "disclosure_dates": ("Công bố BCTC / filing disclosures", "https://api.hsx.vn/n/api/v1/News/NewsFeed", ".csv"),
+    "legal_register": ("Sổ văn bản / legal register", "https://congbao.chinhphu.vn", ".csv"),
+    "sbv_system": ("Số liệu hệ thống NHNN / SBV system data", "https://sbv.gov.vn", ".parquet"),
+    "case_tcb": ("BCTC Techcombank / Techcombank financial statements",
+                 "https://techcombank.com/nha-dau-tu/thong-tin-tai-chinh/bao-cao-tai-chinh-vas", ".csv"),
+    "wdi_bank": ("World Development Indicators · FB.AST.NPER.ZS",
+                 "https://data.worldbank.org/indicator/FB.AST.NPER.ZS", ".parquet"),
+}
 
 
 def _sources(silver, counts):
@@ -54,6 +64,13 @@ def _sources(silver, counts):
                             licence="Văn bản pháp luật công khai / public legal text" if calendar else
                             "FiinGroup · điều khoản dữ liệu / commercial data terms",
                             retrieved_at=timestamp.isoformat(timespec="seconds"), rows=counts[key]))
+    for key, (name, url, suffix) in EXTRA_SOURCES.items():
+        file = silver / f"{key}{suffix}"
+        if key in counts and file.is_file():
+            timestamp = datetime.fromtimestamp(file.stat().st_mtime, LOCAL_TIME)
+            sources.append(dict(id=key, name=name, method="file", url=url,
+                                licence="Nguồn công khai / public source",
+                                retrieved_at=timestamp.isoformat(timespec="seconds"), rows=counts[key]))
     return sources
 
 
@@ -128,6 +145,7 @@ def _read_gold(gold):
 
 def _bank_cards(panel, banks, derived, models, names, publish):
     forecasts = {row["bank_code"]: row for row in models["M7"]["forecast_2026Q4"]}
+    decisions = {row["bank_code"]: row for row in models["M7"].get("decision_rule", {}).get("latest", [])}
     series = {}
     if publish:
         for bank, rows in panel.groupby("bank_code", sort=False):
@@ -146,6 +164,9 @@ def _bank_cards(panel, banks, derived, models, names, publish):
         card = dict(code=bank.bank_code, ticker=bank.ticker, name_vi=name_vi, name_en=name_en,
                     ownership=bank.ownership, **metrics)
         card["latest"] = {**card["latest"], "forecast_next": next_quarter}
+        if bank.bank_code in decisions:
+            card["latest"]["decision"] = {key: value for key, value in decisions[bank.bank_code].items()
+                                          if key != "bank_code"}
         if publish:
             card["series"] = series[bank.bank_code]
         cards.append(card)
@@ -181,6 +202,13 @@ def _methods(models):
     m1, m2, m3, m4, m5, m6, m7 = (models[f"M{i}"] for i in range(1, 8))
     benchmark = m2["baseline"]["terms"]["Q4"]
     mae = m7["backtest"]["mae_pp"]
+    joint = "reported_or_deadline" in m6["regressions"]
+    market_spec = (
+        "CAR ±10 phiên quanh ngày công bố thực tế hoặc hạn; hồi quy đồng thời phần dự kiến loại quan sát đang xét "
+        "và phần bất ngờ, chuẩn VNINDEX / CAR ±10 sessions around actual dates or deadlines; joint regression "
+        "on leave-one-out expected change and surprise, benchmarked to VNINDEX."
+        if joint else "CAR ±10 phiên quanh hạn công bố, chuẩn VNINDEX / CAR ±10 sessions around the deadline, benchmarked to VNINDEX."
+    )
     definitions = [
         ("Mô tả", "Descriptives", "Trung vị và trung bình theo quý, ngân hàng và sở hữu / medians and means by quarter, bank and ownership.",
          sum(row["npl_pct_count"] for row in m1["by_period"]),
@@ -198,8 +226,9 @@ def _methods(models):
         ("Liên hệ", "Linkage", "Mô hình mùa vụ cho bao phủ, NIM, tăng trưởng dư nợ / seasonal models for coverage, NIM and loan growth.",
          m5["seasonal"]["d_coverage_pct"]["n"], "The model links coverage, NIM and loan growth to the reporting quarter. The feed lacks ROA.",
          "Association can reflect common denominators or other unobserved factors."),
-        ("Phản ứng thị trường", "Market response", "CAR trong cửa sổ ±10 phiên quanh hạn công bố, chuẩn VNINDEX / CAR over ±10 sessions around the disclosure deadline, benchmarked to VNINDEX.",
-         m6["regressions"]["raw"]["n"], f"{m6['events_with_car']} bank-quarter events have usable cumulative abnormal returns.",
+        ("Phản ứng thị trường", "Market response", market_spec,
+         m6["regressions"]["reported_or_deadline" if joint else "raw"]["n"],
+         f"{m6['events_with_car']} bank-quarter events have usable cumulative abnormal returns.",
          "The deadline is a proxy for the actual announcement date. Concurrent news may affect returns."),
         ("Dự báo", "Forecast", f"Kiểm định dự báo trước một quý, huấn luyện đến {m7['train_through']} / "
          f"one-quarter-ahead backtest, trained through {m7['train_through']}.",
@@ -208,8 +237,9 @@ def _methods(models):
     ]
     return [
         dict(id=f"M{index}", name_vi=vi, name_en=en, spec=spec, n=n,
-             reading_vi=models[f"M{index}"]["reading"], reading_en=reading,
-             does_not_show_vi=models[f"M{index}"]["what_this_does_not_show"], does_not_show_en=limit)
+             reading_vi=models[f"M{index}"]["reading"], reading_en=models[f"M{index}"].get("reading_en", reading),
+             does_not_show_vi=models[f"M{index}"]["what_this_does_not_show"],
+             does_not_show_en=models[f"M{index}"].get("what_this_does_not_show_en", limit))
         for index, (vi, en, spec, n, reading, limit) in enumerate(definitions, start=1)
     ]
 
@@ -267,7 +297,9 @@ def build_snapshot(results, gold, silver):
         "banks": _bank_cards(panel, banks, derived, models, _names(silver), publish),
         "heterogeneity": m4,
         "linkage": _linkage(m5),
-        "market": {key: m6[key] for key in ["car_by_day", "regressions"]},
+        "market": {key: m6[key] for key in ["car_by_day", "regressions", "deadline_car_by_day", "coverage",
+                                           "events_with_car", "eligible_bank_quarters", "period_start", "period_end",
+                                           "reading_en"] if key in m6},
         "forecast": {"backtest": m7["backtest"]["by_period"],
                      "mae": {key: m7["backtest"]["mae_pp"][source] for key, source in
                              [("model", "model"), ("last_value", "naive"), ("seasonal_naive", "seasonal_naive")]}},
@@ -280,10 +312,10 @@ def build_snapshot(results, gold, silver):
                  en="The sample covers listed banks with consolidated data. Means and medians weight banks equally."),
             dict(vi="Chỉ báo 4 quý lấy trung vị của bình quân NPL 4 quý liên tiếp theo từng ngân hàng.",
                  en="The four-quarter statistic is the median of each bank’s average NPL ratio over four consecutive quarters."),
-            dict(vi="FiinQuant không trả ROA. Một số tín hiệu cần chi tiết nợ nhóm 2, xóa nợ và phát sinh nợ xấu.",
-                 en="FiinQuant does not return ROA. Several signals require group 2 loan, write-off and NPL formation data."),
-            dict(vi="Thời điểm nghiên cứu thị trường là hạn công bố. Khoảng dự báo lấy từ sai số lịch sử.",
-                 en="The event study uses filing deadlines. Prediction intervals are based on historical residuals."),
+            dict(vi="FiinQuant không trả ROA. Hai tín hiệu về nợ nhóm 2 và xóa nợ cần dữ liệu ghi chú BCTC.",
+                 en="FiinQuant does not return ROA. The group 2 and write-off flags require financial statement notes."),
+            dict(vi="Đọc nghiên cứu thị trường cùng độ phủ ngày công bố thực tế. Khoảng dự báo lấy từ sai số lịch sử.",
+                 en="Read market estimates alongside actual disclosure date coverage. Prediction intervals use historical residuals."),
             dict(vi="Thời điểm nguồn ghi theo lần sửa tệp Silver cuối cùng.",
                  en="Source timestamps reflect the last modification of each Silver file."),
         ],
@@ -300,6 +332,20 @@ def build_snapshot(results, gold, silver):
                  en="Published figures come from DuckDB and model outputs. Code formats the headline."),
         ],
     })
+    if "coverage" in m6:
+        payload["market"]["reading_vi"] = m6["reading"]
+    for key, model in [("findings", m1), ("context", m1), ("mechanism", m1), ("decision_rule", m7)]:
+        if key in model:
+            payload[key] = model[key]
+    if "summary" in m3:
+        payload["reversal"] = m3["summary"]
+    if "decoder" in models:
+        decoder = models["decoder"]
+        if not publish:
+            decoder = {**decoder, "fiinquant_rows": [
+                {**row, **dict.fromkeys(VENDOR_LEVEL_FIELDS)} for row in decoder["fiinquant_rows"]
+            ]}
+        payload["decoder"] = decoder
     snapshot_hash = sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False).encode("utf-8"))
     payload["meta"]["snapshot_id"] = f"npl-{latest['period']}-{snapshot_hash.hexdigest()[:12]}"
     payload["meta"]["generated_at"] = datetime.now(LOCAL_TIME).isoformat(timespec="seconds")

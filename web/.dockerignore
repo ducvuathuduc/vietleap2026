@@ -1,4 +1,10 @@
 node_modules
 .next
+out
 .env*
 !.env.example
+tsconfig.tsbuildinfo
+**/*.test.ts
+Dockerfile
+.dockerignore
+README.md

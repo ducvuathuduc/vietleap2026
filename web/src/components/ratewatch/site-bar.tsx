@@ -44,7 +44,7 @@ export function SiteBar() {
         </p>
         <nav className="flex flex-wrap gap-1" aria-label={vi ? "Mục" : "Sections"}>
           {RATEWATCH_NAV.map((item) => {
-            const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(`${item.url}/`)
+            const active = pathname === item.url || pathname.startsWith(`${item.url}/`)
             return (
               <a
                 key={item.url}

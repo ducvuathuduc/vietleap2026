@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lãi suất hôm nay",
-  description: "Kỳ hạn, ngân hàng và phần nằm trong hạn mức 350 triệu cho một khoản tiền gửi.",
+  title: "Nợ xấu ngân hàng",
+  description: "Mức giảm NPL quý 4 của ngân hàng niêm yết là cải thiện bền hay hiệu ứng mùa vụ.",
   robots: { index: true, follow: true },
 };
 

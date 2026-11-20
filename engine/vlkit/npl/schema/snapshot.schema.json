@@ -319,6 +319,8 @@
         "regression": {
           "$ref": "#/$defs/regression"
         },
+        "reading_en": { "type": "string", "minLength": 1 },
+        "what_this_does_not_show_en": { "type": "string", "minLength": 1 },
         "reading": {
           "type": "string",
           "minLength": 1
@@ -387,6 +389,8 @@
           "type": "string",
           "minLength": 1
         },
+        "reading_en": { "type": "string", "minLength": 1 },
+        "what_this_does_not_show_en": { "type": "string", "minLength": 1 },
         "reading": {
           "type": "string",
           "minLength": 1
@@ -413,11 +417,14 @@
         },
         "regressions": {
           "type": "object",
-          "required": [
-            "raw",
-            "adjusted",
-            "raw_q4",
-            "adjusted_q4"
+          "oneOf": [
+            {
+              "required": ["raw", "adjusted", "raw_q4", "adjusted_q4"]
+            },
+            {
+              "required": ["reported_or_deadline", "deadline_only", "reported_or_deadline_q4",
+                           "deadline_only_q4", "actual_dates", "matched_actual", "matched_deadline"]
+            }
           ],
           "properties": {
             "raw": {
@@ -431,10 +438,57 @@
             },
             "adjusted_q4": {
               "$ref": "#/$defs/regression"
+            },
+            "reported_or_deadline": {
+              "$ref": "#/$defs/regression"
+            },
+            "deadline_only": {
+              "$ref": "#/$defs/regression"
+            },
+            "reported_or_deadline_q4": {
+              "$ref": "#/$defs/regression"
+            },
+            "deadline_only_q4": {
+              "$ref": "#/$defs/regression"
+            },
+            "actual_dates": {
+              "$ref": "#/$defs/regression"
+            },
+            "matched_actual": {
+              "$ref": "#/$defs/regression"
+            },
+            "matched_deadline": {
+              "$ref": "#/$defs/regression"
             }
           },
           "additionalProperties": false
-        }
+        },
+        "deadline_car_by_day": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/carDay" }
+        },
+        "coverage": {
+          "type": "object",
+          "required": ["bank_quarters_n", "actual_date_n", "actual_date_pct", "actual_date_car_n",
+                       "matched_clock_car_n", "deadline_fallback_n", "deadline_car_n", "period"],
+          "properties": {
+            "bank_quarters_n": { "type": "integer", "minimum": 0 },
+            "actual_date_n": { "type": "integer", "minimum": 0 },
+            "actual_date_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+            "actual_date_car_n": { "type": "integer", "minimum": 0 },
+            "matched_clock_car_n": { "type": "integer", "minimum": 0 },
+            "deadline_fallback_n": { "type": "integer", "minimum": 0 },
+            "deadline_car_n": { "type": "integer", "minimum": 0 },
+            "period": { "$ref": "#/$defs/periodRange" }
+          },
+          "additionalProperties": false
+        },
+        "events_with_car": { "type": "integer", "minimum": 0 },
+        "eligible_bank_quarters": { "type": "integer", "minimum": 0 },
+        "period_start": { "anyOf": [{ "$ref": "#/$defs/period" }, { "type": "null" }] },
+        "period_end": { "anyOf": [{ "$ref": "#/$defs/period" }, { "type": "null" }] },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 }
       },
       "additionalProperties": false
     },
@@ -581,6 +635,89 @@
       "items": {
         "$ref": "#/$defs/text"
       }
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "reversal": {
+      "type": "object",
+      "required": ["n", "reversals", "share_pct", "period", "mean_next_q1_change_pp", "mean_next_q1_ci95"]
+    },
+    "decision_rule": {
+      "type": "object",
+      "required": ["latest_period", "latest", "q4_backtest", "band_level_pct", "reading_vi", "reading_en",
+                   "does_not_show_vi", "does_not_show_en"],
+      "properties": {
+        "latest_period": { "$ref": "#/$defs/period" },
+        "latest": {
+          "type": "array",
+          "items": {
+            "allOf": [{ "$ref": "#/$defs/decision" }, { "required": ["bank_code"] }]
+          }
+        },
+        "q4_backtest": {
+          "type": "object",
+          "required": ["unusual", "improving", "deteriorating", "within_normal_season"],
+          "additionalProperties": {
+            "type": "object",
+            "required": ["n", "reversals", "share_pct", "ci95", "period"],
+            "properties": {
+              "n": { "type": "integer", "minimum": 0 },
+              "reversals": { "type": "integer", "minimum": 0 },
+              "share_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+              "ci95": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+              "period": { "$ref": "#/$defs/periodRange" }
+            }
+          }
+        },
+        "band_level_pct": { "const": 80 }
+      }
+    },
+    "mechanism": {
+      "type": "object",
+      "required": ["coverage", "quarterly", "annual_writeoffs", "reading_vi", "reading_en",
+                   "does_not_show_vi", "does_not_show_en"]
+    },
+    "context": {
+      "type": "object",
+      "required": ["wdi", "policy"]
+    },
+    "decoder": {
+      "type": "object",
+      "required": ["title_vi", "title_en", "periods", "banks", "rows", "fiinquant_rows", "regression", "reading_vi", "reading_en",
+                   "does_not_show_vi", "does_not_show_en"],
+      "properties": {
+        "title_vi": { "type": "string", "minLength": 1 },
+        "title_en": { "type": "string", "minLength": 1 },
+        "periods": {
+          "type": "array", "minItems": 6, "maxItems": 6, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/period" }
+        },
+        "banks": {
+          "type": "array", "minItems": 8, "maxItems": 8, "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "rows": {
+          "type": "array", "minItems": 48, "maxItems": 48,
+          "items": { "$ref": "#/$defs/decoderRow" }
+        },
+        "fiinquant_rows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decoderRow" }
+        },
+        "regression": {
+          "type": "object",
+          "required": ["outcome", "regressors", "estimator", "fiinquant", "notes"],
+          "properties": {
+            "outcome": { "const": "delta_npl_ratio" },
+            "regressors": { "const": ["writeoff_ratio", "delta_g2_ratio", "loan_growth", "lagged_coverage"] },
+            "fiinquant": { "$ref": "#/$defs/decoderFit" },
+            "notes": { "$ref": "#/$defs/decoderFit" }
+          }
+        }
+      }
     }
   },
   "additionalProperties": false,
@@ -620,6 +757,77 @@
     }
   },
   "$defs": {
+    "decoderRow": {
+      "type": "object",
+      "required": ["bank_code", "period", "status", "status_vi", "status_en", "signals", "missing_inputs",
+                   "npl_ratio", "g2_ratio", "coverage", "writeoff_ratio", "npl_formation", "broad_problem_ratio"],
+      "properties": {
+        "bank_code": { "type": "string", "minLength": 1 },
+        "period": { "$ref": "#/$defs/period" },
+        "status": { "enum": ["CLEAN", "review", "missing_data", "not_applicable"] },
+        "status_vi": { "type": "string", "minLength": 1 },
+        "status_en": { "type": "string", "minLength": 1 },
+        "signals": {
+          "type": "array", "maxItems": 4,
+          "items": {
+            "type": "object", "required": ["id", "text_vi", "text_en"],
+            "properties": {
+              "id": { "enum": ["S1", "S2", "S3", "S4"] },
+              "text_vi": { "type": "string", "minLength": 1 },
+              "text_en": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "missing_inputs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "npl_ratio": { "type": ["number", "null"] },
+        "g2_ratio": { "type": ["number", "null"] },
+        "coverage": { "type": ["number", "null"] },
+        "writeoff_ratio": { "type": ["number", "null"] },
+        "npl_formation": { "type": ["number", "null"] },
+        "broad_problem_ratio": { "type": ["number", "null"] }
+      },
+      "if": { "properties": { "status": { "const": "CLEAN" } } },
+      "then": { "properties": { "signals": { "maxItems": 0 }, "missing_inputs": { "maxItems": 0 } } }
+    },
+    "decoderFit": {
+      "type": "object",
+      "required": ["n_panel", "grid_n", "panel_period", "full", "available", "unavailable_fields", "n_by_field"],
+      "properties": {
+        "n_panel": { "type": "integer", "minimum": 0 },
+        "grid_n": { "type": ["integer", "null"], "minimum": 0 },
+        "panel_period": { "$ref": "#/$defs/periodRange" },
+        "full": { "$ref": "#/$defs/regression" },
+        "available": { "anyOf": [{ "$ref": "#/$defs/regression" }, { "type": "null" }] },
+        "unavailable_fields": { "type": "array", "items": { "type": "string" } },
+        "n_by_field": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+      }
+    },
+    "periodRange": {
+      "type": ["array", "null"],
+      "items": { "$ref": "#/$defs/period" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "decision": {
+      "type": "object",
+      "required": ["period", "status", "status_vi", "status_en", "unusual", "d_npl_pct", "expected_change_pp",
+                   "adjusted_change_pp", "lo80_pp", "hi80_pp", "train_n"],
+      "properties": {
+        "bank_code": { "type": "string", "minLength": 1 },
+        "period": { "$ref": "#/$defs/period" },
+        "status": { "enum": ["improving", "deteriorating", "within_normal_season", "unavailable"] },
+        "status_vi": { "type": "string", "minLength": 1 },
+        "status_en": { "type": "string", "minLength": 1 },
+        "unusual": { "type": ["boolean", "null"] },
+        "d_npl_pct": { "type": ["number", "null"] },
+        "expected_change_pp": { "type": ["number", "null"] },
+        "adjusted_change_pp": { "type": ["number", "null"] },
+        "lo80_pp": { "type": ["number", "null"] },
+        "hi80_pp": { "type": ["number", "null"] },
+        "train_n": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "period": {
       "type": "string",
       "pattern": "^[1-9][0-9]{3}Q[1-4]$"
@@ -956,6 +1164,9 @@
                 "number",
                 "null"
               ]
+            },
+            "decision": {
+              "$ref": "#/$defs/decision"
             },
             "forecast_next": {
               "anyOf": [

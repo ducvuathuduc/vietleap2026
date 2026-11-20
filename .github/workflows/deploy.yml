@@ -1,0 +1,66 @@
+# Build both images on GitHub runners and push them to ECR (OIDC, no stored AWS keys).
+# When EXPRESS_SERVICE_ARN is set, roll the ECS Express web service to the new image.
+# Repo variables: AWS_DEPLOY_ROLE_ARN, APP_SECRET_ARN, EXPRESS_SERVICE_ARN (after the service exists).
+name: Deploy
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/ratewatch]
+    paths:
+      - "web/**"
+      - "engine/**"
+      - "Dockerfile.pipeline"
+      - "requirements.txt"
+      - ".github/workflows/deploy.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-vietleap
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-southeast-1
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push web image
+        working-directory: web
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/vietleap-web
+          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Build and push pipeline image
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/vietleap-pipeline
+          docker build -f Dockerfile.pipeline -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Roll the Express web service
+        if: ${{ vars.EXPRESS_SERVICE_ARN != '' }}
+        env:
+          SECRET_ARN: ${{ vars.APP_SECRET_ARN }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          S="name=OPENAI_API_KEY,valueFrom=$SECRET_ARN:OPENAI_API_KEY::"
+          for k in LANGFUSE_GATEWAY_HOST LANGFUSE_GATEWAY_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY LANGFUSE_BASE_URL GROQ_API_KEY; do
+            S="$S},{name=$k,valueFrom=$SECRET_ARN:$k::"
+          done
+          aws ecs update-express-gateway-service \
+            --service-arn '${{ vars.EXPRESS_SERVICE_ARN }}' \
+            --primary-container "image=$REGISTRY/vietleap-web:${{ github.sha }},containerPort=3000,secrets=[{$S}]"

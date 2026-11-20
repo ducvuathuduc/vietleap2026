@@ -117,10 +117,13 @@ export interface GuardResult {
 
 /** Replace every number that matches no tool value with "[chưa kiểm chứng]" and list them. */
 export function guardNumbers(text: string, truth: number[]): GuardResult {
+  const negatedTruth = truth.map((t) => -t)
   const flagged: string[] = []
   const out = text.replace(NUM_RE, (token, offset: number) => {
     const rest = text.slice(offset + token.length, offset + token.length + 12)
-    if (tokenGrounded(token, rest, truth)) return token
+    // A token right after a minus/dash may be a negative value: test both signs.
+    const pool = offset > 0 && /[-−–]/.test(text[offset - 1] ?? "") ? [...truth, ...negatedTruth] : truth
+    if (tokenGrounded(token, rest, pool)) return token
     flagged.push(token)
     return "[chưa kiểm chứng]"
   })
@@ -130,14 +133,20 @@ export function guardNumbers(text: string, truth: number[]): GuardResult {
 /** Every numeric value in tool outputs (numbers, and numbers inside strings such as dates). */
 export function collectTruthNumbers(toolOutputs: unknown[]): number[] {
   const vals: number[] = []
+  let hasCi = false
   const walk = (v: unknown, depth: number) => {
     if (depth > 6 || v === null || v === undefined) return
     if (typeof v === "number" && Number.isFinite(v)) vals.push(v)
     else if (typeof v === "string") numbersIn(v).forEach((token) => vals.push(...numberCandidates(token)))
     else if (Array.isArray(v)) v.slice(0, 250).forEach((x) => walk(x, depth + 1))
-    else if (typeof v === "object") Object.values(v as Record<string, unknown>).forEach((x) => walk(x, depth + 1))
+    else if (typeof v === "object") {
+      if ("ci95" in v || "lo80" in v) hasCi = true
+      Object.values(v as Record<string, unknown>).forEach((x) => walk(x, depth + 1))
+    }
   }
   walk(toolOutputs, 0)
+  // A tool that returns an interval lets the answer state the interval level.
+  if (hasCi) vals.push(95, 80)
   return vals
 }
 
@@ -179,7 +188,7 @@ export function guardTextStream(): TransformStream<Record<string, unknown>, Reco
     transform(chunk, controller) {
       const type = chunk.type
       if (type === "tool-output-available") {
-        truth = truth.concat(collectTruthNumbers(chunk.output))
+        truth = truth.concat(collectTruthNumbers([chunk.output]))
         controller.enqueue(chunk)
         return
       }

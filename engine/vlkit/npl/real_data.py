@@ -85,6 +85,9 @@ def clean_quarters(raw, *, canonical_fractions=False):
     signal_fields = [field for field in OPTIONAL_SIGNAL_DELTAS if field in raw]
     for field in signal_fields:
         panel[field] = _numeric(raw, field)
+    for field in ("g2_ratio", "writeoff_ratio", "npl_formation"):
+        if field in raw:
+            panel[field] = _numeric(raw, field)
     valid = (panel["ticker"].str.fullmatch(r"[A-Z0-9]+").fillna(False)
              & panel["period"].str.fullmatch(r"\d{4}Q[1-4]").fillna(False)
              & panel["basis"].isin(["consolidated", "separate"]))
@@ -153,9 +156,26 @@ def read_silver(folder):
     absent = [path.name for path in [*paths.values(), calendar] if not path.is_file()]
     if absent:
         raise ValueError(f"Thiếu đầu vào Silver: {', '.join(absent)}")
+    optional_parquet = ("sbv_system", "wdi_bank", "notes_bank_quarter")
+    optional_csv = ("field_map_ratios", "disclosure_dates", "case_tcb", "legal_register", "notes_links", "notes_gate")
+    paths.update({name: folder / f"{name}.parquet" for name in optional_parquet
+                  if (folder / f"{name}.parquet").is_file()})
     with duckdb.connect() as db:
         tables = {name: db.read_parquet(str(path)).df() for name, path in paths.items()}
+    for name in optional_csv:
+        path = folder / f"{name}.csv"
+        if path.is_file():
+            tables[name] = pd.read_csv(path)
     tables["report_calendar"] = pd.read_csv(calendar)
+    if "notes_bank_quarter" in tables and "notes_links" in tables:
+        keys = ["bank", "period", "source_url"]
+        links = tables["notes_links"].rename(columns={"url": "source_url", "statement_type": "registered_scope"})
+        links = links[[*keys, "registered_scope"]].drop_duplicates().dropna(subset=keys)
+        links = links.loc[~links.duplicated(keys, keep=False)]
+        notes = tables["notes_bank_quarter"].merge(links, on=keys, how="left", validate="many_to_one")
+        notes["statement_type"] = (notes["statement_type"].fillna(notes["registered_scope"])
+                                   if "statement_type" in notes else notes["registered_scope"])
+        tables["notes_bank_quarter"] = notes.drop(columns="registered_scope")
     return tables
 
 
@@ -257,7 +277,9 @@ def write_star(path, panel, market, calendar, events):
     parsed = pd.PeriodIndex(periods["period"], freq="Q")
     periods["year"], periods["quarter"] = parsed.year, parsed.quarter
     periods["quarter_end"] = parsed.to_timestamp(how="end").normalize()
-    dates = pd.concat([market["date"], calendar["deadline"], events["event_date"]]).dropna().drop_duplicates()
+    event_dates = ["deadline", "event_date", "deadline_event_date", "published_at", "anchor_date"]
+    dates = pd.concat([market["date"], calendar["deadline"], *[events[column] for column in event_dates]]
+                      ).dropna().drop_duplicates()
     dates = dates.to_frame(name="date")
     dates["year"] = dates["date"].dt.year
     dates["month"] = dates["date"].dt.month
@@ -274,7 +296,10 @@ def write_star(path, panel, market, calendar, events):
         "fact_report_event": (events, "PRIMARY KEY (bank_code, period, basis), "
                               "FOREIGN KEY (bank_code, period, basis) REFERENCES fact_bank_quarter(bank_code, period, basis), "
                               "FOREIGN KEY (deadline) REFERENCES dim_date(date), "
-                              "FOREIGN KEY (event_date) REFERENCES dim_date(date)"),
+                              "FOREIGN KEY (event_date) REFERENCES dim_date(date), "
+                              "FOREIGN KEY (deadline_event_date) REFERENCES dim_date(date), "
+                              "FOREIGN KEY (published_at) REFERENCES dim_date(date), "
+                              "FOREIGN KEY (anchor_date) REFERENCES dim_date(date)"),
     }
     with duckdb.connect(str(Path(path))) as db:
         for name, (frame, constraints) in frames.items():

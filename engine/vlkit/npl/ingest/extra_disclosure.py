@@ -6,7 +6,7 @@ Coverage is reported as-is: a quarter with no matching item simply stays missing
 """
 
 import re
-from datetime import datetime, timezone
+from datetime import timezone
 from email.utils import parsedate_to_datetime
 from urllib.parse import urljoin
 from xml.etree import ElementTree

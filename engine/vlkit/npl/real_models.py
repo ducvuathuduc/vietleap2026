@@ -3,13 +3,16 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from scipy import stats
+from statsmodels.stats.proportion import proportion_confint
 
-from .real_data import RATIOS
+from .real_data import DEADLINE_SOURCE, RATIOS, _bank_code
 
 
 BOOTSTRAP_REPS = 999
 BOOTSTRAP_SEED = 20261120
 QUARTER_TERMS = ["Q2", "Q3", "Q4"]
+MARKET_TERMS = ["expected_d_npl_pct", "surprise_d_npl_pct"]
+FORECAST_TRAIN_THROUGH = "2024Q4"
 
 
 def _design(panel, terms, *, bank=False, year=False):
@@ -95,6 +98,51 @@ def _quarters(panel):
     return panel.assign(**{term: panel["quarter"].eq(int(term[1])) for term in QUARTER_TERMS})
 
 
+def seasonal_expectation(panel):
+    """Predict each observed change after removing its own bank-quarter from the fit."""
+    sample = _quarters(panel.dropna(subset=["d_npl_pct"]))
+    expected = pd.Series(np.nan, index=panel.index, dtype=float)
+    x = _design(sample, QUARTER_TERMS, bank=True).to_numpy()
+    if not len(x) or np.linalg.matrix_rank(x) != x.shape[1]:
+        return expected
+    inverse = np.linalg.pinv(x)
+    y = sample["d_npl_pct"].to_numpy()
+    fitted = x @ (inverse @ y)
+    # Diagonal of the hat matrix; the deletion formula equals refitting each row.
+    leverage = np.einsum("ij,ji->i", x, inverse)
+    valid = leverage < 1 - 1e-10
+    expected.loc[sample.index[valid]] = (y - (y - fitted) / np.where(valid, 1 - leverage, np.nan))[valid]
+    return expected
+
+
+def _mean_interval(values, banks):
+    """95% t interval for an observation-weighted mean with bank clusters."""
+    center = values.mean()
+    scores = (values - center).groupby(banks).sum()
+    clusters = len(scores)
+    if clusters < 2:
+        return None
+    se = np.sqrt(scores.pow(2).sum() * clusters / (clusters - 1)) / len(values)
+    margin = stats.t.ppf(.975, clusters - 1) * se
+    return [center - margin, center + margin]
+
+
+def _share_interval(count, n):
+    return [100 * bound for bound in proportion_confint(count, n, method="wilson")] if n else None
+
+
+def _bank_bootstrap_share(indicator, banks):
+    """Resample whole bank histories and keep each eligible pair equally weighted."""
+    bank_counts = indicator.groupby(banks).agg(["sum", "size"])
+    if len(bank_counts) < 2:
+        return None
+    rng = np.random.default_rng(BOOTSTRAP_SEED)
+    draw = rng.integers(len(bank_counts), size=(BOOTSTRAP_REPS, len(bank_counts)))
+    counts = bank_counts["sum"].to_numpy()[draw].sum(axis=1)
+    totals = bank_counts["size"].to_numpy()[draw].sum(axis=1)
+    return np.quantile(100 * counts / totals, [.025, .975]).tolist()
+
+
 def descriptives(panel):
     metrics = ["npl_pct", "coverage_pct", "ldr_pct", "roa_pct"]
     result = {}
@@ -135,14 +183,22 @@ def seasonal_models(panel):
 
 
 def reversal(panel):
-    q4 = panel.loc[panel.quarter.eq(4), ["bank_code", "year", "d_npl_pct"]].rename(columns={"d_npl_pct": "q4_delta"})
+    q4 = panel.loc[panel.quarter.eq(4), ["bank_code", "year", "period", "d_npl_pct"]].rename(columns={"d_npl_pct": "q4_delta"})
     q1 = panel.loc[panel.quarter.eq(1), ["bank_code", "year", "d_npl_pct"]].rename(columns={"d_npl_pct": "next_q1_delta"})
     pairs = q4.merge(q1.assign(year=q1.year - 1), on=["bank_code", "year"], validate="one_to_one")
     pairs = pairs.dropna()
     pairs["down_then_up"] = pairs.q4_delta.lt(0) & pairs.next_q1_delta.gt(0)
     yearly = pairs.groupby("year")["down_then_up"].agg(n="size", count="sum").reset_index()
     yearly["share_pct"] = 100 * yearly["count"] / yearly["n"]
+    n, count = len(pairs), int(pairs["down_then_up"].sum())
     return {"regression": _fit(pairs, "next_q1_delta", ["q4_delta"], bank=True)[0],
+            "summary": {"n": n, "reversals": count, "share_pct": 100 * count / n if n else None,
+                        "ci95_share_pct": _bank_bootstrap_share(pairs.down_then_up, pairs.bank_code),
+                        "ci95_share_pct_wilson": _share_interval(count, n),
+                        "period": [pairs.period.min(), f"{pairs.year.max() + 1}Q1"] if n else None,
+                        "mean_next_q1_change_pp": pairs.next_q1_delta.mean(),
+                        "mean_next_q1_ci95": _mean_interval(pairs.next_q1_delta, pairs.bank_code),
+                        "share_ci_method": "95% percentile bank bootstrap; Wilson shown for independent pairs"},
             "by_year": yearly.to_dict("records")}
 
 
@@ -190,7 +246,9 @@ def event_paths(market, calendar):
         x_event = benchmark[window]
         if not np.isfinite(x_event).all():
             continue
-        for bank in wide:
+        for bank in ([row.bank_code] if hasattr(row, "bank_code") else wide):
+            if bank not in wide:
+                continue
             y = wide[bank].to_numpy()
             jointly_observed = np.isfinite(x) & np.isfinite(y[train])
             if jointly_observed.sum() < 120 or not np.isfinite(y[window]).all():
@@ -206,41 +264,155 @@ def event_paths(market, calendar):
                                           "car_pct", "estimation_n"])
 
 
-def market_study(panel, market, calendar, fitted):
-    paths = event_paths(market, calendar)
+def market_study(panel, market, calendar, disclosure=None):
     bank_quarters = panel[["bank_code", "period", "basis", "quarter", "d_npl_pct"]].copy()
-    bank_quarters["adjusted_d_npl_pct"] = panel.d_npl_pct - fitted
+    bank_quarters["expected_d_npl_pct"] = seasonal_expectation(panel)
+    bank_quarters["surprise_d_npl_pct"] = panel.d_npl_pct - bank_quarters.expected_d_npl_pct
     events = bank_quarters.merge(calendar, on="period", how="left", validate="many_to_one")
-    terminal = paths.loc[paths.day.eq(10), ["bank_code", "period", "event_date", "car_pct", "estimation_n"]]
-    events = events.merge(terminal, on=["bank_code", "period"], how="left", validate="one_to_one")
-    events["estimation_n"] = events["estimation_n"].astype("Int64")
-    if terminal.empty:
-        events["event_date"] = pd.NaT
-    # Descriptive mean curve and bank-clustered confidence intervals.
-    paths = paths.merge(bank_quarters[["bank_code", "period", "quarter"]],
-                        on=["bank_code", "period"], how="inner", validate="many_to_one")
-    means = []
-    for group_name, group in [("all", paths), ("Q4", paths.loc[paths.quarter.eq(4)])]:
-        for day, sample in group.groupby("day"):
-            n = len(sample)
-            mean = sample.car_pct.mean()
-            cluster_sums = (sample.car_pct - mean).groupby(sample.bank_code).sum()
-            clusters = len(cluster_sums)
-            if clusters > 1:
-                se = np.sqrt((cluster_sums ** 2).sum() * clusters / (clusters - 1)) / n
-                margin = stats.t.ppf(.975, clusters - 1) * se
-                ci = [mean - margin, mean + margin]
-            else:
-                ci = None
-            means.append({"group": group_name, "day": int(day), "n": n, "mean_car_pct": mean, "ci95": ci})
-    regressions = {}
-    for label, predictor in [("raw", "d_npl_pct"), ("adjusted", "adjusted_d_npl_pct")]:
-        regressions[label] = _fit(events, "car_pct", [predictor])[0]
-        regressions[f"{label}_q4"] = _fit(events.loc[events.quarter.eq(4)], "car_pct", [predictor])[0]
-    return {"regressions": regressions, "car_by_day": means, "events_with_car": int(events.car_pct.notna().sum()),
-            "eligible_bank_quarters": int(events.deadline.notna().sum()),
-            "period_start": events.loc[events.car_pct.notna(), "period"].min() if not terminal.empty else None,
-            "period_end": events.loc[events.car_pct.notna(), "period"].max() if not terminal.empty else None}, events
+    quarter_end = pd.PeriodIndex(events.period, freq="Q").to_timestamp(how="end").normalize()
+    events["quarter_end"] = events["quarter_end"].fillna(pd.Series(quarter_end, index=events.index))
+    events["deadline"] = events["deadline"].fillna(events.quarter_end + pd.Timedelta(days=30))
+    events["deadline_source_url"] = events["deadline_source_url"].fillna(DEADLINE_SOURCE)
+    keys = ["bank_code", "period"]
+    if disclosure is not None:
+        actual = disclosure[["ticker", "period", "published_at", "url"]].rename(columns={"url": "disclosure_url"})
+        actual["bank_code"] = _bank_code(actual.pop("ticker"))
+        actual["period"] = actual["period"].astype("string").str.strip().str.upper()
+        actual["published_at"] = (pd.to_datetime(actual["published_at"], format="mixed", errors="coerce", utc=True)
+                                  .dt.tz_convert("Asia/Ho_Chi_Minh").dt.tz_localize(None).dt.normalize())
+        actual = actual.merge(events[keys + ["quarter_end"]], on=keys, how="inner", validate="many_to_one")
+        actual = (actual.loc[actual["published_at"].gt(actual["quarter_end"])]
+                  .sort_values(["published_at", "disclosure_url"]).drop_duplicates(keys))
+        events = events.merge(actual[keys + ["published_at", "disclosure_url"]], on=keys,
+                              how="left", validate="one_to_one")
+    else:
+        events = events.assign(published_at=pd.NaT, disclosure_url=None)
+
+    observed = events.published_at.notna()
+    events["anchor_date"] = events["published_at"].fillna(events["deadline"])
+    events["anchor_source"] = np.select([observed, events.deadline.notna()], ["actual", "deadline"], default="missing")
+    deadline_paths = event_paths(market, events[["period", "deadline"]].drop_duplicates())
+    actual_paths = event_paths(market, events.loc[observed, keys + ["anchor_date"]]
+                               .rename(columns={"anchor_date": "deadline"}))
+    # A known disclosure with no valid trading window remains missing on the preferred clock.
+    is_actual = pd.MultiIndex.from_frame(deadline_paths[keys]).isin(pd.MultiIndex.from_frame(events.loc[observed, keys]))
+    paths = deadline_paths.loc[~is_actual]
+    if not actual_paths.empty:
+        paths = actual_paths if paths.empty else pd.concat([paths, actual_paths], ignore_index=True)
+    columns = ["event_date", "car_pct", "estimation_n"]
+    for source, prefix in [(paths, ""), (deadline_paths, "deadline_")]:
+        terminal = source.loc[source.day.eq(10), keys + columns].rename(
+            columns={column: prefix + column for column in columns})
+        events = events.merge(terminal, on=keys, how="left", validate="one_to_one")
+        events[prefix + "event_date"] = pd.to_datetime(events[prefix + "event_date"])
+        events[prefix + "estimation_n"] = events[prefix + "estimation_n"].astype("Int64")
+
+    dated = events.loc[events.anchor_source.eq("actual")]
+    matched = dated.dropna(subset=["car_pct", "deadline_car_pct"])
+    variants = [
+        ("reported_or_deadline", events, "car_pct"),
+        ("deadline_only", events, "deadline_car_pct"),
+        ("reported_or_deadline_q4", events.loc[events.quarter.eq(4)], "car_pct"),
+        ("deadline_only_q4", events.loc[events.quarter.eq(4)], "deadline_car_pct"),
+        ("actual_dates", dated, "car_pct"),
+        ("matched_actual", matched, "car_pct"),
+        ("matched_deadline", matched, "deadline_car_pct"),
+    ]
+    regressions = {label: _fit(sample, outcome, MARKET_TERMS, bootstrap=True)[0]
+                   for label, sample, outcome in variants}
+    curves = {}
+    for label, source in [("reported_or_deadline", paths), ("deadline_only", deadline_paths)]:
+        source = source.merge(bank_quarters[keys + ["quarter"]], on=keys, how="inner", validate="many_to_one")
+        curves[label] = [
+            {"group": name, "day": int(day), "n": len(sample), "mean_car_pct": sample.car_pct.mean(),
+             "ci95": _mean_interval(sample.car_pct, sample.bank_code)}
+            for name, group in [("all", source), ("Q4", source.loc[source.quarter.eq(4)])]
+            for day, sample in group.groupby("day")
+        ]
+    available = events.loc[events.car_pct.notna()]
+    return {
+        "regressions": regressions, "car_by_day": curves["reported_or_deadline"],
+        "deadline_car_by_day": curves["deadline_only"],
+        "events_with_car": len(available), "eligible_bank_quarters": int(events.anchor_date.notna().sum()),
+        "period_start": available.period.min() if len(available) else None,
+        "period_end": available.period.max() if len(available) else None,
+        "coverage": {"bank_quarters_n": len(events), "actual_date_n": len(dated),
+                     "actual_date_pct": 100 * len(dated) / len(events) if len(events) else None,
+                     "actual_date_car_n": int(dated.car_pct.notna().sum()), "matched_clock_car_n": len(matched),
+                     "deadline_fallback_n": int(events.anchor_source.eq("deadline").sum()),
+                     "deadline_car_n": int(events.deadline_car_pct.notna().sum()),
+                     "period": [events.period.min(), events.period.max()] if len(events) else None},
+    }, events
+
+
+def decision_rule(panel):
+    """Use the M7 model and residual quantiles with training strictly before each target."""
+    data = _quarters(panel)
+    rows = data[["bank_code", "period", "quarter", "year", "d_npl_pct"]].copy()
+    rows["expected_change_pp"] = rows["lo80_pp"] = rows["hi80_pp"] = np.nan
+    rows["train_n"] = 0
+    for period, target in data.groupby("period"):
+        train = data.loc[data.period.lt(period) & data.period.le(FORECAST_TRAIN_THROUGH)].dropna(subset=["d_npl_pct"])
+        x = _design(train, QUARTER_TERMS, bank=True)
+        if len(x) <= len(x.columns) or np.linalg.matrix_rank(x.to_numpy()) != len(x.columns):
+            continue
+        fit = sm.OLS(train["d_npl_pct"], x).fit()
+        predict = _design(target, QUARTER_TERMS, bank=True)
+        for column in x.columns.difference(predict.columns):
+            bank = column.removeprefix("bank_code_")
+            predict[column] = target.bank_code.eq(bank)
+        expected = predict[x.columns].astype(float) @ fit.params
+        eligible = target.index[target.bank_code.isin(train.bank_code)]
+        rows.loc[eligible, "expected_change_pp"] = expected.loc[eligible]
+        lo, hi = fit.resid.quantile([.1, .9])
+        rows.loc[eligible, ["lo80_pp", "hi80_pp", "train_n"]] = [lo, hi, len(train)]
+    rows["adjusted_change_pp"] = rows["d_npl_pct"] - rows["expected_change_pp"]
+    residual = rows["adjusted_change_pp"]
+    improving = residual.lt(rows["lo80_pp"] - 1e-10)
+    deteriorating = residual.gt(rows["hi80_pp"] + 1e-10)
+    rows["unusual"] = (improving | deteriorating).astype("boolean").where(residual.notna())
+    rows["status"] = np.select([residual.isna(), improving, deteriorating],
+                               ["unavailable", "improving", "deteriorating"], default="within_normal_season")
+    rows["status_vi"] = rows["status"].map({"unavailable": "Chưa đủ dữ liệu", "improving": "Cải thiện",
+                                           "deteriorating": "Xấu đi", "within_normal_season": "Trong mùa vụ bình thường"})
+    rows["status_en"] = rows["status"].str.replace("_", " ")
+    q4 = rows.loc[rows.quarter.eq(4) & residual.notna()]
+    q1 = rows.loc[rows.quarter.eq(1), ["bank_code", "year", "d_npl_pct"]].rename(columns={"d_npl_pct": "q1_delta"})
+    pairs = q4.merge(q1.assign(year=q1.year - 1).dropna(), on=["bank_code", "year"], validate="one_to_one")
+    pairs["reversed"] = (pairs["d_npl_pct"] * pairs["q1_delta"]).lt(0)
+    backtest = {}
+    for label, selected in [("unusual", pairs.unusual), ("improving", pairs.status.eq("improving")),
+                            ("deteriorating", pairs.status.eq("deteriorating")),
+                            ("within_normal_season", pairs.status.eq("within_normal_season"))]:
+        sample = pairs.loc[selected]
+        n, count = len(sample), int(sample["reversed"].sum())
+        backtest[label] = {"n": n, "reversals": count, "share_pct": 100 * count / n if n else None,
+                           "clusters": int(sample.bank_code.nunique()),
+                           "ci95": _bank_bootstrap_share(sample.reversed, sample.bank_code),
+                           "ci95_wilson": _share_interval(count, n),
+                           "period": [sample.period.min(), f"{sample.year.max() + 1}Q1"] if n else None}
+    fields = ["bank_code", "period", "d_npl_pct", "expected_change_pp", "adjusted_change_pp", "lo80_pp",
+              "hi80_pp", "train_n", "unusual", "status", "status_vi", "status_en"]
+    latest_period = rows.period.max()
+    latest = (rows.loc[rows.period.eq(latest_period), fields].set_index("bank_code")
+              .reindex(sorted(rows.bank_code.unique())).reset_index())
+    latest["period"] = latest_period
+    latest["train_n"] = latest["train_n"].fillna(0).astype(int)
+    for column, label in [("status", "unavailable"), ("status_vi", "Chưa đủ dữ liệu"), ("status_en", "unavailable")]:
+        latest[column] = latest[column].fillna(label)
+    return {
+        "latest_period": latest_period,
+        "latest": latest.to_dict("records"),
+        "q4_backtest": backtest,
+        "eligible_q4_n": len(q4),
+        "paired_q4_n": len(pairs),
+        "band_level_pct": 80,
+        "share_ci_method": "95% percentile bank bootstrap; Wilson shown for independent pairs",
+        "reading_vi": "So sánh thay đổi NPL thực tế trừ mức dự kiến với dải sai số M7 80%; thấp hơn dải là cải thiện, cao hơn là xấu đi, và trong dải là mùa vụ bình thường.",
+        "reading_en": "Compare the actual NPL change minus its expected change with the M7 80% residual band; below is improving, above is deteriorating, and inside is within normal season.",
+        "does_not_show_vi": "Cờ khác thường chỉ đặt ưu tiên rà soát; đảo chiều là hai thay đổi NPL thực tế liên tiếp trái dấu và chưa xác định nguyên nhân.",
+        "does_not_show_en": "An unusual flag prioritizes review; a reversal is two consecutive actual NPL changes with opposite signs and does not establish a cause.",
+    }, rows[fields]
 
 
 def forecast(panel):
@@ -251,7 +423,7 @@ def forecast(panel):
         keys = pd.MultiIndex.from_arrays([rows["bank_code"], rows["quarter_id"] - lag])
         return levels.reindex(keys).to_numpy()
 
-    train = data.loc[data.year.le(2024)].dropna(subset=["d_npl_pct"])
+    train = data.loc[data.period.le(FORECAST_TRAIN_THROUGH)].dropna(subset=["d_npl_pct"])
     design = _design(train, QUARTER_TERMS, bank=True)
     if train.empty or np.linalg.matrix_rank(design.to_numpy()) != design.shape[1]:
         raise ValueError("Mẫu huấn luyện dự báo thiếu biến thiên hoặc không đủ quý")
@@ -311,7 +483,7 @@ def forecast(panel):
     future = future[["bank_code", "period", "last_value", "predicted_npl_pct", "lower80", "upper80",
                      "unavailable_reason"]]
     return {
-        "train_n": len(train), "train_through": "2024Q4", "test_period": ["2025Q1", "2026Q3"],
+        "train_n": len(train), "train_through": FORECAST_TRAIN_THROUGH, "test_period": ["2025Q1", "2026Q3"],
         "residual_quantiles_pp": [lower_error, upper_error],
         "backtest": {"n": len(common), "mae_pp": errors, "mae_difference_vs": difference_intervals,
                      "interval_coverage_pct": 100 * covered.mean(),

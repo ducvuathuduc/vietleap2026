@@ -19,15 +19,23 @@ from .files import atomic
 DATASETS = ("wdi", "sbv", "legal", "disclosure", "tcb")
 SILVER = {"wdi": "wdi_bank.parquet", "sbv": "sbv_system.parquet", "legal": "legal_register.csv",
           "disclosure": "disclosure_dates.csv", "tcb": "case_tcb.csv"}
+BACKSLASH = chr(92)
 
 
 def tinyfetch_url(url):
     """Free TinyFetch fallback for hosts this machine cannot reach directly (api.worldbank.org blocks it)."""
     from ...de.tinyfish import fetch_text
 
-    body = fetch_text([url]).get(url)
-    fence = body.split("```")[1] if "```" in body else body
-    return fence.split("\n", 1)[1] if fence.lstrip().startswith("json") else fence
+    body = fetch_text([url]).get(url) or ""
+    if not body:
+        raise ValueError("TinyFetch returned nothing")
+    fence = body.split("```")[1] if body.count("```") >= 2 else body
+    head, _, rest = fence.partition("\n")
+    if rest and head.strip().lower() in ("json", ""):
+        fence = rest
+    for char in "_*[]()#`+~>-":  # the markdown pass escapes these, which json.loads rejects
+        fence = fence.replace(BACKSLASH + char, char)
+    return fence
 
 
 def run_extra(lake=LAKE, today=None, fetcher=None, run_id=None, datasets=DATASETS, banks=BANKS,

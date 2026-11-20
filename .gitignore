@@ -16,3 +16,6 @@ data/*.duckdb
 *.key
 *.log
 data/*.duckdb.wal
+
+web/test-results/
+web/playwright-report/

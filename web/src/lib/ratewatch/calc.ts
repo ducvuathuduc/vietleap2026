@@ -299,7 +299,7 @@ export function plan(
   if (split.allocations.length >= 2) {
     const rowsByBank = new Map(ordered.map((b) => [b.row.bank_code, b.row]))
     const factorHByBank = new Map(ordered.map((b) => [b.row.bank_code, b.factorH]))
-    const interestVnd = split.allocations.reduce((s, a) => s + a.amount * (factorHByBank.get(a.bank_code) - 1), 0)
+    const interestVnd = split.allocations.reduce((s, a) => s + a.amount * ((factorHByBank.get(a.bank_code) ?? 1) - 1), 0)
     plans.push({
       kind: "split",
       early_withdrawal: false,

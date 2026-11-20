@@ -1,0 +1,52 @@
+# NPL pipeline (scheduled job). Build: docker build -f Dockerfile.pipeline -t pipeline .  (context = repo root)
+# Runtime needs (injected by the ECS task, never baked): FIINQUANT_USERNAME / FIINQUANT_PASSWORD
+# env vars (bridged to a dotenv file the CLI reads), SNAPSHOT_S3_URI or RATEWATCH_S3_URI for the
+# snapshot upload. PIPELINE_MODE=ratewatch keeps the T6 ratewatch behaviour; the default runs the
+# NPL chain: ingest -> pipeline -> snapshot.
+# syntax=docker/dockerfile:1
+FROM python:3.12-slim AS pipeline
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/job/engine
+WORKDIR /job
+COPY requirements.txt .
+RUN pip install -r requirements.txt awscli
+COPY engine engine
+COPY scenarios scenarios
+COPY tools tools
+COPY <<'EOF' /usr/local/bin/pipeline-entrypoint
+#!/bin/sh
+set -e
+# ECS injects the FiinGroup credentials as env vars; the pipeline CLI reads them
+# from a dotenv file (--credentials). Bridge the two when the env vars are set.
+if [ -n "$FIINQUANT_USERNAME" ] && [ -n "$FIINQUANT_PASSWORD" ]; then
+  umask 077
+  printf 'FIINQUANT_USERNAME=%s\nFIINQUANT_PASSWORD=%s\n' "$FIINQUANT_USERNAME" "$FIINQUANT_PASSWORD" > /tmp/fiin.env
+  set -- --credentials /tmp/fiin.env "$@"
+fi
+
+if [ "$PIPELINE_MODE" = "ratewatch" ]; then
+  exec python -m vlkit.ratewatch.pipeline "$@"
+fi
+
+# NPL chain (default): ingest every dataset, run the seven-model analysis,
+# then publish the web snapshot. "$@" is intentionally not forwarded: the
+# chain is fixed and CMD args only apply to the ratewatch mode.
+python -m vlkit.npl.ingest --all
+python -m vlkit.npl.pipeline --real data/lake/npl/silver --out out/npl
+python -m vlkit.npl.snapshot \
+  --results out/npl/results.json \
+  --gold out/npl/gold.duckdb \
+  --silver data/lake/npl/silver \
+  --out web/seed/npl/snapshot.json
+
+uri="${SNAPSHOT_S3_URI:-${RATEWATCH_S3_URI:-}}"
+if [ -n "$uri" ]; then
+  aws s3 cp web/seed/npl/snapshot.json "$uri/npl/snapshot.json"
+fi
+EOF
+RUN chmod 755 /usr/local/bin/pipeline-entrypoint \
+  && useradd --create-home --uid 10001 pipeline \
+  && mkdir -p data/lake out web/seed/npl && chown -R pipeline:pipeline /job
+USER pipeline
+ENTRYPOINT ["pipeline-entrypoint"]
+# CMD args only apply to PIPELINE_MODE=ratewatch (--stage all); the default NPL chain is fixed.
+CMD ["--stage", "all"]

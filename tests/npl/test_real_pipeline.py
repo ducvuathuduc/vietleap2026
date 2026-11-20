@@ -133,10 +133,21 @@ def test_real_cli_publishes_models_and_gold(silver):
     out = silver / "gold"
     main(["--real", str(silver), "--out", str(out)])
     results = json.loads((out / "results.json").read_text(encoding="utf-8"))
-    assert set(results) == {f"M{i}" for i in range(1, 8)}
-    assert all(model["reading"] and model["what_this_does_not_show"] for model in results.values())
+    assert set(results) == {f"M{i}" for i in range(1, 8)} | {"decoder"}
+    assert all(results[f"M{i}"]["reading"] and results[f"M{i}"]["what_this_does_not_show"] for i in range(1, 8))
+    assert len(results["decoder"]["rows"]) == 48
+    assert results["decoder"]["regression"]["fiinquant"]["available"]["n"] == 176
     assert sum(row["n"] for row in results["M3"]["by_year"]) == 40
-    assert results["M6"]["regressions"]["raw"]["n"] > 100
+    assert results["M6"]["regressions"]["reported_or_deadline"]["n"] > 100
+    assert results["M6"]["coverage"]["actual_date_n"] == 0
+    assert results["M6"]["regressions"]["reported_or_deadline"] == results["M6"]["regressions"]["deadline_only"]
+    assert results["M3"]["summary"]["mean_next_q1_change_pp"] > 0
+    assert results["M3"]["summary"]["share_pct"] > 0
+    assert "partial persistence" in results["M3"]["reading_en"]
+    assert "decision_rule" in results["M7"]
+    assert results["M7"]["decision_rule"]["q4_backtest"]["unusual"]["ci95"] is not None
+    assert len(results["M1"]["findings"]) <= 6
+    assert "notes_bank_quarter" in (out / "cleaning_log.md").read_text(encoding="utf-8")
     assert results["M7"]["backtest"]["n"] == 56
     assert results["M7"]["train_n"] == 8 * 15
     assert results["M7"]["backtest"]["mae_difference_vs"]["naive"]["ci95"][1] < 0

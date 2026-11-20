@@ -87,7 +87,7 @@ function ToolOutput({ name, output, lang }: { name: string; output: Record<strin
       },
     ]
     const rows = points.map((p) => ({ term: p.term_months, [code]: p.rate_pct }))
-    return <CurveChart rows={rows} series={series} ceiling={4.75} horizon={0} lang={lang} />
+    return <CurveChart rows={rows} series={series} ceiling={4.75} horizon={0} bandLabel={vi ? "Vùng trần" : "Ceiling band"} ceilingLabel={vi ? "Trần 4,75%" : "Ceiling 4.75%"} lang={lang} />
   }
   if (name === "compare_banks") {
     const rows = (output.rows as { bank_code: string; bank_name: string; channel: string; rate_pct: number; grade: string; sheet_date: string | null }[]) ?? []
@@ -250,7 +250,11 @@ export function RatewatchAssistant() {
     setInput("")
   }
 
-  const toolParts = messages.flatMap((message: UIMessage) => (message.role === "assistant" ? message.parts.filter(isToolPart) : []))
+  const toolParts: ToolPart[] = []
+  for (const message of messages) {
+    if (message.role !== "assistant") continue
+    for (const part of message.parts) if (isToolPart(part)) toolParts.push(part)
+  }
 
   return (
     <Card>

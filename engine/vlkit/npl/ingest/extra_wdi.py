@@ -70,7 +70,7 @@ def run(lake, fetcher, run_id, tinyfetch=None):
             try:
                 if not direct:
                     raise FetchError("api.worldbank.org unreachable from this network")
-                payload = fetcher.get(url, timeout=10).content
+                payload = fetcher.get(url, timeout=6).content
             except Exception as exc:  # api.worldbank.org is unreachable from some networks
                 direct = False
                 if tinyfetch is None:

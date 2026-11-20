@@ -55,12 +55,16 @@ export function GET(req: Request) {
   return Response.json({ mode: m ? "llm" : "offline", model: m?.label ?? null })
 }
 
-function lastUserText(messages: UIMessage[]): string {
+function lastUserText(messages: { role: string; parts: unknown[] }[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i]
-    if (m.role === "user") {
+    if (m?.role === "user") {
       return m.parts
-        .filter((p): p is { type: "text"; text: string } => p.type === "text" && typeof p.text === "string")
+        .filter((p): p is { type: "text"; text: string } => {
+          if (typeof p !== "object" || p === null) return false
+          const part = p as { type?: unknown; text?: unknown }
+          return part.type === "text" && typeof part.text === "string"
+        })
         .map((p) => p.text)
         .join(" ")
         .trim()

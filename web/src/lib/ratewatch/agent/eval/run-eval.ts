@@ -70,7 +70,7 @@ function num(v: unknown): number {
 async function runCase(agent: ToolLoopAgent, c: EvalCase): Promise<CaseResult> {
   let result: Awaited<ReturnType<ToolLoopAgent["generate"]>>
   try {
-    result = await agent.generate({ prompt: c.question, maxRetries: 4 })
+    result = await agent.generate({ prompt: c.question })
   } catch (e) {
     return {
       id: c.id,
@@ -149,6 +149,7 @@ function timeoutResult(c: EvalCase): CaseResult {
     flagged: [],
     guard_clean: true,
     citations_ok: false,
+    answered: false,
     answer: "",
     pass: false,
     usage: { inputTokens: 0, outputTokens: 0 },
@@ -235,17 +236,27 @@ async function main(): Promise<void> {
         description: "20 VI/EN cases: tool choice, grounded numbers, citations (fixture snapshot)",
         metadata: { provider, model: chosen.label },
         maxConcurrency: 1,
-        task: async (item: {
-          input: { id: string; lang: string; question: string }
-          expectedOutput: { expect_tool: string; expect_numbers: number[] }
-        }) => {
+        task: async (raw: unknown) => {
+          // Dataset items come back untyped from the Langfuse API: narrow before use.
+          const item = raw as { input: { id?: unknown; lang?: unknown; question?: unknown }; expectedOutput?: unknown }
+          const expected = (item.expectedOutput ?? null) as { expect_tool?: unknown; expect_numbers?: unknown } | null
+          if (
+            typeof item.input.id !== "string" ||
+            typeof item.input.question !== "string" ||
+            (item.input.lang !== "vi" && item.input.lang !== "en") ||
+            !expected ||
+            typeof expected.expect_tool !== "string" ||
+            !Array.isArray(expected.expect_numbers)
+          ) {
+            return { pass: 0, tool_ok: 0, guard_clean: 0, citations_ok: 0 }
+          }
           if (delayMs > 0) await sleep(delayMs)
           const c: EvalCase = {
             id: item.input.id,
             lang: item.input.lang,
             question: item.input.question,
-            expect_tool: item.expectedOutput.expect_tool,
-            expect_numbers: item.expectedOutput.expect_numbers,
+            expect_tool: expected.expect_tool,
+            expect_numbers: expected.expect_numbers,
           }
           const r = await runCaseWithTimeout(agent, c)
           results.push(r)
@@ -253,10 +264,10 @@ async function main(): Promise<void> {
           return { pass: r.pass ? 1 : 0, tool_ok: r.tool_ok ? 1 : 0, guard_clean: r.guard_clean ? 1 : 0, citations_ok: r.citations_ok ? 1 : 0 }
         },
         evaluators: [
-          (params: { output: Record<string, number> }) => ({ name: "tool_choice", value: params.output.tool_ok }),
-          (params: { output: Record<string, number> }) => ({ name: "numbers_guard_clean", value: params.output.guard_clean }),
-          (params: { output: Record<string, number> }) => ({ name: "citations_present", value: params.output.citations_ok }),
-          (params: { output: Record<string, number> }) => ({ name: "pass", value: params.output.pass }),
+          async (params: { output: Record<string, number> }) => ({ name: "tool_choice", value: params.output.tool_ok }),
+          async (params: { output: Record<string, number> }) => ({ name: "numbers_guard_clean", value: params.output.guard_clean }),
+          async (params: { output: Record<string, number> }) => ({ name: "citations_present", value: params.output.citations_ok }),
+          async (params: { output: Record<string, number> }) => ({ name: "pass", value: params.output.pass }),
         ],
       })
       experimentUrl = run.experimentUrl ?? null

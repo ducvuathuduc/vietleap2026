@@ -82,10 +82,10 @@ class Fetcher:
         raise FetchError(f"GET {url}: retries exhausted")
 
     def get(self, url, params=None, timeout=None):
-        if not self.allowed(url):
-            raise FetchError(f"robots.txt disallows {url}")
         if timeout:
             self.client.timeout = timeout
+        if not self.allowed(url):
+            raise FetchError(f"robots.txt disallows {url}")
         response = self._get(url)
         response.raise_for_status()
         self.calls.append({"url": url, "status": response.status_code, "bytes": len(response.content),
