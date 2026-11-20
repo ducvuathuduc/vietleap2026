@@ -12,12 +12,16 @@ from matplotlib import pyplot as plt
 
 from .decoder import build_decoder
 from .decompose import decompose_screening
+from .event_windows import window_study
 from .market_model import run as run_market_model
 from .real_data import DEADLINE_SOURCE, OWNERSHIP_SOURCES, RATIOS, clean_calendar, clean_market, clean_quarters, read_silver, write_star
 from .real_context import mechanism, policy_context, statement_amounts
 from .real_models import (
     SCREENING_LINKAGE, decision_rule, descriptives, forecast, heterogeneity, linkage, market_study, reversal,
     seasonal_models,
+)
+from .seasonal_review import (
+    add_rebound_baseline, adjust_pvalues, loan_size_subgroups, policy_robustness, rebound_baselines, seasonal_hypotheses,
 )
 from .snapshot_metrics import dashboard_metrics, json_safe
 
@@ -197,6 +201,7 @@ def _readings(models):
     first = m1["by_period"][0]
     last = m1["by_period"][-1]
     summary = m3["summary"]
+    rebound = m3["baselines"]
     span = "–".join(summary["period"] or [])
     mean_change = summary["mean_next_q1_change_pp"]
     mean_vi = (f"Quý 1 bình quân tăng {_number(mean_change)} điểm %" if mean_change > 0 else
@@ -252,7 +257,7 @@ def _readings(models):
          "Hệ số mùa vụ mô tả biến động báo cáo. Nguyên nhân có thể gồm xử lý nợ, tăng dư nợ hoặc thay đổi chất lượng tín dụng."),
         (f"Giai đoạn {span}, NPL giảm rồi tăng ở {summary['reversals']}/{summary['n']} cặp Quý 4–Quý 1 "
          f"({_number(summary['share_pct'], 1)}%) và {mean_vi}. "
-         f"Hệ số Quý 1 theo Quý 4 là {_term_text(m3['regression'], 'q4_delta')}. {m3_direction}",
+         f"Hệ số Quý 1 theo Quý 4 là {_term_text(m3['regression'], 'q4_delta')}. {m3_direction} {rebound['reading_vi']}",
          "Hai chênh lệch dùng chung mức NPL tại Quý 4. Mối liên hệ không chứng minh nợ đã được chuyển kỳ."),
         (f"Sau 2022, chênh lệch hiệu ứng Quý 4 của nhóm NPL cao so với nhóm còn lại là "
          f"{_term_text(m4['regression'], 'Q4_high_npl')} điểm %. Chênh lệch của nhóm Nhà nước là "
@@ -281,7 +286,7 @@ def _readings(models):
          "The seasonal pattern cannot distinguish debt resolution, loan growth and changes in credit quality."),
         (f"In {span}, NPL fell then rose in {summary['reversals']} of {summary['n']} Q4–Q1 pairs "
          f"({_number(summary['share_pct'], 1)}%) and {mean_en}. The slope is "
-         f"{_term_text(m3['regression'], 'q4_delta', english=True)}. {m3_direction_en}",
+         f"{_term_text(m3['regression'], 'q4_delta', english=True)}. {m3_direction_en} {rebound['reading_en']}",
          "The changes share the Q4 level and do not show that loans moved across reporting quarters."),
         (f"From 2023, the Q4 effect differs by {_term_text(m4['regression'], 'Q4_high_npl', english=True)} pp "
          f"for banks with high starting NPL and by {_term_text(m4['regression'], 'Q4_state', english=True)} pp for state banks.",
@@ -500,11 +505,21 @@ def run_real(silver, out):
     m4 = heterogeneity(main)
     screening = tables.get("fiin_screening")
     screening_amounts = statement_amounts(None, screening=screening)[0] if screening is not None else None
+    m2["h1"] = seasonal_hypotheses(main)
+    m2["by_size"] = loan_size_subgroups(main, screening_amounts)
+    m2["policy_robustness"] = policy_robustness(main, tables.get("legal_register"))
+    precise, _ = clean_quarters(tables["bank_quarter"], round_digits=None)
+    rebound_panel = precise.loc[precise.basis.eq("consolidated")]
+    m3["baselines"] = rebound_baselines(rebound_panel)
     m5 = linkage(main, screening_amounts)
     m7, adjusted = forecast(main)
     m7["decision_rule"], decisions = decision_rule(main)
+    add_rebound_baseline(m7["decision_rule"], rebound_panel, decisions, m3["baselines"])
     decoder = build_decoder(main, decisions, tables.get("notes_bank_quarter"), screening)
-    m6, events = market_study(main, market, calendar, tables.get("disclosure_dates"))
+    disclosure = tables.get("disclosure_dates")
+    if disclosure is not None and "valid" in getattr(disclosure, "columns", []):
+        disclosure = disclosure.loc[disclosure["valid"].map(lambda value: str(value).strip().lower() in {"1", "true", "yes"})]
+    m6, events = market_study(main, market, calendar, None if disclosure is None or not len(disclosure) else disclosure)
     decision_data = decisions.drop(columns=["d_npl_pct", "status_vi", "status_en"]).rename(
         columns={"adjusted_change_pp": "adjusted_d_npl_pct", "status": "decision_status"})
     events = events.merge(decision_data, on=["bank_code", "period"], validate="one_to_one")
@@ -526,6 +541,9 @@ def run_real(silver, out):
     models["decoder"] = decoder
     models["M8"] = run_market_model(silver)
     models["decomposition"] = decompose_screening(screening, tables.get("notes_bank_quarter"))
+    legacy = m6["regressions"].get("deadline_only", {}).get("terms", {}).get("surprise_d_npl_pct")
+    m6["windows"] = window_study(market, events, legacy_surprise=legacy)
+    models["multiple_testing"] = adjust_pvalues(models)
     m1["findings"] = _findings(models)
     changed = int(calendar["deadline"].ne(calendar["silver_deadline"]).sum())
     audit = ["# Nhật ký làm sạch dữ liệu NPL", "", "| Bước | Dòng trước | Dòng sau | Thực hiện |", "|---|---:|---:|---|"]

@@ -377,7 +377,7 @@ def build_snapshot(results, gold, silver):
         "linkage": _linkage(m5),
         "market": {key: m6[key] for key in ["car_by_day", "regressions", "deadline_car_by_day", "coverage",
                                            "events_with_car", "eligible_bank_quarters", "period_start", "period_end",
-                                           "reading_en"] if key in m6},
+                                           "reading_en", "windows"] if key in m6},
         "decomposition": _decomposition_block(models.get("decomposition")),
         "forecast": {"backtest": m7["backtest"]["by_period"],
                      "mae": {key: m7["backtest"]["mae_pp"][source] for key, source in
@@ -421,7 +421,16 @@ def build_snapshot(results, gold, silver):
         if key in model:
             payload[key] = model[key]
     if "summary" in m3:
-        payload["reversal"] = m3["summary"]
+        payload["reversal"] = {**m3["summary"]}
+        if "baselines" in m3:
+            payload["reversal"]["baselines"] = m3["baselines"]
+    if "h1" in m2:
+        payload["seasonal_review"] = {
+            "hypotheses": m2["h1"], "ownership_subgroups": m2["by_ownership"],
+            "size_subgroups": m2["by_size"], "policy_robustness": m2["policy_robustness"],
+        }
+    if "multiple_testing" in models:
+        payload["multiple_testing"] = models["multiple_testing"]
     if "decoder" in models:
         decoder = models["decoder"]
         if not publish:

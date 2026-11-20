@@ -163,7 +163,7 @@ def test_real_cli_publishes_models_and_gold(silver):
     out = silver / "gold"
     main(["--real", str(silver), "--out", str(out)])
     results = json.loads((out / "results.json").read_text(encoding="utf-8"))
-    assert set(results) == {f"M{i}" for i in range(1, 9)} | {"decoder", "decomposition"}
+    assert {f"M{i}" for i in range(1, 9)} | {"decoder", "decomposition"} <= set(results)
     assert results["M8"]["forecast"]["basket"]["series"]
     assert any(point["in_test"] for point in results["M8"]["forecast"]["basket"]["series"])
     assert results["decomposition"]["unavailable_reason"] == "no_screening_table"
@@ -174,6 +174,9 @@ def test_real_cli_publishes_models_and_gold(silver):
     assert sum(row["n"] for row in results["M3"]["by_year"]) == 40
     assert results["M6"]["regressions"]["reported_or_deadline"]["n"] > 100
     assert results["M6"]["coverage"]["actual_date_n"] == 0
+    assert results["M6"]["windows"]["estimation"] == [-120, -21]
+    assert results["M6"]["windows"]["clocks"]["deadline"]["windows"]["m1_p1"]["n"] > 0
+    assert results["M6"]["windows"]["clocks"]["actual"]["unavailable_reason"] == "no_valid_disclosure_dates"
     assert results["M6"]["regressions"]["reported_or_deadline"] == results["M6"]["regressions"]["deadline_only"]
     assert results["M3"]["summary"]["mean_next_q1_change_pp"] > 0
     assert results["M3"]["summary"]["share_pct"] > 0

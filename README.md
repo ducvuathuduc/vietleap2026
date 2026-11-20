@@ -31,16 +31,39 @@ python -m pip install -r requirements.txt
 python -m pytest -q tests
 ```
 
-To regenerate the snapshot with authorised source access, install the bundled FiinQuant SDK wheel in addition to the engine requirements. Supply `FIINQUANT_USERNAME` and `FIINQUANT_PASSWORD` in your local credentials file and set `PYTHONPATH` to `engine`. Run the following commands from the repository root.
+## Chạy lại từ đầu
 
-```sh
-python -m pip install tools/fiinquant/fiinquantx-0.1.73-py3-none-any.whl
-python -m vlkit.npl.ingest --all --credentials .env.local
-python -m vlkit.npl.pipeline --real data/lake/npl/silver --out out/npl
-python -m vlkit.npl.snapshot --results out/npl/results.json --gold out/npl/gold.duckdb --silver data/lake/npl/silver --out web/seed/npl/snapshot.json
+The PowerShell commands below use the interpreter in `.venv`, with the engine requirements and the bundled FiinQuant SDK installed. Put authorised FiinQuant credentials in your ignored `.env.local`. Run from the repository root. This run fixes the data cutoff and uses a separate lake. The providers can revise historical records.
+
+```powershell
+$env:PYTHONPATH='engine;.'
+$env:PYTHONIOENCODING='utf-8'
+$env:OPENBLAS_NUM_THREADS='2'
+$env:OMP_NUM_THREADS='2'
+.venv/Scripts/python.exe -m vlkit.npl.ingest --all --as-of 2026-11-20 --credentials .env.local --lake out/npl-rebuild/lake
+.venv/Scripts/python.exe -m vlkit.npl.ingest --screening --as-of 2026-11-20 --credentials .env.local --lake out/npl-rebuild/lake
+.venv/Scripts/python.exe -m vlkit.npl.ingest --extra --as-of 2026-11-20 --lake out/npl-rebuild/lake
+.venv/Scripts/python.exe -m vlkit.npl.pipeline --real out/npl-rebuild/lake/silver --out out/npl-rebuild/analysis
+.venv/Scripts/python.exe -m vlkit.npl.snapshot --results out/npl-rebuild/analysis/results.json --gold out/npl-rebuild/analysis/gold.duckdb --silver out/npl-rebuild/lake/silver --out out/npl-rebuild/snapshot.json
+
+$env:PATH = "$(Join-Path (Get-Location) '.venv/Scripts');$env:PATH"
+$env:PYTEST_ADDOPTS='-p no:cacheprovider --basetemp=out/npl-rebuild/pytest'
+pytest -q tests
+Set-Location web
+npm.cmd test
+npm.cmd run dev -- --port 3017 --hostname 127.0.0.1
 ```
 
-Run ingest separately with `--extra` for public context data or `--notes` for financial-statement notes before building Gold.
+Bronze and Silver land in `out/npl-rebuild/lake`. Gold, `results.json`, and the analytical exports land in `out/npl-rebuild/analysis`. The rebuilt snapshot lands in `out/npl-rebuild/snapshot.json`. The local web server is at http://127.0.0.1:3017 and reads the repository's published seed with S3 unconfigured.
+
+To regenerate that bundled seed from the audited release lake, run from the repository root with the same environment settings.
+
+```powershell
+.venv/Scripts/python.exe -m vlkit.npl.pipeline --real data/lake/npl/silver --out out/b17
+.venv/Scripts/python.exe -m vlkit.npl.snapshot --results out/b17/results.json --gold out/b17/gold.duckdb --silver data/lake/npl/silver --out web/seed/npl/snapshot.json
+```
+
+The reviewer tests, bank-cluster bootstrap and market-model inference use `BOOTSTRAP_SEED = 20261120`. Random non-event dates use `PLACEBO_SEED = 20261120`, and the Q2/Q3 placebo uses `BOOTSTRAP_SEED + 11`.
 
 ## AWS deployment
 

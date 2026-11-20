@@ -106,6 +106,7 @@ test("accepts the previous S3 publication without the new judge-page fields", as
   const previous = structuredClone(seed)
   Reflect.deleteProperty(previous, "decomposition")
   Reflect.deleteProperty(previous.market, "m8")
+  Reflect.deleteProperty(previous.market, "windows")
   Reflect.deleteProperty(previous.decision_rule, "q4_oos")
   t.mock.method(S3Client.prototype, "send", async () => ({
     Body: { transformToString: async () => JSON.stringify(previous) },

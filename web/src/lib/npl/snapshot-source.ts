@@ -35,7 +35,7 @@ const readerSchema = {
     ...schema.properties,
     market: {
       ...schema.properties.market,
-      required: schema.properties.market.required.filter((key) => key !== "m8"),
+      required: schema.properties.market.required.filter((key) => key !== "m8" && key !== "windows"),
     },
     decision_rule: {
       ...schema.properties.decision_rule,

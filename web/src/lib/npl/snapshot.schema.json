@@ -408,7 +408,8 @@
       "required": [
         "car_by_day",
         "regressions",
-        "m8"
+        "m8",
+        "windows"
       ],
       "properties": {
         "car_by_day": {
@@ -491,11 +492,51 @@
         "period_end": { "anyOf": [{ "$ref": "#/$defs/period" }, { "type": "null" }] },
         "reading_vi": { "type": "string", "minLength": 1 },
         "reading_en": { "type": "string", "minLength": 1 },
+        "windows": { "$ref": "#/$defs/eventWindows" },
         "m8": { "$ref": "#/$defs/priceModel" }
       },
       "additionalProperties": false
     },
     "decomposition": { "$ref": "#/$defs/decomposition" },
+    "seasonal_review": {
+      "type": "object",
+      "required": ["hypotheses", "ownership_subgroups", "size_subgroups", "policy_robustness"],
+      "properties": {
+        "hypotheses": { "type": "object", "required": ["tests", "reading_vi", "reading_en"] },
+        "ownership_subgroups": { "type": "object" },
+        "size_subgroups": { "type": "object", "required": ["large", "small", "reading_vi", "reading_en"] },
+        "policy_robustness": { "type": "object", "required": ["interaction", "drop_2024", "quarter_regime", "reading_vi", "reading_en"] }
+      },
+      "additionalProperties": false
+    },
+    "multiple_testing": {
+      "type": "object",
+      "required": ["q", "n_pvalues", "rows", "reading_vi", "reading_en"],
+      "properties": {
+        "q": { "const": 0.05 },
+        "n_pvalues": { "type": "integer", "minimum": 0 },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["test_id", "raw_p", "wild_p", "bh_adjusted", "reject_at_q"],
+            "properties": {
+              "test_id": { "type": "string", "minLength": 1 },
+              "raw_p": { "$ref": "#/$defs/reviewPValue" },
+              "wild_p": { "$ref": "#/$defs/reviewPValue" },
+              "raw_p_bh_adjusted": { "$ref": "#/$defs/reviewPValue" },
+              "wild_p_bh_adjusted": { "$ref": "#/$defs/reviewPValue" },
+              "bh_adjusted": { "$ref": "#/$defs/reviewPValue" },
+              "reject_at_q": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "forecast": {
       "type": "object",
       "required": [
@@ -794,6 +835,20 @@
       },
       "additionalProperties": true
     },
+    "eventWindows": {
+      "type": "object",
+      "required": ["estimation", "clocks", "reading_vi", "reading_en",
+                   "what_this_does_not_show_vi", "what_this_does_not_show_en"],
+      "properties": {
+        "estimation": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer" } },
+        "clocks": { "type": "object" },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 },
+        "what_this_does_not_show_vi": { "type": "string", "minLength": 1 },
+        "what_this_does_not_show_en": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
     "priceModel": {
       "type": "object",
       "required": ["basket", "vnindex", "band_table", "bands", "threshold", "reading_vi", "reading_en"],
@@ -906,6 +961,19 @@
         "n_by_field": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
       }
     },
+    "reviewPValue": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "q1RiseRate": {
+      "type": "object",
+      "required": ["n", "clusters", "rises", "share_pct", "ci95", "mean_next_change_pp"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 0 },
+        "clusters": { "type": "integer", "minimum": 0 },
+        "rises": { "type": "integer", "minimum": 0 },
+        "share_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "ci95": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "mean_next_change_pp": { "type": ["number", "null"] }
+      }
+    },
     "reversalClass": {
       "type": "object",
       "required": ["n", "reversals", "share_pct", "ci95"],
@@ -915,6 +983,10 @@
         "share_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "ci95": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
         "clusters": { "type": "integer", "minimum": 0 },
+        "q1_rises": { "type": "integer", "minimum": 0 },
+        "q1_rise_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "q1_rise_ci95": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "baseline_q1_rise_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "period": { "$ref": "#/$defs/periodRange" }
       },
       "additionalProperties": false
@@ -933,6 +1005,9 @@
         "deteriorating": { "$ref": "#/$defs/reversalClass" },
         "within_normal_season": { "$ref": "#/$defs/reversalClass" },
         "unusual": { "$ref": "#/$defs/reversalClass" },
+        "q1_rise_baseline": { "$ref": "#/$defs/q1RiseRate" },
+        "baseline_reading_vi": { "type": "string", "minLength": 1 },
+        "baseline_reading_en": { "type": "string", "minLength": 1 },
         "reading_vi": { "type": "string", "minLength": 1 },
         "reading_en": { "type": "string", "minLength": 1 }
       },

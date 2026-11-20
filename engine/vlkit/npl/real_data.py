@@ -55,7 +55,7 @@ def _bank_code(series):
     return _ticker(series).replace({"BIDV": "BID"})
 
 
-def clean_quarters(raw, *, canonical_fractions=False):
+def clean_quarters(raw, *, canonical_fractions=False, round_digits=2):
     """Keep valid-key observations, preserving nullable metrics and gap boundaries."""
     log = []
 
@@ -110,9 +110,12 @@ def clean_quarters(raw, *, canonical_fractions=False):
             panel[name] *= 100
     invalid_npl = panel["npl_pct"].notna() & ~panel["npl_pct"].between(0, 100, inclusive="left")
     invalid_coverage = panel["coverage_pct"].lt(0)
-    panel[list(RATIOS)] = panel[list(RATIOS)].round(2)
+    precision = "giữ nguyên độ chính xác nguồn"
+    if round_digits is not None:
+        panel[list(RATIOS)] = panel[list(RATIOS)].round(round_digits)
+        precision = f"làm tròn {round_digits} chữ số"
     record("Đơn vị", len(panel), len(panel),
-           "Quy đổi tỷ lệ FiinQuant từ phân số sang %, làm tròn 2 chữ số; biến động dùng điểm phần trăm.")
+           f"Quy đổi tỷ lệ FiinQuant từ phân số sang %, {precision}; biến động dùng điểm phần trăm.")
     panel["bank_code"] = _bank_code(panel["ticker"])
     panel["ownership"] = np.where(panel["bank_code"].isin(STATE), "state", "private")
     record("Phân nhóm", len(panel), len(panel),

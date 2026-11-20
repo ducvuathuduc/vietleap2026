@@ -53,6 +53,13 @@ def test_public_snapshot_matches_schema_and_results(snapshot_inputs, monkeypatch
     assert len(payload["decoder"]["focus"]) == 48
     assert payload["market"]["coverage"]["actual_date_n"] == 0
     assert payload["decision_rule"]["q4_backtest"]
+    assert payload["decision_rule"]["q1_rise_baseline"] == results["M3"]["baselines"]["any_q4"]
+    assert payload["reversal"]["baselines"] == results["M3"]["baselines"]
+    baseline_review = results["M2"]["h1"]
+    assert payload["seasonal_review"]["hypotheses"] == baseline_review
+    assert baseline_review["tests"]["joint_quarters"]["wild_p"] is not None
+    assert payload["seasonal_review"]["ownership_subgroups"] == results["M2"]["by_ownership"]
+    assert payload["multiple_testing"] == results["multiple_testing"]
     assert payload["banks"][0]["latest"]["decision"]["status"] in {
         "within_normal_season", "improving", "deteriorating", "unavailable",
     }
