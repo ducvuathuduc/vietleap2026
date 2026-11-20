@@ -27,17 +27,20 @@ function Tip({ active, payload, label, digits = 3, lang = "vi" }: { active?: boo
 
 const medianConfig = {
   median: { label: "Trung vị", color: "var(--chart-1)" },
-  band: { label: "P25–P75", color: "var(--chart-2)" },
-  q4: { label: "Q4", color: "var(--chart-4)" },
+  band: { label: "25–75% ngân hàng", color: "var(--chart-1)" },
+  q4: { label: "Quý 4", color: "var(--chart-1)" },
 } satisfies ChartConfig
 
-function MedianTip({ active, payload, label, lang }: { active?: boolean; payload?: { payload?: { median?: number | null; nBanks?: number } }[]; label?: string | number; lang: Lang }) {
+function MedianTip({ active, payload, label, lang }: { active?: boolean; payload?: { payload?: { median?: number | null; p25?: number | null; p75?: number | null; nBanks?: number | null } }[]; label?: string | number; lang: Lang }) {
   const row = payload?.[0]?.payload
   if (!active || row?.median == null) return null
+  const pct = (value: number | null | undefined) => value == null ? "—" : `${formatNumber(value, lang, 2)}%`
   return (
     <div className="grid min-w-32 gap-1 rounded-lg border border-border bg-background px-2 py-1.5 text-xs">
       <p className="font-medium">{label}</p>
-      <p>{lang === "vi" ? "Trung vị" : "Median"}: {formatNumber(row.median, lang, 2)}%</p>
+      <p>{lang === "vi" ? "Trung vị" : "Median"}: {pct(row.median)}</p>
+      <p>25%: {pct(row.p25)}</p>
+      <p>75%: {pct(row.p75)}</p>
       <p>{lang === "vi" ? "Số ngân hàng" : "Banks"}: {row.nBanks ?? "—"}</p>
     </div>
   )
@@ -55,34 +58,44 @@ export function MedianChart({
   const data = rows.map((row) => ({
     period: row.period,
     median: row.median,
+    p25: row.p25,
+    p75: row.p75,
     nBanks: row.nBanks ?? null,
     base: row.p25,
     band: row.p25 != null && row.p75 != null ? row.p75 - row.p25 : null,
     q4: row.q4,
   }))
+  const vi = lang === "vi"
   return (
-    <ChartContainer config={medianConfig} className="aspect-auto h-56 w-full min-w-0" initialDimension={{ width: 640, height: 224 }}>
-      <ComposedChart data={data} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="period" tickLine={false} axisLine={false} interval="preserveStartEnd" tick={{ fontSize: 11 }} />
-        <YAxis width={44} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={axisTick(lang)} />
-        <ChartTooltip content={<MedianTip lang={lang} />} />
-        <Area dataKey="base" stackId="iqr" stroke="none" fill="transparent" name="P25" />
-        <Area dataKey="band" stackId="iqr" stroke="none" fill="var(--color-band)" fillOpacity={0.28} name={lang === "vi" ? "Khoảng tứ phân vị" : "Interquartile band"} />
-        <Line dataKey="median" name={lang === "vi" ? "Trung vị" : "Median"} stroke="var(--color-median)" strokeWidth={2} dot={false} />
-        {data.filter((row) => row.q4 && row.median != null).map((row) => (
-          <ReferenceDot
-            key={row.period}
-            x={row.period}
-            y={row.median ?? 0}
-            r={4}
-            fill="var(--color-q4)"
-            stroke="var(--background)"
-            label={row.period === mark?.period ? { value: mark.label, position: "top", fontSize: 11, fill: "var(--foreground)" } : undefined}
-          />
-        ))}
-      </ComposedChart>
-    </ChartContainer>
+    <div className="flex min-w-0 flex-col gap-2">
+      <ChartContainer config={medianConfig} className="aspect-auto h-56 w-full min-w-0" initialDimension={{ width: 640, height: 224 }}>
+        <ComposedChart data={data} margin={{ top: 16, right: 8, left: 12, bottom: 0 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="period" tickLine={false} axisLine={false} interval="preserveStartEnd" tick={{ fontSize: 11 }} />
+          <YAxis width={52} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={axisTick(lang)} label={{ value: vi ? "% dư nợ" : "% of loans", angle: -90, position: "insideLeft", style: { fill: "var(--muted-foreground)", fontSize: 11 } }} />
+          <ChartTooltip content={<MedianTip lang={lang} />} />
+          <Area dataKey="base" stackId="iqr" stroke="none" fill="transparent" name="P25" />
+          <Area dataKey="band" stackId="iqr" stroke="none" fill="var(--color-median)" fillOpacity={0.15} name={vi ? "25–75% ngân hàng" : "25–75% of banks"} />
+          <Line dataKey="median" name={vi ? "Trung vị" : "Median"} stroke="var(--color-median)" strokeWidth={2.5} dot={false} />
+          {data.filter((row) => row.q4 && row.median != null).map((row) => (
+            <ReferenceDot
+              key={row.period}
+              x={row.period}
+              y={row.median ?? 0}
+              r={4}
+              fill="var(--color-median)"
+              stroke="var(--background)"
+              label={row.period === mark?.period ? { value: mark.label, position: "top", fontSize: 11, fill: "var(--foreground)" } : undefined}
+            />
+          ))}
+        </ComposedChart>
+      </ChartContainer>
+      <ul className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        <li className="flex items-center gap-1"><span className="inline-block h-0.5 w-6 bg-chart-1" />{vi ? "Trung vị" : "Median"}</li>
+        <li className="flex items-center gap-1"><span className="inline-block size-3 bg-chart-1/15" />{vi ? "25–75% ngân hàng" : "25–75% of banks"}</li>
+        <li className="flex items-center gap-1"><span className="inline-block size-2 rounded-full bg-chart-1" />{vi ? "Quý 4" : "Q4"}</li>
+      </ul>
+    </div>
   )
 }
 

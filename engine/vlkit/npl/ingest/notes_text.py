@@ -10,9 +10,9 @@ Reader "table" reads pdfplumber's cell grid; reader "text" reads the extracted t
 code paths on purpose: a number both readers return is graded verified, a number only one reader returns is
 graded single, and disagreement is graded contested — nothing is silently averaged.
 
-Sign convention: provision balances and write-offs are magnitudes (a balance sheet prints the provision as a
-negative asset); the charge and the amount used keep the sign the statement prints, so a reversal stays
-visible as a negative charge.
+Sign convention: provision balances, the amount used to write off and the write-offs themselves are magnitudes
+(a balance sheet prints the provision as a negative asset, a movement table prints its uses in parentheses); the
+charge keeps the sign the statement prints, so a reversal stays visible as a negative charge.
 """
 import re
 
@@ -41,7 +41,7 @@ BALANCE_CLOSING = ["du phong rui ro cho vay khach hang", "du phong rui ro tin du
 MOVEMENT_CLOSING = ["so du cuoi ky", "du phong cuoi ky"]
 GROUPS = ["group_1_current", "group_2_watch", "group_3_substandard", "group_4_doubtful", "group_5_loss"]
 MOVEMENT = ["provision_opening", "provision_charge", "provision_used_writeoff"]
-MAGNITUDE = {"provision_opening", "provision_closing", "writeoff_period"}
+MAGNITUDE = {"provision_opening", "provision_used_writeoff", "provision_closing", "writeoff_period"}
 CODE_MAX = 1000                     # a "Mã số" / note reference: an integer below this
 NUMBER_CELL = re.compile(r"^\(?-?[\d.,]+\)?$")
 

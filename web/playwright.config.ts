@@ -1,8 +1,7 @@
 import { defineConfig } from "@playwright/test"
 
-// Target an already-running server: E2E_BASE_URL (production URL from Kiro) or
-// the local dev server on 3109. This config never starts a server itself.
-const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3109"
+// Target an already-running server. BASE_URL works for dev and production.
+const baseURL = process.env.BASE_URL ?? process.env.E2E_BASE_URL ?? "http://localhost:3112"
 
 export default defineConfig({
   testDir: "./e2e",

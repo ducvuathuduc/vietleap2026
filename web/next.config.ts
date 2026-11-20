@@ -30,7 +30,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   async redirects() {
-    return legacyRedirects(process.env.ENABLE_LAB === "1")
+    const labEnabled = process.env.ENABLE_LAB === "1"
+    if (process.env.NODE_ENV === "production" && !labEnabled) return []
+    return legacyRedirects(labEnabled)
   },
   async rewrites() {
     const backend = process.env.EXTERNAL_API_URL

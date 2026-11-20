@@ -1,27 +1,40 @@
-import type { Page } from "@playwright/test"
+import { expect, type Page } from "@playwright/test"
 
 export type Lang = "vi" | "en"
 
-/** Public page routes of the judge flows (NPL product + RateWatch pages). */
-export const PUBLIC_ROUTES = [
+export const NPL_ROUTES = [
   "/",
   "/ngan-hang",
-  "/ngan-hang/VCB",
-  "/ngan-hang/TCB",
-  "/ngan-hang/STB",
   "/thi-truong",
   "/phuong-phap",
   "/du-lieu",
   "/giai-ma",
+] as const
+
+export const RATEWATCH_ROUTES = [
   "/ban-do",
   "/chinh-sach",
   "/lai-suat",
   "/lai-suat/phuong-phap",
-  "/lai-suat/ngan-hang/TCB",
 ] as const
 
+// Canonical tickers in the published NPL panel and the RateWatch edition.
+export const NPL_BANK_CODES = [
+  "ABB", "ACB", "BAB", "BID", "BVB", "CTG", "EIB", "HDB", "KLB", "LPB", "MBB", "MSB", "NAB", "NVB",
+  "OCB", "PGB", "SGB", "SHB", "SSB", "STB", "TCB", "TPB", "VAB", "VBB", "VCB", "VIB", "VPB",
+] as const
+
+export const RATEWATCH_BANK_CODES = ["AGRIBANK", "BIDV", "EXIMBANK", "HDB", "MSB", "OCB", "PVCOMBANK", "STB", "TCB", "VCBNEO", "VIETBANK"] as const
+
 /** Debug/internal leaks that must never appear as rendered page text. */
-export const FORBIDDEN_TEXT = /get_ratios|fixture|run_id|undefined|\bNaN\b|Error:|stack/i
+export const FORBIDDEN_TEXT = /\b(?:get_ratios|fixture|run_id|undefined|NaN|stack|console)\b|\bError:/i
+
+export function isProductionTarget(baseURL: string | undefined) {
+  if (process.env.E2E_PROD !== undefined) return process.env.E2E_PROD === "1"
+  return !!baseURL && !["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseURL).hostname)
+}
+
+export const LANGS = ["vi", "en"] as const
 
 export function withLang(path: string, lang: Lang): string {
   if (lang === "vi") return path
@@ -45,18 +58,15 @@ export function monitor(page: Page) {
   return { consoleErrors, failedRequests }
 }
 
-export interface PageLabels {
-  nav: string[]
-  brand: string
-  h1: string
-  h2: string
+export function decoderCell(page: Page, lang: Lang) {
+  const number = lang === "vi" ? /^-?\d+,\d{2}(?:\s|$)/ : /^-?\d+\.\d{2}(?:\s|$)/
+  return page.getByRole("table").getByRole("button", { name: number, pressed: false }).first()
 }
 
-/** Visible UI labels: header nav links, brand subtitle, h1, joined h2 headings. */
-export async function readLabels(page: Page): Promise<PageLabels> {
-  const nav = await page.locator("header nav a").allInnerTexts()
-  const brand = await page.locator("header p span").nth(1).innerText()
-  const h1 = (await page.locator("h1").innerText()).trim()
-  const h2 = (await page.locator("h2").allInnerTexts()).join(" | ")
-  return { nav, brand, h1, h2 }
+export async function switchTo(page: Page, lang: Lang) {
+  const current = lang === "en" ? "Ngôn ngữ" : "Language"
+  const group = page.getByRole("group", { name: current, exact: true })
+  await group.getByRole("button", { name: lang.toUpperCase(), exact: true }).click()
+  await page.waitForURL((url) => lang === "en" ? url.searchParams.get("lang") === "en" : !url.searchParams.has("lang"))
+  await expect(page.locator("html")).toHaveAttribute("lang", lang)
 }

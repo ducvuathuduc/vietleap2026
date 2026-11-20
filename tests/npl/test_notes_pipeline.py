@@ -222,8 +222,8 @@ def test_an_empty_run_writes_no_silver_and_leaves_the_watermark_alone(tmp_path):
 def test_merge_keeps_the_better_grade_when_a_bank_quarter_is_read_again():
     def row(grade, value):
         return {"bank": "VCB", "period": "2025Q2", "field": "loans_customer", "basis": "point",
-                "value_vnd_bn": value, "page": 1, "source_url": "https://x.test/a.pdf", "reader": "text",
-                "grade": grade, "raw_sha256": "sha"}
+                "value_vnd_bn": value, "page": 1, "source_url": "https://x.test/a.pdf",
+                "statement_type": "consolidated", "reader": "text", "grade": grade, "raw_sha256": "sha"}
     merged = notes_runner.merge_silver(pd.DataFrame([row("verified", 100.0)]),
                                        pd.DataFrame([row("single", 101.0)]))
     assert len(merged) == 1 and merged.iloc[0]["value_vnd_bn"] == 100.0 and merged.iloc[0]["grade"] == "verified"
@@ -329,3 +329,76 @@ def test_a_fragment_run_writes_rows_to_json_and_leaves_silver_alone(tmp_path, mo
     assert merge["datasets"]["notes_merge"]["fragments"] == 1 and merge["silver"]["rows"] == len(frame)
     silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
     assert set(silver["bank"]) == {"VCB"} and silver["field"].nunique() > 0
+
+
+def test_the_choice_of_a_loans_page_is_driven_by_the_group_total():
+    def reading(field, value, page):
+        return {"field": field, "value_vnd_bn": value, "page": page, "reader": "vision_a"}
+    readings = [reading("loans_customer", 1000.0, 16), reading("loans_customer", 1000000.0, 58),
+                reading("loans_customer", 1000.0, 16),
+                reading("group_1_current", 900.0, 30), reading("group_2_watch", 50.0, 30),
+                reading("group_3_substandard", 20.0, 30), reading("group_4_doubtful", 20.0, 30),
+                reading("group_5_loss", 10.0, 30)]
+    rows = {row["field"]: row for row in notes_runner.collect(readings, "VCB", "2025Q2", "u", "sha")}
+    assert rows["loans_customer"]["value_vnd_bn"] == 1000.0 and rows["loans_customer"]["page"] == 16
+    assert rows["group_2_watch"]["page"] == 30
+    assert rows["loans_customer"]["grade"] == "verified"          # two readers on page 16, not one
+
+
+def test_the_choice_of_a_provision_closing_is_driven_by_the_roll_forward():
+    def reading(field, value, page):
+        return {"field": field, "value_vnd_bn": value, "page": page, "reader": "vision_a"}
+    readings = [reading("provision_closing", 130.0, 20), reading("provision_closing", 999.0, 16),
+                reading("provision_opening", 100.0, 20), reading("provision_charge", 50.0, 20),
+                reading("provision_used_writeoff", 20.0, 20)]
+    rows = {row["field"]: row for row in notes_runner.collect(readings, "VCB", "2025Q2", "u", "sha")}
+    assert rows["provision_closing"]["value_vnd_bn"] == 130.0 and rows["provision_closing"]["page"] == 20
+    assert rows["provision_opening"]["page"] == 20
+
+
+def test_the_vendor_npl_ratio_is_read_as_a_fraction_and_reported_in_percent(tmp_path):
+    write_silver(tmp_path, "bank_quarter.parquet", pd.DataFrame([
+        {"ticker": "VCB", "period": "2026Q3", "npl": 0.007058},
+        {"ticker": "TCB", "period": "2025Q2", "npl": 0.0115}]))
+    vendor = notes_runner.vendor_npl(tmp_path)
+    assert vendor[("VCB", "2026Q3")] == pytest.approx(0.7058) and vendor[("TCB", "2025Q2")] == pytest.approx(1.15)
+
+
+def test_a_provision_balance_whose_coverage_is_implausible_loses_to_the_plausible_page():
+    def reading(field, value, page):
+        return {"field": field, "value_vnd_bn": value, "page": page, "reader": "vision_a"}
+    readings = [reading("group_3_substandard", 20000.0, 39), reading("group_4_doubtful", 10000.0, 39),
+                reading("group_5_loss", 5000.0, 39),
+                reading("provision_closing", 31168.0, 16),            # coverage 517%: plausible
+                reading("provision_closing", 31.2, 40),               # coverage 0.5%: a unit slip on the page
+                reading("provision_opening", 25.0, 40), reading("provision_charge", 6.2, 40),
+                reading("provision_used_writeoff", 0.0, 40)]
+    rows = {row["field"]: row for row in notes_runner.collect(readings, "VCB", "2026Q3", "u", "sha")}
+    assert rows["provision_closing"]["value_vnd_bn"] == 31168.0
+
+
+def test_a_movement_table_on_a_page_whose_closing_has_the_wrong_unit_is_dropped_not_half_emitted():
+    def reading(field, value, page):
+        return {"field": field, "value_vnd_bn": value, "page": page, "reader": "vision_a"}
+    readings = [reading("group_3_substandard", 20000.0, 39), reading("group_4_doubtful", 10000.0, 39),
+                reading("group_5_loss", 5000.0, 39),
+                reading("provision_closing", 31168.0, 16),
+                reading("provision_closing", 31.2, 40), reading("provision_opening", 25.0, 40),
+                reading("provision_charge", 6.2, 40), reading("provision_used_writeoff", 0.0, 40)]
+    rows = {row["field"]: row for row in notes_runner.collect(readings, "VCB", "2026Q3", "u", "s")}
+    assert rows["provision_closing"]["page"] == 16
+    assert "provision_opening" not in rows and "provision_charge" not in rows
+    gate = notes_gates.rollforward_gate(notes_gates.values_of(list(rows.values())))
+    assert gate["status"] == "skipped"            # missing inputs are skipped, never a false pass or fail
+
+
+def test_the_groups_3_5_total_is_emitted_as_a_derived_row_only_when_all_three_sit_on_one_page():
+    def reading(field, value, page, grade_reader="vision_a"):
+        return {"field": field, "value_vnd_bn": value, "page": page, "reader": grade_reader}
+    readings = [reading("group_3_substandard", 20.0, 39), reading("group_4_doubtful", 15.0, 39),
+                reading("group_5_loss", 5.0, 39), reading("group_4_doubtful", 15.0, 41)]
+    rows = {row["field"]: row for row in notes_runner.collect(readings, "VCB", "2025Q2", "u", "sha")}
+    assert rows["groups_3_5"]["value_vnd_bn"] == 40.0 and rows["groups_3_5"]["page"] == 39
+    assert rows["groups_3_5"]["reader"] == "derived" and rows["groups_3_5"]["grade"] == "single"
+    only_two = [reading("group_3_substandard", 20.0, 39), reading("group_5_loss", 5.0, 39)]
+    assert "groups_3_5" not in {row["field"] for row in notes_runner.collect(only_two, "VCB", "2025Q2", "u", "s")}

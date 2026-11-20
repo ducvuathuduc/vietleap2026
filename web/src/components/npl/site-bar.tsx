@@ -3,11 +3,12 @@
 import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
 
+import { NplAskDock } from "@/components/npl-ai/assistant"
 import { buttonVariants } from "@/components/ui/button"
 import { NPL_NAV } from "@/lib/nav"
 import { cn } from "cn"
 
-export function SiteBar() {
+export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; yearStart: string; yearEnd: string }) {
   const pathname = usePathname()
   const search = useSearchParams()
   const vi = search.get("lang") !== "en"
@@ -33,10 +34,10 @@ export function SiteBar() {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-2 px-4 py-2">
-        <p className="mr-auto leading-tight">
-          <span className="text-base font-semibold">{vi ? "Nợ xấu ngân hàng" : "Bank NPL"}</span>
-          <span className="block text-xs text-muted-foreground">{vi ? "Hiệu ứng quý 4" : "The Q4 effect"}</span>
-        </p>
+        <div className="mr-auto">
+          <p className="text-base font-semibold leading-tight">{vi ? "Sau tỷ lệ nợ xấu" : "Behind the NPL Ratio"}</p>
+          <p className="text-xs text-muted-foreground">{vi ? `${bankCount} ngân hàng niêm yết, ${yearStart}–${yearEnd}` : `${bankCount} listed banks, ${yearStart}–${yearEnd}`}</p>
+        </div>
         <nav className="flex flex-wrap gap-1" aria-label={vi ? "Mục" : "Sections"}>
           {NPL_NAV.map((item) => {
             const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(`${item.url}/`)
@@ -56,6 +57,7 @@ export function SiteBar() {
             )
           })}
         </nav>
+        <NplAskDock />
         <div className="flex rounded-lg border border-border p-0.5" role="group" aria-label={vi ? "Ngôn ngữ" : "Language"}>
           <button type="button" className={cn(buttonVariants({ variant: vi ? "secondary" : "ghost", size: "sm" }), "min-h-11 min-w-11")} aria-pressed={vi} onClick={() => choose("vi")}>
             VI

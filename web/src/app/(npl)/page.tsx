@@ -4,6 +4,7 @@ import { MedianChart } from "@/components/npl/charts"
 import { DecoderTable } from "@/components/npl/decoder-table"
 import { Glossary } from "@/components/npl/glossary"
 import { HowToRead } from "@/components/npl/how-to-read"
+import { KeyNumbers } from "@/components/npl/key-numbers"
 import { loadSnapshot } from "@/lib/npl/load"
 import { decoderModel, langFromQuery, overviewModel, pageHref } from "@/lib/npl/view"
 
@@ -31,6 +32,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
       <h1 className="text-xl font-semibold text-balance">{model.plainHeadline}</h1>
       <p className="text-sm text-muted-foreground">{model.evidenceLine}</p>
       <Glossary lang={lang} />
+      <KeyNumbers cards={model.cards} lang={lang} />
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Nợ xấu trung vị theo quý" : "Median NPL by quarter"}</h2>
         <MedianChart rows={model.series} lang={lang} mark={model.q4Mark} />
@@ -41,20 +43,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
             : ["The line is the median NPL. The band is the middle half of banks, and the dots are Q4.", "The Q4 fall and the next Q1 rise are what the flag table below checks."]}
         />
       </section>
-      <DecoderTable model={decoderModel(snapshot, lang)} lang={lang} />
+      <DecoderTable model={decoderModel(snapshot, lang)} lang={lang} hideSource />
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Vì sao cần kiểm tra" : "Why this needs a check"}</h2>
-        <p className="text-sm">
-          {model.cards.map((card) => `${card.title}: ${card.figure}. ${card.help}`).join(" ")}
-        </p>
+        {model.why.map((sentence) => (
+          <p key={sentence} className="text-sm">{sentence}</p>
+        ))}
       </section>
       <p>
         <a className="text-sm underline underline-offset-4" href={pageHref("/phuong-phap", lang)}>
           {vi ? "Xem bằng chứng" : "See the evidence"}
         </a>
       </p>
-      <footer className="flex flex-col gap-2 border-t border-border pt-3 text-xs text-muted-foreground break-words">
-        <p>{model.footer.legal}</p>
+      <footer className="border-t border-border pt-3 text-xs text-muted-foreground break-words">
         <p>
           {model.footer.publicLine}{" "}
           <a className="underline underline-offset-4" href={pageHref("/phuong-phap", lang)}>{vi ? "Phương pháp" : "Method"}</a>

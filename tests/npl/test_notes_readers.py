@@ -61,6 +61,12 @@ def test_table_reader_skips_the_ma_so_column_and_uses_the_page_unit():
     assert found["loans_customer"] == {"value_vnd_bn": 1234.567, "page": 1, "reader": "table"}
 
 
+def test_provision_uses_are_magnitudes_while_a_reversal_stays_negative():
+    assert notes_text.signed("provision_used_writeoff", -5307.6) == 5307.6
+    assert notes_text.signed("provision_closing", -31168.1) == 31168.1
+    assert notes_text.signed("provision_charge", -120.0) == -120.0      # hoan nhap: a real reversal
+
+
 def test_two_readers_agreeing_is_verified_one_reader_is_single_and_disagreement_is_contested():
     assert contract.grade([("text", 100.0), ("table", 100.0)]) == ("verified", 100.0)
     assert contract.grade([("text", 100.0)]) == ("single", 100.0)
@@ -102,6 +108,14 @@ def test_vision_json_is_parsed_from_a_fence_and_transcribed_lines_are_scaled():
     assert payload["values"] == {"group_2_watch": 80.0}
     assert notes_vision.read_line_numbers(payload)["provision_closing"] == 34.0
     assert notes_vision.parse_json("no json here") is None
+
+
+def test_a_reply_with_null_labels_still_validates_against_the_extraction_schema():
+    import jsonschema
+    payload = {"page_label": None, "unit_printed": None, "period_label": None, "note": None,
+               "values": {"loans_customer": 1000.0}}
+    jsonschema.validate(payload, notes_vision.SCHEMA)          # a null label is not a refusal
+    assert notes_vision.payload_values(payload) == {"loans_customer": 1000.0}
 
 
 def test_page_numbers_survive_the_way_a_model_writes_them():

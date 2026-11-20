@@ -234,11 +234,23 @@ test("Vietnamese figures use a decimal comma and the headline is the plain sente
   assert.match(model.evidenceLine, /0,001/)
   assert.equal(model.cards[0]?.title, "Nợ xấu trung vị hiện nay")
   assert.match(model.cards[0]?.figure ?? "", /2,22%/)
-  assert.match(model.cards[0]?.help ?? "", /2026Q3 · 23 ngân hàng/)
-  assert.equal(model.cards[1]?.title, "Nhịp quý 4")
-  assert.match(model.cards[1]?.figure ?? "", /-0,43/)
+  assert.match(model.cards[0]?.help ?? "", /2026Q3, 23 ngân hàng/)
+  assert.equal(model.cards[1]?.title, "Quý 4 so với quý 1")
+  assert.match(model.cards[1]?.figure ?? "", /-0,43 điểm %/)
+  assert.equal(model.cards[2]?.title, "Giảm rồi tăng lại")
   assert.match(model.cards[2]?.help ?? "", /53,8% năm 2025/)
   assert.match(model.cards[2]?.help ?? "", /70,4% năm 2023/)
+  assert.equal(model.why.length, 2)
+  assert.match(model.why[0] ?? "", /Nợ xấu trung vị quý 2026Q3 là 2,22% trên 23 ngân hàng/)
+  assert.match(model.why[1] ?? "", /0,43 điểm %/)
+  assert.match(model.why[1] ?? "", /2025/)
+  assert.match(model.why[1] ?? "", /70,4% năm 2023/)
+  assert.doesNotMatch(model.why.join(" "), / · |S4|M7|snapshot/)
+  const englishWhy = overviewModel(snapshot, "en")
+  assert.equal(englishWhy.cards[1]?.title, "Q4 versus Q1")
+  assert.equal(englishWhy.why.length, 2)
+  assert.match(englishWhy.why[0] ?? "", /2\.22%/)
+  assert.match(englishWhy.why[1] ?? "", /0\.43/)
   assert.equal(model.q4Mark?.period, "2021Q4")
   assert.match(model.footer.publicLine, /Nguồn: FiinQuant \(FiinGroup\), báo cáo tài chính hợp nhất/)
   assert.match(model.footer.publicLine, /dữ liệu đến 2026Q3/)
@@ -435,6 +447,15 @@ test("the decoder flags a coverage decline and a usual Q4 move, and never calls 
   assert.ok(all.periods.length > 6)
   assert.deepEqual(all.rows.map((row) => row.bank), ["VCB", "ABB"])
   assert.equal(table.moreLabel, "Xem tất cả ngân hàng")
+  assert.match(table.note, /Dải mùa vụ của chính ngân hàng đó/)
+  assert.doesNotMatch(table.note, /S4|M7|snapshot/)
+  assert.equal(table.rows[0]?.cells[0]?.badges.join(" "), "Bao phủ giảm")
+  assert.equal(table.rows[0]?.cells[0]?.pending, "Chưa có nhóm 2, xóa nợ")
+  assert.equal(table.rows[0]?.cells[0]?.largeMove, false)
+  assert.match(table.rows[0]?.cells[2]?.badges.join(" ") ?? "", /Trong nhịp mùa vụ/)
+  assert.match(table.rows[0]?.cells[2]?.badges.join(" ") ?? "", /Bao phủ không giảm/)
+  assert.equal(table.rows[0]?.cells[1]?.badges.includes("Cải thiện có cơ sở"), false)
+  assert.equal(table.rows[0]?.cells[1]?.pending, "Chưa có nhóm 2, xóa nợ")
 })
 
 test("a published decoder object supplies ratios, flags and the plain reading", () => {
@@ -467,6 +488,82 @@ test("a published decoder object supplies ratios, flags and the plain reading", 
   assert.equal(full.rows.some((row) => row.bank === "ABB"), true)
 })
 
+test("a falling quarter with missing notes still shows the coverage and seasonal checks", () => {
+  const publication = {
+    rows: [
+      {
+        bank_code: "VCB",
+        period: "2025Q4",
+        npl_ratio: 0.01,
+        coverage: 1.2,
+        delta_npl_ratio: -0.002,
+        delta_coverage: 0.01,
+        status: "missing",
+        signals: [{ id: "S4", text_vi: "Nhịp mùa vụ cuối năm", text_en: "Usual year-end movement" }],
+        missing_inputs: ["delta_g2_ratio", "delta_writeoff_ratio"],
+      },
+      {
+        bank_code: "STB",
+        period: "2025Q4",
+        npl_ratio: 0.07,
+        coverage: 0.35,
+        delta_npl_ratio: 0.0366,
+        delta_coverage: -0.43,
+        status: "not_applicable",
+        signals: [],
+        missing_inputs: [],
+      },
+      {
+        bank_code: "ACB",
+        period: "2025Q3",
+        npl_ratio: 0.012,
+        coverage: 1.1,
+        delta_npl_ratio: -0.001,
+        delta_coverage: -0.02,
+        delta_g2_ratio: 0.004,
+        delta_writeoff_ratio: -0.001,
+        status: "review",
+        signals: [{ id: "S1", text_vi: "Nhóm 2 tăng", text_en: "Group 2 rose" }, { id: "S3", text_vi: "Bao phủ giảm", text_en: "Coverage fell" }],
+        missing_inputs: [],
+      },
+      {
+        bank_code: "BID",
+        period: "2025Q2",
+        npl_ratio: 0.011,
+        coverage: 1.4,
+        delta_npl_ratio: -0.001,
+        delta_coverage: 0.02,
+        delta_g2_ratio: -0.001,
+        delta_writeoff_ratio: -0.001,
+        status: "clean",
+        signals: [],
+        missing_inputs: [],
+      },
+    ],
+  }
+  const model = decoderModel({ decoder: publication } as unknown as Snapshot, "vi")
+  const vcb = model.rows.find((row) => row.bank === "VCB")?.cells.find((item) => item?.period === "2025Q4")
+  assert.deepEqual(vcb?.badges, ["Bao phủ không giảm", "Trong nhịp mùa vụ"])
+  assert.equal(vcb?.pending, "Chưa có nhóm 2, xóa nợ")
+  assert.equal(vcb?.badges.includes("Cải thiện có cơ sở"), false)
+  assert.equal(vcb?.badges.includes("Thiếu dữ liệu"), false)
+  const stb = model.rows.find((row) => row.bank === "STB")?.cells.find((item) => item?.period === "2025Q4")
+  assert.equal(stb?.dNplText, "3,66")
+  assert.equal(stb?.largeMove, true)
+  const acb = model.rows.find((row) => row.bank === "ACB")?.cells.find((item) => item?.period === "2025Q3")
+  assert.equal(acb?.pending, null)
+  assert.ok(acb?.badges.includes("Nhóm 2 tăng"))
+  assert.ok(acb?.badges.includes("Bao phủ giảm"))
+  assert.ok(acb?.badges.includes("Xóa nợ không tăng"))
+  const bid = model.rows.find((row) => row.bank === "BID")?.cells.find((item) => item?.period === "2025Q2")
+  assert.deepEqual(bid?.badges, ["Cải thiện có cơ sở"])
+  assert.equal(bid?.pending, null)
+  const english = decoderModel({ decoder: publication } as unknown as Snapshot, "en")
+  const englishVcb = english.rows.find((row) => row.bank === "VCB")?.cells.find((item) => item?.period === "2025Q4")
+  assert.deepEqual(englishVcb?.badges, ["Coverage did not fall", "Inside the year-end range"])
+  assert.equal(englishVcb?.pending, "Group 2 and write-offs are not in yet")
+})
+
 test("the page shell clips horizontal overflow", () => {
   assert.match(PAGE_SHELL, /overflow-x-hidden/)
   const layout = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/layout.tsx"), "utf8")
@@ -482,7 +579,32 @@ test("the page shell clips horizontal overflow", () => {
   assert.doesNotMatch(overview, /→/)
   assert.doesNotMatch(overview, / · /)
   assert.doesNotMatch(overview, /Kiểm tra độ vững/)
-  assert.doesNotMatch(overview, /KeyNumbers/)
+  assert.match(overview, /KeyNumbers/)
+  assert.match(overview, /model\.why/)
+  assert.doesNotMatch(overview, /cards\.map/)
+  assert.doesNotMatch(overview, /footer\.legal/)
+  assert.match(overview, /hideSource/)
+  const charts = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/charts.tsx"), "utf8")
+  assert.match(charts, /strokeWidth=\{2\.5\}/)
+  assert.match(charts, /% dư nợ/)
+  assert.match(charts, /25–75% ngân hàng/)
+  assert.match(charts, /Quý 4/)
+  assert.match(charts, /25%/)
+  assert.match(charts, /75%/)
+  const decoder = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/decoder-table.tsx"), "utf8")
+  assert.match(decoder, /"Ngân hàng"/)
+  assert.match(decoder, /chưa công bố/)
+  assert.match(decoder, /biến động lớn/)
+  assert.doesNotMatch(decoder, /"Mã"/)
+  const banks = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/ngan-hang/page.tsx"), "utf8")
+  assert.match(banks, /"Ngân hàng"/)
+  assert.doesNotMatch(banks, /"Mã"/)
+  const data = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/data-table.tsx"), "utf8")
+  assert.doesNotMatch(data, /vi: "Mã"/)
+  const bar = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/site-bar.tsx"), "utf8")
+  assert.match(bar, /Sau tỷ lệ nợ xấu/)
+  assert.match(bar, /Behind the NPL Ratio/)
+  assert.doesNotMatch(bar, / · /)
   const method = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/phuong-phap/page.tsx"), "utf8")
   assert.match(method, /Kiểm tra độ vững/)
   assert.match(method, /QuarterChart/)

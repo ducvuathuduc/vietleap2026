@@ -1,22 +1,23 @@
 import { expect, test } from "@playwright/test"
 
-import { withLang } from "./helpers"
+import { LANGS, withLang } from "./helpers"
 
 const ATTRIBUTION = "Nguồn: FiinQuant (FiinGroup)"
 
 for (const code of ["VCB", "TCB", "STB"]) {
-  for (const lang of ["vi", "en"] as const) {
+  for (const lang of LANGS) {
     test(`bank page ${code} [${lang}]: renders charts and the attribution line`, async ({ page }) => {
       await page.goto(withLang(`/ngan-hang/${code}`, lang), { waitUntil: "load" })
 
-      await expect(page.locator("h1")).toBeVisible()
+      await expect(page.getByRole("heading", { level: 1, name: new RegExp(`\\b${code}\\b`) })).toBeVisible()
 
-      // Recharts surfaces: the quarterly compare chart and the per-metric lines.
-      const charts = page.locator(".recharts-surface")
-      await expect(charts.first(), `${code} (${lang}) must render at least one chart`).toBeVisible()
-      expect(await charts.count(), `${code} (${lang}) chart count`).toBeGreaterThanOrEqual(1)
+      const charts = page.getByRole("application")
+      await expect(charts.first()).toBeVisible()
+      await expect(charts.first()).toContainText("Q4")
+      await expect(charts.nth(1)).toBeVisible()
+      await expect(charts.nth(1)).toContainText(/20\d{2}Q[1-4]/)
 
-      await expect(page.getByText(ATTRIBUTION).first(), `${code} (${lang}) must show the attribution line`).toBeVisible()
+      await expect(page.getByText(ATTRIBUTION, { exact: true }).first()).toBeVisible()
     })
   }
 }

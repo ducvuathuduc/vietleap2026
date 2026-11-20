@@ -38,12 +38,12 @@ rui ro")."""
 SCHEMA = {
     "type": "object",
     "properties": {
-        "page_label": {"type": "string"},
-        "unit_printed": {"type": "string"},
-        "period_label": {"type": "string"},
+        "page_label": {"type": ["string", "null"]},
+        "unit_printed": {"type": ["string", "null"]},
+        "period_label": {"type": ["string", "null"]},
         "values": {"type": "object", "additionalProperties": {"type": ["number", "null"]}},
         "lines": {"type": "array", "items": {"type": "object", "additionalProperties": True}},
-        "note": {"type": "string"},
+        "note": {"type": ["string", "null"]},
     },
     "required": ["values"],
 }
@@ -53,7 +53,11 @@ Read the table on the page and return STRICT JSON, nothing else:
   "values": {{"<field>": <number in VND BILLION or null>}}, "note": "anything that makes a value uncertain"}}
 Fields to look for: {FIELDS_HINT}
 Rules: take the CURRENT period column (the first amount column), not the prior-period column. Convert the printed
-unit to VND billion (1 ty dong = 1 bn; 1 trieu dong = 0.001 bn; 1 dong = 1e-9 bn) and say which unit you saw.
+unit to VND billion and say which unit you saw. The arithmetic, exactly: "Don vi tinh: ty dong" -> the printed
+number is already VND billion; "Don vi tinh: trieu dong" -> divide the printed number by 1,000 (31,168,107 trieu
+dong = 31,168.1 bn); "Don vi tinh: dong/VND" -> divide by 1,000,000,000. A provision balance is 10x to 20x the
+NPL it covers, so if your converted closing provision is smaller than the NPL total on the page you have the unit
+wrong: recheck the unit line before answering.
 Use null for a field the page does not show. Never estimate, never split a number across lines, never invent a
 row. A balance printed in parentheses (a provision shown as a negative asset) is reported as a positive magnitude.
 """
@@ -64,9 +68,11 @@ Return STRICT JSON only:
   "lines": [{{"label": "the printed label", "numbers": ["the amounts exactly as printed, current column first"]}}],
   "values": {{"<field>": <number in VND BILLION or null>}}, "note": "..."}}
 In "lines" copy the label and the numbers character by character, keeping Vietnamese diacritics and the printed
-thousand separators. In "values" convert the CURRENT period amount of each matched line to VND billion. If a line
-appears twice (notes and balance sheet), keep both in "lines" and put the notes figure in "values", saying so in
-note. Never estimate or interpolate.
+thousand separators. In "values" convert the CURRENT period amount of each matched line to VND billion: "ty dong" -> as printed,
+"trieu dong" -> divide by 1,000 (31,168,107 -> 31,168.1), "dong/VND" -> divide by 1,000,000,000. Then check
+yourself: opening + charge - used must equal closing; a provision balance is 10x to 20x the NPL it covers. If
+either check fails, say so in note instead of hiding it. If a line appears twice (notes and balance sheet), keep
+both in "lines" and put the notes figure in "values", saying so in note. Never estimate or interpolate.
 """
 
 

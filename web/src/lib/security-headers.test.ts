@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 
 import nextConfig from "../../next.config.ts"
+import { FORBIDDEN_TEXT } from "../../e2e/helpers.ts"
 
 async function headerMap(nodeEnv: string) {
   const prev = process.env.NODE_ENV
@@ -35,4 +36,24 @@ test("development CSP keeps unsafe-eval and the Next dev socket", async () => {
   assert.match(csp, /script-src 'self' 'unsafe-inline' 'unsafe-eval'/)
   assert.match(csp, /connect-src 'self' ws: wss:/)
   assert.match(csp, /frame-ancestors 'none'/)
+})
+
+test("production disables legacy aliases unless the lab is enabled", async () => {
+  const original = process.env
+  try {
+    process.env = { ...original, NODE_ENV: "production", ENABLE_LAB: "0" }
+    assert.deepEqual(await nextConfig.redirects!(), [])
+    process.env.ENABLE_LAB = "1"
+    const redirects = await nextConfig.redirects!()
+    assert.ok(redirects.some(({ source, destination }) => source === "/analyst" && destination === "/lab/analyst"))
+  } finally {
+    process.env = original
+  }
+})
+
+test("QA detects debug tokens in rendered text without flagging ordinary words", () => {
+  assert.doesNotMatch("Consolidated financial statements and fixtureless datasets.", FORBIDDEN_TEXT)
+  for (const token of ["get_ratios", "fixture", "run_id", "undefined", "NaN", "Error:", "stack", "console"]) {
+    assert.match(`Value: (${token}).`, FORBIDDEN_TEXT)
+  }
 })

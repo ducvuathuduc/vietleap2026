@@ -427,7 +427,6 @@ function decoderReading(cell: DecoderCell, lang: Lang): string {
 
 export function decoderModel(snapshot: Snapshot, lang: Lang, scope: "preview" | "all" = "preview") {
   const cells = decoderCells(snapshot.decoder)
-  const publication = Array.isArray(snapshot.decoder) ? undefined : snapshot.decoder
   const allPeriods = [...new Set(cells.map((cell) => cell.period))].sort()
   const periods = scope === "all" ? allPeriods : allPeriods.slice(-6)
   const grouped = new Map<string, Map<string, DecoderCell>>()
@@ -443,9 +442,9 @@ export function decoderModel(snapshot: Snapshot, lang: Lang, scope: "preview" | 
   ]
   return {
     title: lang === "vi" ? "NPL giảm quý này có cơ sở không?" : "Is this quarter's NPL decline supported?",
-    note: publication?.[lang === "vi" ? "reading_vi" : "reading_en"] ?? (lang === "vi"
-      ? "Bản này chỉ có tín hiệu FiinQuant: bao phủ giảm và nhịp quý 4. Nhóm 2 và xóa nợ chưa có, nên một quý giảm mà không vướng hai cờ đó vẫn là thiếu dữ liệu."
-      : "This file only has the FiinQuant flags: lower coverage and the usual Q4 move. Group 2 and write-offs are absent, so a decline without those two flags stays missing data."),
+    note: lang === "vi"
+      ? "Khi nợ xấu giảm, ô hiện phần đã biết: bao phủ có giảm hay không. Dải mùa vụ của chính ngân hàng đó cho biết quý 4 có nằm trong nhịp các năm khác hay không. Nhóm 2 và xóa nợ chưa có thì ghi bên dưới. Chỉ khi đủ bốn kiểm tra mới gọi là cải thiện có cơ sở."
+      : "When bad debt falls, the cell shows what is already known, including whether coverage fell. That bank's own year-end range says whether the fourth quarter sits with its other years. Group 2 and write-offs are named underneath until they arrive. The cell calls the improvement supported only when all four checks pass.",
     disclaimer: DECODER_DISCLAIMER[lang],
     attribution: SERIES_ATTRIBUTION,
     moreLabel: scope === "preview" ? (lang === "vi" ? "Xem tất cả ngân hàng" : "See every bank") : null,
@@ -461,12 +460,16 @@ export function decoderModel(snapshot: Snapshot, lang: Lang, scope: "preview" | 
         const cell = grouped.get(bank)?.get(period)
         if (!cell) return null
         const label = cell.status === "no_fall" ? null : BADGE_LABEL[cell.status][lang]
+        const face = cellFace(cell, lang)
         return {
           period,
           dNpl: cell.d_npl_pp,
           dNplText: cell.d_npl_pp == null ? "—" : formatNumber(cell.d_npl_pp, lang, 2),
           status: cell.status,
           label,
+          badges: face.badges,
+          pending: face.pending,
+          largeMove: face.largeMove,
           signals: cell.signals.map((signal) => (lang === "vi" ? signal.text_vi : signal.text_en)),
           reading: decoderReading(cell, lang),
           inputs: cell.inputs,
@@ -574,12 +577,79 @@ function evidenceLine(term: Term, lang: Lang): string {
 }
 
 function shareHelp(shares: { year: number; share: number }[], lang: Lang): string {
-  const preferred = [2025, 2023].flatMap((year) => {
-    const row = shares.find((item) => item.year === year)
-    return row ? [row] : []
-  })
-  const rows = preferred.length ? preferred : shares
-  return rows.map((row) => `${formatNumber(row.share, lang, 1)}% ${lang === "vi" ? "năm" : "in"} ${row.year}`).join("; ")
+  if (!shares.length) return ""
+  const latest = [...shares].sort((left, right) => left.year - right.year).at(-1)
+  const highest = shares.reduce((best, row) => (row.share > best.share ? row : best))
+  if (!latest) return ""
+  const bit = (row: { year: number; share: number }) => `${formatNumber(row.share, lang, 1)}% ${lang === "vi" ? "năm" : "in"} ${row.year}`
+  if (highest.year === latest.year) return bit(latest)
+  return `${bit(latest)}; ${lang === "vi" ? "cao nhất" : "highest"} ${bit(highest)}`
+}
+
+const LARGE_MOVE_PP = 3
+const FACE_TEXT = {
+  coverageDown: { vi: "Bao phủ giảm", en: "Coverage fell" },
+  coverageHold: { vi: "Bao phủ không giảm", en: "Coverage did not fall" },
+  seasonal: { vi: "Trong nhịp mùa vụ", en: "Inside the year-end range" },
+  g2Up: { vi: "Nhóm 2 tăng", en: "Group 2 rose" },
+  g2Hold: { vi: "Nhóm 2 không tăng", en: "Group 2 did not rise" },
+  writeoffUp: { vi: "Xóa nợ tăng", en: "Write-offs rose" },
+  writeoffHold: { vi: "Xóa nợ không tăng", en: "Write-offs did not rise" },
+  pending: { vi: "Chưa có nhóm 2, xóa nợ", en: "Group 2 and write-offs are not in yet" },
+} as const
+
+function cellFace(cell: DecoderCell, lang: Lang): { badges: string[]; pending: string | null; largeMove: boolean } {
+  const largeMove = cell.d_npl_pp != null && Math.abs(cell.d_npl_pp) >= LARGE_MOVE_PP
+  const fell = cell.d_npl_pp != null && cell.d_npl_pp < 0
+  if (!fell) return { badges: [], pending: null, largeMove }
+  if (cell.status === "clean") return { badges: [BADGE_LABEL.clean[lang]], pending: null, largeMove }
+  const has = (id: DecoderSignal["id"]) => cell.signals.some((signal) => signal.id === id)
+  const badges: string[] = []
+  const coverage = cell.inputs.d_coverage_pp
+  if (has("S3") || coverage != null) {
+    badges.push(has("S3") || (coverage != null && coverage < 0) ? FACE_TEXT.coverageDown[lang] : FACE_TEXT.coverageHold[lang])
+  }
+  if (has("S4")) badges.push(FACE_TEXT.seasonal[lang])
+  const g2 = cell.inputs.delta_g2_pp
+  const g2Known = has("S1") || g2 != null
+  if (g2Known) badges.push(has("S1") || (g2 != null && g2 > 0) ? FACE_TEXT.g2Up[lang] : FACE_TEXT.g2Hold[lang])
+  const writeoff = cell.inputs.delta_writeoff_pp
+  const writeoffKnown = has("S2") || writeoff != null
+  if (writeoffKnown) badges.push(has("S2") || (writeoff != null && writeoff > 0) ? FACE_TEXT.writeoffUp[lang] : FACE_TEXT.writeoffHold[lang])
+  const pending = g2Known && writeoffKnown
+    ? null
+    : !g2Known && !writeoffKnown
+      ? FACE_TEXT.pending[lang]
+      : lang === "vi"
+        ? (g2Known ? "Chưa có xóa nợ" : "Chưa có nhóm 2")
+        : (g2Known ? "Write-offs are not in yet" : "Group 2 is not in yet")
+  return { badges, pending, largeMove }
+}
+
+function whySentences(level: Snapshot["kpis"]["level"], coef: number, shares: { year: number; share: number }[], lang: Lang): [string, string] {
+  const latest = [...shares].sort((left, right) => left.year - right.year).at(-1)
+  const highest = shares.reduce<(typeof shares)[number] | null>((best, row) => (!best || row.share > best.share ? row : best), null)
+  const amount = formatNumber(Math.abs(coef), lang, 2)
+  const levelText = formatNumber(level.npl_median_pct, lang, 2)
+  if (!latest || !highest) {
+    return lang === "vi"
+      ? [`Nợ xấu trung vị quý ${level.period} là ${levelText}% trên ${level.n_banks} ngân hàng.`, "Chưa có tỷ lệ giảm rồi tăng lại."]
+      : [`Median NPL in ${level.period} is ${levelText}% across ${level.n_banks} banks.`, "The down-then-up share is not in yet."]
+  }
+  const latestShare = formatNumber(latest.share, lang, 1)
+  const highShare = formatNumber(highest.share, lang, 1)
+  if (lang === "vi") {
+    const high = highest.year === latest.year ? "" : `, cao nhất ${highShare}% năm ${highest.year}`
+    return [
+      `Nợ xấu trung vị quý ${level.period} là ${levelText}% trên ${level.n_banks} ngân hàng.`,
+      `Quý 4 ${coef < 0 ? "thấp hơn" : "cao hơn"} quý 1 ${amount} điểm %. Năm ${latest.year} có ${latestShare}% ngân hàng giảm ở quý 4 rồi tăng ở quý 1${high}.`,
+    ]
+  }
+  const high = highest.year === latest.year ? "" : `, and the high was ${highShare}% in ${highest.year}`
+  return [
+    `Median NPL in ${level.period} is ${levelText}% across ${level.n_banks} banks.`,
+    `Q4 is ${amount} pp ${coef < 0 ? "lower" : "higher"} than Q1. In ${latest.year}, ${latestShare}% of banks fell in Q4 and rose in Q1${high}.`,
+  ]
 }
 
 function barsFrom(effects: QuarterEffect[]) {
@@ -632,10 +702,10 @@ export function overviewModel(snapshot: Snapshot, lang: Lang, selection: Selecti
         digits: 2,
         suffix: "%",
         figure: `${formatNumber(level.npl_median_pct, lang, 2)}%`,
-        help: `${level.period} · ${level.n_banks} ${lang === "vi" ? "ngân hàng" : "banks"}`,
+        help: `${level.period}, ${level.n_banks} ${lang === "vi" ? "ngân hàng" : "banks"}`,
       },
       {
-        title: lang === "vi" ? "Nhịp quý 4" : "Q4 pattern",
+        title: lang === "vi" ? "Quý 4 so với quý 1" : "Q4 versus Q1",
         value: snapshot.kpis.benchmark.coef_pp,
         digits: 2,
         suffix: lang === "vi" ? " điểm %" : " pp",
@@ -651,6 +721,7 @@ export function overviewModel(snapshot: Snapshot, lang: Lang, selection: Selecti
         help: shareHelp(shares, lang),
       },
     ],
+    why: whySentences(level, snapshot.kpis.benchmark.coef_pp, shares, lang),
     decision: decisionSentence(benchmark, lang),
     level: {
       value: level.npl_median_pct,

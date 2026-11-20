@@ -101,9 +101,8 @@ export async function POST(req: Request) {
     let body: z.infer<typeof Body>
     try {
       body = Body.parse(JSON.parse(raw))
-    } catch (e) {
-      const msg = e instanceof z.ZodError ? e.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; ") : "JSON không hợp lệ"
-      return Response.json({ detail: `Yêu cầu không hợp lệ: ${msg}`, request_id: requestId }, { status: 400 })
+    } catch {
+      return Response.json({ detail: "Yêu cầu không hợp lệ. / Invalid request.", request_id: requestId }, { status: 400 })
     }
 
     const log: LogEntry = { status: 200, provider: "none", model: null, session: body.sessionId?.slice(0, 8) ?? null, tools: [], flagged: 0, ms: 0, rejected: null }

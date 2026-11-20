@@ -21,9 +21,12 @@ import pandas as pd
 from .extra_landing import FetchError, read_silver, write_silver
 from .files import atomic, now
 from .notes_text import signed
+from .notes_contract import GROUP_FIELDS, NPL_FIELDS
+
+PROVISION_MOVEMENT_LITE = ("provision_opening", "provision_charge", "provision_used_writeoff")
 from .notes_contract import (FIELDS, SILVER_COLUMNS, agreement, grade, kind_of, to_quarterly,
                              unit_scale)
-from .notes_gates import GATE_COLUMNS, run_gates
+from .notes_gates import GATE_COLUMNS, GROUP_TOL, ROLLFORWARD_TOL, run_gates
 from .notes_links import (CATALOGUE, COLUMNS as LINK_COLUMNS, agent_goal, agent_schema, hits_only,
                           prefer_consolidated, probe_statement, rows_from_agent, rows_from_page,
                           vietstock_annual_urls)
@@ -87,11 +90,18 @@ def latest_vendor_period(lake=LAKE):
 
 
 def vendor_npl(lake=LAKE):
-    """(bank, period) -> vendor NPL percent, for the third gate."""
+    """(bank, period) -> vendor NPL in percent, for the third gate.
+
+    The vendor stores the ratio as a fraction (VCB 2026Q3 = 0.007058), so a value at or below 1 is multiplied by
+    100. A vendor column that already prints percent would exceed 1 everywhere and is left alone.
+    """
     frame = read_silver(lake, "bank_quarter.parquet")
     if frame is None or "npl" not in frame:
         return {}
-    return {(str(row.ticker), str(row.period)): float(row.npl) for row in frame.itertuples() if pd.notna(row.npl)}
+    values = pd.to_numeric(frame["npl"], errors="coerce")
+    scale = 100.0 if values.dropna().le(1).all() else 1.0
+    return {(str(row.ticker), str(row.period)): float(row.npl) * scale
+            for row in frame.itertuples() if pd.notna(row.npl)}
 
 
 def store_path(lake, url):
@@ -119,15 +129,8 @@ def cached_pdf(lake, fetcher, url, run_id):
     return content, meta
 
 
-def collect(readings, bank, period, url, sha):
-    """Silver rows for one bank-quarter: one row per field, graded page by page, then the best page wins.
-
-    Two readers on the SAME page are the independent read the grade is about. Different pages of one statement
-    legitimately show different numbers (the balance sheet next to the note, the parent-company statement next to
-    the consolidated one), so comparing across pages would call every correct value contested. A page whose two
-    readers agree is preferred; if two such pages still disagree the field is labelled contested and the page that
-    covers more fields wins, so nothing is silently averaged.
-    """
+def _candidates(readings):
+    """field -> [{grade, value, page, readers}] with one entry per (field, page), graded over that page's readers."""
     by_page = {}
     for reading in readings:
         by_page.setdefault((reading["field"], int(reading["page"])), []).append(reading)
@@ -138,36 +141,163 @@ def collect(readings, bank, period, url, sha):
             continue
         per_field.setdefault(field, []).append({"grade": value_grade, "value": value, "page": page,
                                                 "readers": sorted({item["reader"] for item in found})})
+    for entries in per_field.values():
+        entries.sort(key=lambda item: (GRADE_ORDER[item["grade"]], -item["page"]))
+    return per_field
+
+
+def _group_sums(per_field):
+    """[(page, sum of groups 1-5 on that page)] for every page that carries all five groups."""
+    pages = {}
+    for field in GROUP_FIELDS:
+        for entry in per_field.get(field) or []:
+            pages.setdefault(entry["page"], {})[field] = entry["value"]
+    return [(page, sum(values.values())) for page, values in pages.items() if len(values) == len(GROUP_FIELDS)]
+
+
+COVERAGE_RANGE = (0.05, 20.0)     # a loan-loss provision balance between 5% and 2000% of the NPL it covers
+
+
+def _npl_total(per_field):
+    """The NPL (groups 3-5) total on the page that carries the most of them, or 0 when the notes are missing."""
+    pages = {}
+    for field in NPL_FIELDS:
+        for entry in per_field.get(field) or []:
+            pages.setdefault(entry["page"], {})[field] = entry["value"]
+    if not pages:
+        return 0.0
+    _, values = max(pages.items(), key=lambda item: len(item[1]))
+    return sum(values.values())
+
+
+def _coherent(loans, total, tolerance):
+    if not total:
+        return False
+    return abs(loans - total) / abs(total) <= tolerance
+
+
+def choose(per_field):
+    """One entry per field, chosen so the gates can pass on numbers read from the same page set.
+
+    A statement shows the same quantity on several pages (balance sheet, note, maturity table) and only one of
+    them is the note the gate compares against, so the choice is driven by the gates themselves: loans must agree
+    with a page that carries all five groups, the provision closing must close a page's roll-forward, and the
+    groups/opening/charge/used come from the page that made the check pass. A field with no coherent partner keeps
+    its best-graded candidate, and the grade is never upgraded by the choice: it stays what the readers gave.
+    """
+    chosen = {}
+    sums = _group_sums(per_field)
+    loans_entries = per_field.get("loans_customer") or []
+    best = None
+    for total_page, total in sums:
+        for entry in loans_entries:
+            if _coherent(entry["value"], total, GROUP_TOL) and (best is None or
+                                                                GRADE_ORDER[entry["grade"]] < GRADE_ORDER[best[0]["grade"]]):
+                best = (entry, total_page, total)
+    if best is not None:
+        entry, total_page, total = best
+        chosen["loans_customer"] = entry
+        for field in GROUP_FIELDS:
+            match = next(item for item in per_field[field] if item["page"] == total_page)
+            chosen[field] = match
+    group_pages = {}
+    for field in GROUP_FIELDS:
+        for entry in per_field.get(field) or []:
+            group_pages.setdefault(entry["page"], {})[field] = entry
+    if group_pages:
+        page, entries = max(group_pages.items(), key=lambda item: (len(item[1]), -item[0]))
+        for field, entry in entries.items():
+            chosen.setdefault(field, entry)          # the five groups always come from ONE page
+    npl_total = _npl_total(per_field)
+    closing_entries = per_field.get("provision_closing") or []
+    rejected_pages = set()
+    if npl_total > 0:
+        plausible = [entry for entry in closing_entries
+                     if COVERAGE_RANGE[0] <= entry["value"] / npl_total <= COVERAGE_RANGE[1]]
+        rejected_pages = {entry["page"] for entry in closing_entries if entry not in plausible}
+        closing_entries = plausible or closing_entries
+    fallback_closing = closing_entries[0] if closing_entries else None
+    movement = None
+    for closing in closing_entries:
+        page = closing["page"]
+        parts = {}
+        for field in PROVISION_MOVEMENT_LITE:
+            match = next((item for item in per_field.get(field) or [] if item["page"] == page), None)
+            if match is not None:
+                parts[field] = match
+        if len(parts) < 3:
+            continue
+        expected = parts["provision_opening"]["value"] + parts["provision_charge"]["value"] \
+            - parts["provision_used_writeoff"]["value"]
+        if _coherent(expected, closing["value"], ROLLFORWARD_TOL):
+            movement = (page, parts, closing)
+            break
+    if movement is not None:
+        page, parts, closing = movement
+        chosen["provision_closing"] = closing
+        chosen.update(parts)
+    if "provision_closing" not in chosen and fallback_closing is not None:
+        chosen["provision_closing"] = fallback_closing
+    for field in FIELDS:
+        if field in chosen:
+            continue
+        entries = per_field.get(field) or []
+        if entries:
+            chosen[field] = entries[0]
+    for field in PROVISION_MOVEMENT_LITE:       # a movement table with a unit slip is not half-emitted
+        if field in chosen and chosen[field]["page"] in rejected_pages:
+            del chosen[field]
+    return chosen
+
+
+def collect(readings, bank, period, url, sha, statement_type="unknown"):
+    """Silver rows for one bank-quarter: one row per field, graded page by page and chosen coherently (see choose)."""
+    per_field = _candidates(readings)
+    chosen = choose(per_field)
     rows = []
     for field in FIELDS:
-        candidates = per_field.get(field) or []
-        if not candidates:
+        entry = chosen.get(field)
+        if entry is None:
             continue
-        candidates.sort(key=lambda item: (GRADE_ORDER[item["grade"]], -item["page"]))
-        best = candidates[0]
-        others = [item for item in candidates[1:] if item["grade"] == best["grade"]]
-        grade_value = best["grade"]
-        if others and any(not agreement(best["value"], item["value"]) for item in others):
-            grade_value = "contested"
         rows.append({"bank": bank, "period": period, "field": field,
                      "basis": "point" if kind_of(field) == "balance" else "ytd",
-                     "value_vnd_bn": best["value"], "page": best["page"], "source_url": url,
-                     "reader": ",".join(best["readers"]), "grade": grade_value, "raw_sha256": sha})
+                     "value_vnd_bn": entry["value"], "page": entry["page"], "source_url": url,
+                     "statement_type": statement_type, "reader": ",".join(entry["readers"]),
+                     "grade": entry["grade"], "raw_sha256": sha})
+    rows.extend(_derived_npl(rows, bank, period, url, sha, statement_type))
     return rows
+
+
+def _derived_npl(rows, bank, period, url, sha, statement_type="unknown"):
+    """The groups 3-5 total the downstream ratios need: the arithmetic sum of three rows on one page.
+
+    It is a derived row and says so (reader "derived"), keeps the page of its parts, and can only be as good as its
+    worst part. A group missing from that page means no derived total at all.
+    """
+    parts = {row["field"]: row for row in rows if row["field"] in NPL_FIELDS}
+    if len(parts) != len(NPL_FIELDS) or len({row["page"] for row in parts.values()}) != 1:
+        return []
+    grade_rank = max(GRADE_ORDER[row["grade"]] for row in parts.values())
+    grade_name = next(name for name, rank in GRADE_ORDER.items() if rank == grade_rank)
+    page = next(iter(parts.values()))["page"]
+    return [{"bank": bank, "period": period, "field": "groups_3_5", "basis": "point",
+             "value_vnd_bn": round(sum(row["value_vnd_bn"] for row in parts.values()), 6), "page": page,
+             "source_url": url, "statement_type": statement_type, "reader": "derived", "grade": grade_name,
+             "raw_sha256": sha}]
 
 
 def locate_table_pages(content, vision, total, page_cap=VISION_PAGE_CAP, model=None):
     """(pages, errors) that hold the classification note, the provision movement or the balance sheet.
 
-    Cheap by design: eight page thumbnails per vision call, each stamped with its own page number, so a 90-page
-    scan costs about a dozen small calls instead of ninety full-page ones.
+    Cheap by design: six legible page thumbnails per vision call, each stamped with its own page number, so a
+    90-page scan costs about fifteen small calls instead of ninety full-page ones.
     """
     pages = list(range(1, min(total, page_cap) + 1))
     wanted, errors = [], {}
     for start in range(0, len(pages), STRIP):
         chunk = pages[start:start + STRIP]
         try:
-            strip = render_strip(content, chunk, scale=STRIP_SCALE, per_row=4)
+            strip = render_strip(content, chunk, scale=STRIP_SCALE, per_row=4)   # 4 per row keeps the cached strips reusable
             payload = vision.read(strip, LOCATE_PROMPT, model or MODEL_LOCATE, schema=LOCATE_SCHEMA)
         except VisionError as exc:
             errors[f"locate {chunk[0]}-{chunk[-1]}"] = str(exc)[:140]
@@ -240,7 +370,8 @@ def read_one(lake, fetcher, run_id, link, vision, use_vision, locate, budget_usd
     out["stats"]["vision_calls"] = len(getattr(vision, "calls", [])) - calls_before
     if page_errors:
         out["errors"]["pages"] = dict(list(page_errors.items())[:4])
-    out["rows"] = collect(readings, bank, period, link["url"], meta["sha256"])
+    out["rows"] = collect(readings, bank, period, link["url"], meta["sha256"],
+                          statement_type=str(link.get("statement_type") or "unknown"))
     if readings:
         out["stats"]["read"] = 1
     else:

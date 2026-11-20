@@ -37,7 +37,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
     <>
       <p className="text-sm">{vi ? "Tỷ lệ nợ xấu giảm chưa chứng minh tín dụng tốt hơn." : "A falling NPL ratio is not proof of better credit."}</p>
       <h1 className="text-xl font-semibold text-balance">
-        {vi ? "Ngân hàng nào có mức giảm quý 4 gần hệ số cả nhóm, và quý 1 có tăng lại không?" : "Which banks' Q4 decline is near the panel coefficient, and does Q1 rise again?"}
+        {vi ? "Ngân hàng nào giảm ở quý 4 rồi tăng lại ở quý 1?" : "Which banks fall in Q4 and rise again in Q1?"}
       </h1>
       <div className="flex flex-wrap gap-2">
         {(["all", "state", "private"] as const).map((item) => (
@@ -52,7 +52,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
         ))}
       </div>
       <p className="text-sm text-muted-foreground">
-        {vi ? "Cột đậm là trung vị thay đổi quý 4. Cột nhạt là trung vị quý 1. Sắp từ mức giảm quý 4 lớn nhất. Bấm một mã để mở trang ngân hàng." : "The first bar is the median Q4 change. The second is the median Q1 change. Sorted from the largest Q4 decline. Choose a ticker to open that bank."}
+        {vi ? "Cột đậm là trung vị thay đổi quý 4. Cột nhạt là trung vị quý 1. Sắp từ mức giảm quý 4 lớn nhất. Bấm một ngân hàng để mở trang của ngân hàng đó." : "The first bar is the median Q4 change. The second is the median Q1 change. Sorted from the largest Q4 decline. Choose a bank to open its page."}
       </p>
       <DrillBoard rows={rows} lang={lang} />
       <section className="flex min-w-0 flex-col gap-2">
@@ -65,7 +65,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{vi ? "Mã" : "Ticker"}</TableHead>
+                <TableHead>{vi ? "Ngân hàng" : "Bank"}</TableHead>
                 <TableHead>{vi ? "Cặp năm" : "Year-pairs"}</TableHead>
                 <TableHead>{vi ? "Cặp đảo chiều" : "Reversed pairs"}</TableHead>
               </TableRow>

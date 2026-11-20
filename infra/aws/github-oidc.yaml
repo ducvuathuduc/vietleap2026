@@ -12,6 +12,10 @@ Parameters:
     Type: String
     Description: GitHub repository in OWNER/REPO form that may assume the deploy role.
 
+  ImmutableSubPrefix:
+    Type: String
+    Description: GitHub immutable OIDC subject prefix (gh api repos/OWNER/REPO/actions/oidc/customization/sub).
+
 Resources:
   DeployRole:
     Type: AWS::IAM::Role
@@ -28,7 +32,9 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepo}:*"
+                token.actions.githubusercontent.com:sub:
+                  - !Sub "repo:${GitHubRepo}:*"
+                  - !Sub "${ImmutableSubPrefix}:*"
       Policies:
         - PolicyName: deploy
           PolicyDocument:

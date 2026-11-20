@@ -38,7 +38,7 @@ function visibleCell(item: Cell | null, quarter: string, status: string): Cell |
   return item
 }
 
-export function DecoderTable({ model, lang }: { model: Model; lang: Lang }) {
+export function DecoderTable({ model, lang, hideSource = false }: { model: Model; lang: Lang; hideSource?: boolean }) {
   const vi = lang === "vi"
   const missing = vi ? "Thiếu dữ liệu" : "Missing data"
   const [picked, setPicked] = useState<{ bank: string; period: string } | null>(null)
@@ -96,7 +96,7 @@ export function DecoderTable({ model, lang }: { model: Model; lang: Lang }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{vi ? "Mã" : "Ticker"}</TableHead>
+              <TableHead>{vi ? "Ngân hàng" : "Bank"}</TableHead>
               {model.periods.map((period) => (
                 <TableHead key={period}>{period}</TableHead>
               ))}
@@ -110,22 +110,34 @@ export function DecoderTable({ model, lang }: { model: Model; lang: Lang }) {
                 </TableCell>
                 {row.cells.map((item, index) => {
                   const visible = visibleCell(item, quarter, status)
+                  const unpublished = !item || item.dNpl == null
+                  const marks = visible ? (visible.badges.length ? visible.badges : visible.label ? [visible.label] : []) : []
                   return (
                     <TableCell key={model.periods[index]} className="align-top">
                       {visible ? (
-                        <button
-                          type="button"
-                          className="flex min-h-11 w-full min-w-28 flex-col items-start gap-1 text-left"
-                          aria-pressed={picked?.bank === row.bank && picked.period === visible.period}
-                          onClick={() => setPicked({ bank: row.bank, period: visible.period })}
-                        >
-                          <span className="tabular-nums">{visible.dNplText}</span>
-                          {visible.label ? (
-                            <Badge variant={visible.status === "clean" ? "default" : visible.status === "seasonal" ? "secondary" : "outline"} className="h-auto overflow-visible whitespace-normal">
-                              {visible.label}
-                            </Badge>
+                        <div className="flex min-w-28 flex-col items-start gap-1">
+                          <button
+                            type="button"
+                            className="flex min-h-11 w-full flex-col items-start gap-1 text-left"
+                            aria-pressed={picked?.bank === row.bank && picked.period === visible.period}
+                            onClick={() => setPicked({ bank: row.bank, period: visible.period })}
+                          >
+                            <span className="tabular-nums">{visible.dNplText}</span>
+                            {marks.map((badge) => (
+                              <Badge key={badge} variant={visible.status === "clean" ? "default" : visible.status === "seasonal" ? "secondary" : "outline"} className="h-auto overflow-visible whitespace-normal">
+                                {badge}
+                              </Badge>
+                            ))}
+                            {visible.pending ? <span className="text-xs text-muted-foreground">{visible.pending}</span> : null}
+                          </button>
+                          {visible.largeMove ? (
+                            <a className="text-xs underline underline-offset-4" href={pageHref(`/ngan-hang/${row.bank}`, lang)}>
+                              {vi ? "biến động lớn" : "large move"}
+                            </a>
                           ) : null}
-                        </button>
+                        </div>
+                      ) : unpublished ? (
+                        <span className="text-muted-foreground" title={vi ? "chưa công bố" : "not published yet"}>—</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -140,7 +152,7 @@ export function DecoderTable({ model, lang }: { model: Model; lang: Lang }) {
       {model.moreHref && model.moreLabel ? (
         <p><a className="text-sm underline underline-offset-4" href={model.moreHref}>{model.moreLabel}</a></p>
       ) : null}
-      <p className="text-sm text-muted-foreground">{model.attribution}</p>
+      {hideSource ? null : <p className="text-sm text-muted-foreground">{model.attribution}</p>}
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-semibold">{vi ? "Chú giải" : "Legend"}</h3>
         <ul className="flex flex-col gap-1 text-sm">

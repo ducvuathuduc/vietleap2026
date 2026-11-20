@@ -14,7 +14,8 @@ flows into single-quarter values so the five inputs share one period definition.
 import re
 
 KEY = ["bank", "period", "field", "basis"]
-SILVER_COLUMNS = KEY + ["value_vnd_bn", "page", "source_url", "reader", "grade", "raw_sha256"]
+SILVER_COLUMNS = KEY + ["value_vnd_bn", "page", "source_url", "statement_type", "reader", "grade",
+                        "raw_sha256"]
 READERS = ("text", "table", "vision_a", "vision_b")
 GRADES = ("verified", "single", "contested")
 STATEMENT_TYPES = ("consolidated", "separate", "unknown")
@@ -50,7 +51,8 @@ NUMBER = re.compile(r"\(?-?\d[\d.,]*\)?")
 
 
 def kind_of(field):
-    return FIELDS[field][0]
+    """Label section of a field; a derived field (the groups 3-5 total) is point-in-time and has no labels."""
+    return FIELDS.get(field, ("point", "derived"))[0]
 
 
 def unit_scale(text):

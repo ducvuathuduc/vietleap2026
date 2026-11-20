@@ -8,7 +8,7 @@ import { formatNumber, sortDataRows, type DataRow, type Lang } from "@/lib/npl/v
 type Key = "bank_code" | "period" | "d_npl_pp" | "adjusted_change_pp" | "npl_pct" | "coverage_pct" | "ldr_pct" | "nim_pct" | "loan_growth_pct"
 
 const BASE: { key: Key; vi: string; en: string }[] = [
-  { key: "bank_code", vi: "Mã", en: "Bank" },
+  { key: "bank_code", vi: "Ngân hàng", en: "Bank" },
   { key: "period", vi: "Quý", en: "Quarter" },
   { key: "d_npl_pp", vi: "Biến động NPL", en: "NPL change" },
   { key: "adjusted_change_pp", vi: "Sau hiệu ứng quý", en: "After quarter effect" },
