@@ -4,14 +4,14 @@ type Prompts = Record<Lang, readonly [string, string, string]>
 
 const overview: Prompts = {
   vi: [
-    "Mức nợ xấu trung vị mới nhất là bao nhiêu?",
-    "Tỷ lệ bao phủ nợ xấu trung vị mới nhất là bao nhiêu?",
-    "Nợ xấu thường thay đổi thế nào qua các quý?",
+    "Ngân hàng nào có NPL giảm quý 4/2025 nhưng nợ nhóm 2 tăng?",
+    "Vì sao NPL quý 4 giảm?",
+    "Quý 1 có luôn tăng không?",
   ],
   en: [
-    "What is the latest median NPL?",
-    "What is the latest median NPL coverage ratio?",
-    "How does NPL usually change by quarter?",
+    "Which banks had falling NPL and rising group 2 loans in Q4 2025?",
+    "Why does NPL fall in Q4?",
+    "Does NPL always rise in Q1?",
   ],
 }
 
@@ -62,10 +62,11 @@ export function promptsFor(pathname: string): Prompts {
 export function visibleText(value: string): string {
   return value
     .replace(/(\*\*|__)([^\n]+?)\1/g, "$2")
-    .replace(/[ \t]*\bM[456]\b(?:[ \t]*[–—-][ \t]*\bM[456]\b)?/gi, "")
+    .replace(/[ \t]*\bM[1-8]\b(?:[ \t]*[–—-][ \t]*\bM[1-8]\b)?/gi, "")
     .replace(/[ \t]*\bget_ratios\b/gi, "")
     .replace(/[ \t]*\bconsolidated\b/gi, "")
     .replace(/[ \t]*\btool-[a-z0-9_-]+\b/gi, "")
+    .replace(/\b(?:tool|focus|[a-z][a-z0-9]*(?:_[a-z0-9]+)+)\b/gi, "")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/^[ \t]+/, "")
 }

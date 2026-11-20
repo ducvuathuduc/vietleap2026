@@ -264,5 +264,117 @@
     "question": "How does the study define coverage (tỷ lệ bao phủ nợ xấu)?",
     "expect_tool": "glossary",
     "expect_numbers": []
+  },
+  {
+    "id": "published-group2-list-vi",
+    "lang": "vi",
+    "question": "Ngân hàng nào có NPL giảm quý 4/2025 nhưng nợ nhóm 2 tăng?",
+    "expect_tool": "screen_declines",
+    "expect_numbers": [
+      6
+    ],
+    "published": true,
+    "expect_regex": "(?=.*\\bBVB\\b)(?=.*\\bLPB\\b)(?=.*\\bNAB\\b)(?=.*\\bNVB\\b)(?=.*\\bSGB\\b)(?=.*\\bSHB\\b)"
+  },
+  {
+    "id": "published-group2-list-en",
+    "lang": "en",
+    "question": "Which banks had falling NPL and rising group 2 loans in Q4 2025?",
+    "expect_tool": "screen_declines",
+    "expect_numbers": [
+      6
+    ],
+    "published": true,
+    "expect_regex": "(?=.*\\bBVB\\b)(?=.*\\bLPB\\b)(?=.*\\bNAB\\b)(?=.*\\bNVB\\b)(?=.*\\bSGB\\b)(?=.*\\bSHB\\b)"
+  },
+  {
+    "id": "published-why-q4-vi",
+    "lang": "vi",
+    "question": "Vì sao NPL quý 4 giảm?",
+    "expect_tool": "q4_drivers",
+    "expect_numbers": [
+      70.99,
+      0.35
+    ],
+    "published": true
+  },
+  {
+    "id": "published-why-q4-en",
+    "lang": "en",
+    "question": "Why does NPL fall in Q4?",
+    "expect_tool": "q4_drivers",
+    "expect_numbers": [
+      70.99,
+      0.35
+    ],
+    "published": true
+  },
+  {
+    "id": "published-q1-always-vi",
+    "lang": "vi",
+    "question": "Quý 1 có luôn tăng không?",
+    "expect_tool": "q1_rebound",
+    "expect_numbers": [
+      74.24,
+      72.28,
+      80.65
+    ],
+    "published": true
+  },
+  {
+    "id": "published-q1-always-en",
+    "lang": "en",
+    "question": "Does NPL always rise in Q1?",
+    "expect_tool": "q1_rebound",
+    "expect_numbers": [
+      74.24,
+      72.28,
+      80.65
+    ],
+    "published": true
+  },
+  {
+    "id": "published-mbb-2025-vi",
+    "lang": "vi",
+    "question": "Cho xem MBB 2025",
+    "expect_tool": "quarter_breakdown",
+    "expect_numbers": [
+      1.87,
+      1.29
+    ],
+    "published": true,
+    "expect_regex": "\\bMBB\\b"
+  },
+  {
+    "id": "published-mbb-2025-en",
+    "lang": "en",
+    "question": "Show me MBB 2025",
+    "expect_tool": "quarter_breakdown",
+    "expect_numbers": [
+      1.87,
+      1.29
+    ],
+    "published": true,
+    "expect_regex": "\\bMBB\\b"
+  },
+  {
+    "id": "published-coverage-q4-vi",
+    "lang": "vi",
+    "question": "Bao phủ tăng ở quý 4 có thật không?",
+    "expect_tool": "coverage_effect",
+    "expect_numbers": [
+      13.09
+    ],
+    "published": true
+  },
+  {
+    "id": "published-coverage-q4-en",
+    "lang": "en",
+    "question": "Did coverage actually rise in Q4 compared with Q1?",
+    "expect_tool": "coverage_effect",
+    "expect_numbers": [
+      13.09
+    ],
+    "published": true
   }
 ]

@@ -5,19 +5,24 @@ import { NplHeatmap } from "@/components/npl/npl-heatmap"
 import { QuarterBreakdown } from "@/components/npl/quarter-breakdown"
 import { breakdownModel, heatmapModel, q4HoldoutReading } from "@/lib/npl/judge-view"
 import { loadSnapshot } from "@/lib/npl/load"
-import { formatNumber, langFromQuery, pageHref } from "@/lib/npl/view"
+import { formatNumber, langFromQuery, pageHref, SITE_TITLE, siteSubtitle } from "@/lib/npl/view"
 
 export const instant = false
 
-export const metadata: Metadata = {
-  title: "Nợ xấu ngân hàng",
-  description: "Xem tỷ lệ nợ xấu đổi ra sao vào cuối năm và thử kiểm tra một ngân hàng.",
-}
-
 type Query = Record<string, string | string[] | undefined>
 
-export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Query> }): Promise<Metadata> {
   const lang = langFromQuery((await searchParams).lang)
+  const { meta } = await loadSnapshot()
+  return {
+    title: SITE_TITLE[lang],
+    description: siteSubtitle(lang, meta.n_banks, meta.period_start.slice(0, 4), meta.period_end.slice(0, 4)),
+  }
+}
+
+export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
+  const query = await searchParams
+  const lang = langFromQuery(query.lang)
   const snapshot = await loadSnapshot()
   const vi = lang === "vi"
   const { decomposition } = snapshot
@@ -76,7 +81,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
         <h2 className="text-lg font-semibold" id="q4-breakdown">
           {vi ? "Mổ xẻ một lần NPL giảm" : "Break down one NPL decline"}
         </h2>
-        <QuarterBreakdown rows={breakdown} lang={lang} />
+        <QuarterBreakdown rows={breakdown} lang={lang}
+          initialBank={typeof query.bank === "string" ? query.bank.toUpperCase() : undefined}
+          initialYear={typeof query.year === "string" ? query.year : undefined} />
       </section>
       <section className="rounded-xl border border-border bg-muted/50 p-4" aria-labelledby="npl-steps">
         <h2 className="text-lg font-semibold" id="npl-steps">

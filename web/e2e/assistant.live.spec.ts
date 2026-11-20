@@ -15,11 +15,9 @@ const COPY = {
     input: "Câu hỏi về dữ liệu",
     send: "Gửi",
     conversation: "Hội thoại",
-    figures: "Số liệu",
+    figures: "Số liệu đối chiếu",
     median: /trung vị nợ xấu|nợ xấu trung vị/i,
-    open: "Mở trang",
-    sources: "Nguồn & phép tính",
-    overview: "Tổng quan",
+    open: "Xem trên trang",
   },
   en: {
     ask: "Ask the data",
@@ -27,11 +25,9 @@ const COPY = {
     input: "Question about the data",
     send: "Send",
     conversation: "Conversation",
-    figures: "Figures",
+    figures: "Answer evidence",
     median: /median NPL|median non-performing loan/i,
-    open: "Open the page",
-    sources: "Sources & calculation",
-    overview: "Overview",
+    open: "See on the page",
   },
 }
 
@@ -73,16 +69,10 @@ test.describe("assistant panel @live", () => {
       const reply = conversation.getByRole("paragraph").filter({ hasText: copy.median }).last()
       await expect(reply).toBeVisible()
       await expect(reply).not.toHaveText(copy.question)
-      const figures = panel.getByRole("region", { name: copy.figures, exact: true })
-      const card = figures.getByRole("article").filter({ hasText: copy.median }).first()
-      await expect(card).toBeVisible()
-      await expect(card.getByRole("link", { name: copy.open, exact: true })).toBeVisible()
-      await expect(card.getByText(/FiinQuant \(FiinGroup\)/)).toBeVisible()
-
-      const sources = figures.getByRole("button", { name: copy.sources, exact: true })
-      await sources.click()
-      await expect(sources).toHaveAttribute("aria-expanded", "true")
-      await expect(figures.getByText(copy.overview, { exact: true }).last()).toBeVisible()
+      const figures = conversation.getByRole("figure", { name: copy.figures, exact: true })
+      await expect(figures).toHaveCount(1)
+      await expect(figures.getByRole("link", { name: copy.open, exact: true })).toBeVisible()
+      await expect(figures.getByText(/FiinQuant \(FiinGroup\)/)).toBeVisible()
       expect((await panel.innerText()).match(FORBIDDEN_TEXT)?.[0]).toBeUndefined()
     })
   }

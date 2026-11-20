@@ -4,25 +4,27 @@ import * as React from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, getToolName, isToolUIPart, type UIMessage } from "ai"
+import { XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { detectLang, type Lang } from "@/lib/npl/agent/lang"
 
-import { AnswerSources, AskCanvas, type CanvasCard, type ListedTool } from "./canvas"
+import { AnswerEvidence, type ListedTool } from "./canvas"
 import { promptsFor, visibleText } from "./question-lang"
 
 const MAX_INPUT = 500
-const PINNED_STORAGE_KEY = "npl-assistant-pinned"
+const subscribeToHydration = () => () => {}
 
 export function NplAskDock(): React.JSX.Element {
   const params = useSearchParams()
   const pathname = usePathname()
   const pageLang: Lang = params.get("lang") === "en" ? "en" : "vi"
   const pageVi = pageLang === "vi"
-  const side = useSheetSide()
+  const interactive = React.useSyncExternalStore(subscribeToHydration, () => true, () => false)
+  const mobile = useMobilePanel()
   const [open, setOpen] = React.useState(false)
   const [sessionId] = React.useState(() => crypto.randomUUID())
   const [transport] = React.useState(() => new DefaultChatTransport({
@@ -30,7 +32,6 @@ export function NplAskDock(): React.JSX.Element {
     prepareSendMessagesRequest: ({ body, messages }) => ({
       body: {
         ...body,
-        // Tool data stays in the canvas. Send only recent dialogue back to the agent.
         messages: messages.slice(-11).flatMap(({ id, role, parts }) => {
           const textParts = parts.filter((part) => part.type === "text")
           return textParts.length ? [{ id, role, parts: textParts }] : []
@@ -40,23 +41,20 @@ export function NplAskDock(): React.JSX.Element {
   }))
   const { messages, sendMessage, status, error, stop, clearError } = useChat({ transport })
   const [input, setInput] = React.useState("")
-  const [pinned, setPinned] = React.useState<CanvasCard[]>([])
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const threadRef = React.useRef<HTMLDivElement>(null)
   const busy = status === "submitted" || status === "streaming"
-  const prompts = promptsFor(pathname ?? "/")
+  const prompts = promptsFor(pathname ?? "/")[pageLang]
   const langs = messageLangs(messages, pageLang)
-  const pinnedIds = new Set(pinned.map((card) => card.id))
-  const currentCards = canvasModel(messages, langs)
-  const cards = [...pinned, ...currentCards.filter((card) => !pinnedIds.has(card.id))]
-  const answerLang = latestQuestionLang(messages, pageLang)
-  const waiting = busy && !assistantHasText(messages)
+  const answerLang = langs.at(-1) ?? pageLang
+  const last = messages.at(-1)
+  const waiting = busy && (last?.role !== "assistant" || !messageText(last).trim())
   const follow = React.useRef(true)
+  const title = pageVi ? "Hỏi về dữ liệu" : "Ask the data"
 
   React.useEffect(() => {
     const node = threadRef.current
-    if (!node || !follow.current) return
-    node.scrollTop = node.scrollHeight
+    if (node && follow.current) node.scrollTop = node.scrollHeight
   }, [messages, waiting, open])
 
   const send = (text: string) => {
@@ -68,119 +66,80 @@ export function NplAskDock(): React.JSX.Element {
     setInput("")
   }
 
-  const togglePin = (id: string) => {
-    const card = cards.find((item) => item.id === id)
-    if (!card) return
-    const next = pinnedIds.has(id) ? pinned.filter((item) => item.id !== id) : [...pinned, card]
-    setPinned(next)
-    try {
-      sessionStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      // Keep the in-memory pins when tab storage is unavailable.
-    }
-  }
-
   return (
-    <Sheet open={open} onOpenChange={(next) => {
-      if (next && pinned.length === 0) setPinned(readPins())
-      setOpen(next)
-    }}>
-      <SheetTrigger
-        render={
-          <Button ref={triggerRef} type="button" variant="outline" size="sm" className="min-h-11 shrink-0 px-2.5" aria-label={pageVi ? "Hỏi về dữ liệu" : "Ask the data"}>
-            <span className="md:hidden">{pageVi ? "Hỏi" : "Ask"}</span>
-            <span className="hidden md:inline">{pageVi ? "Hỏi về dữ liệu" : "Ask the data"}</span>
-          </Button>
-        }
-      />
-      <SheetContent
-        side={side}
-        finalFocus={triggerRef}
-        className="gap-0 overflow-hidden p-0 data-[side=bottom]:h-[92dvh]! data-[side=right]:w-[min(100vw,72rem)]! data-[side=right]:max-w-none!"
-      >
-        <SheetHeader className="shrink-0 pr-12">
-          <SheetTitle>{pageVi ? "Hỏi về dữ liệu" : "Ask the data"}</SheetTitle>
+    <Sheet open={open} onOpenChange={setOpen} modal={mobile ? true : "trap-focus"} disablePointerDismissal>
+      <SheetTrigger render={
+        <Button ref={triggerRef} type="button" variant="outline" size="sm"
+          className={`min-h-11 shrink-0 px-2.5${interactive ? "" : " invisible"}`} aria-label={title}>
+          <span className="md:hidden">{pageVi ? "Hỏi" : "Ask"}</span>
+          <span className="hidden md:inline">{title}</span>
+        </Button>
+      } />
+      <SheetContent side="right" showOverlay={false} showCloseButton={false} finalFocus={triggerRef}
+        className="gap-0 overflow-hidden p-0 data-[side=right]:h-dvh! data-[side=right]:w-full! data-[side=right]:max-w-none! md:data-[side=right]:w-[min(440px,40vw)]! motion-reduce:transition-none">
+        <SheetHeader className="flex-row items-center justify-between gap-3 border-b border-border py-3">
+          <SheetTitle>{title}</SheetTitle>
+          <SheetClose render={
+            <Button variant="ghost" size="icon-sm" type="button" aria-label={pageVi ? "Đóng" : "Close"}>
+              <XIcon aria-hidden="true" />
+            </Button>
+          } />
         </SheetHeader>
-        <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-4 overflow-hidden px-4 pb-4 sm:grid-cols-2 sm:grid-rows-1">
-          <section className="flex min-h-0 min-w-0 flex-col gap-3" aria-label={pageVi ? "Hội thoại" : "Conversation"}>
-            <div
-              ref={threadRef}
-              className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
-              onScroll={() => {
-                const node = threadRef.current
-                if (!node) return
-                follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 64
-              }}
-            >
-              <details className="shrink-0" key={pathname}>
-                <summary className="w-fit cursor-pointer text-sm text-muted-foreground">
-                  {pageVi ? "Câu hỏi gợi ý" : "Suggested questions"}
-                </summary>
-                <div className="mt-2 grid gap-2 lg:grid-cols-2">
-                  {([pageLang, pageVi ? "en" : "vi"] as const).map((lang) => (
-                    <div key={lang} lang={lang} className="grid content-start gap-2">
-                      {prompts[lang].map((prompt) => (
-                        <Button key={prompt} type="button" variant="outline" size="sm" className="h-auto justify-start whitespace-normal px-2 py-1.5 text-left" disabled={busy} onClick={() => send(prompt)}>
-                          {prompt}
-                        </Button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </details>
-              {messages.map((message, index) => (
-                <MessageView key={message.id} message={message} lang={langs[index] ?? pageLang} />
-              ))}
-              {waiting ? (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Spinner className="size-3" /> {answerLang === "vi" ? "Đang trả lời" : "Answering"}
-                </p>
-              ) : null}
-              {error ? (
-                <p className="text-sm text-destructive">
-                  {answerLang === "vi" ? "Không nhận được câu trả lời. Thử lại." : "No answer came back. Try again."}
-                </p>
-              ) : null}
-            </div>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault()
-                send(input)
-              }}
-              className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:flex sm:flex-col sm:items-stretch"
-            >
-              <Textarea
-                className="max-sm:min-h-12!"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-                    event.preventDefault()
-                    send(input)
-                  }
-                }}
-                placeholder={pageVi ? "Hỏi về số liệu trên trang" : "Ask about the numbers on this page"}
-                aria-label={pageVi ? "Câu hỏi về dữ liệu" : "Question about the data"}
-                aria-invalid={input.length > MAX_INPUT}
-              />
-              <div className="flex items-center justify-between gap-2">
-                <p className={input.length > MAX_INPUT ? "text-xs text-destructive" : "hidden text-xs text-muted-foreground sm:block"}>
-                  {input.length}/{MAX_INPUT}
-                </p>
-                {busy ? (
-                  <Button type="button" variant="outline" size="sm" onClick={() => void stop()}>
-                    {pageVi ? "Dừng" : "Stop"}
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label={pageVi ? "Hội thoại" : "Conversation"}>
+          <div ref={threadRef} className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
+            onScroll={() => {
+              const node = threadRef.current
+              if (node) follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 64
+            }}>
+            {messages.length === 0 && (
+              <div className="grid gap-2">
+                <p className="text-xs text-muted-foreground">{pageVi ? "Câu hỏi gợi ý" : "Suggested questions"}</p>
+                {prompts.map((prompt) => (
+                  <Button key={prompt} type="button" variant="outline" size="sm"
+                    className="h-auto min-w-0 justify-start whitespace-normal px-2.5 py-2 text-left"
+                    disabled={busy} onClick={() => send(prompt)}>
+                    {prompt}
                   </Button>
-                ) : (
-                  <Button type="submit" size="sm" disabled={!input.trim() || input.length > MAX_INPUT}>
-                    {pageVi ? "Gửi" : "Send"}
-                  </Button>
-                )}
+                ))}
               </div>
-            </form>
-          </section>
-          <AskCanvas cards={cards} pinned={pinnedIds} onTogglePin={togglePin} onOpenPage={() => setOpen(false)} lang={pageLang} />
-        </div>
+            )}
+            {messages.map((message, index) => (
+              <MessageView key={message.id} message={message} lang={langs[index] ?? pageLang} />
+            ))}
+            {waiting && (
+              <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Spinner className="size-3 motion-reduce:animate-none" /> {answerLang === "vi" ? "Đang trả lời" : "Answering"}
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {answerLang === "vi" ? "Không nhận được câu trả lời. Thử lại." : "No answer came back. Try again."}
+              </p>
+            )}
+          </div>
+          <form onSubmit={(event) => { event.preventDefault(); send(input) }}
+            className="grid w-full shrink-0 gap-2 border-t border-border bg-popover px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <Textarea className="min-h-14 w-full resize-none text-base md:text-sm" rows={2}
+              value={input} onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault()
+                  send(input)
+                }
+              }}
+              placeholder={pageVi ? "Hỏi về số liệu trên trang" : "Ask about the numbers on this page"}
+              aria-label={pageVi ? "Câu hỏi về dữ liệu" : "Question about the data"}
+              aria-invalid={input.length > MAX_INPUT} />
+            <div className="flex items-center justify-between gap-2">
+              <p className={input.length > MAX_INPUT ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                {input.length}/{MAX_INPUT}
+              </p>
+              {busy
+                ? <Button type="button" variant="outline" size="sm" onClick={() => void stop()}>{pageVi ? "Dừng" : "Stop"}</Button>
+                : <Button type="submit" size="sm" disabled={!input.trim() || input.length > MAX_INPUT}>{pageVi ? "Gửi" : "Send"}</Button>}
+            </div>
+          </form>
+        </section>
       </SheetContent>
     </Sheet>
   )
@@ -188,49 +147,24 @@ export function NplAskDock(): React.JSX.Element {
 
 export default NplAskDock
 
-function useSheetSide(): "right" | "bottom" {
-  const [side, setSide] = React.useState<"right" | "bottom">("right")
+function useMobilePanel(): boolean {
+  const [mobile, setMobile] = React.useState(false)
   React.useEffect(() => {
-    const media = window.matchMedia("(max-width: 639px)")
-    const apply = () => setSide(media.matches ? "bottom" : "right")
+    const media = window.matchMedia("(max-width: 767px)")
+    const apply = () => setMobile(media.matches)
     apply()
     media.addEventListener("change", apply)
     return () => media.removeEventListener("change", apply)
   }, [])
-  return side
-}
-
-function latestQuestionLang(messages: UIMessage[], pageLang: Lang): Lang {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i]
-    if (message?.role === "user") return detectLang(messageText(message))
-  }
-  return pageLang
+  return mobile
 }
 
 function messageLangs(messages: UIMessage[], pageLang: Lang): Lang[] {
-  const langs: Lang[] = []
   let current = pageLang
-  for (const message of messages) {
+  return messages.map((message) => {
     if (message.role === "user") current = detectLang(messageText(message))
-    langs.push(current)
-  }
-  return langs
-}
-
-function canvasModel(messages: UIMessage[], langs: Lang[]): CanvasCard[] {
-  const index = messages.findLastIndex((message) => message.role === "assistant")
-  const message = messages[index]
-  return message ? completedTools(message).map((tool) => ({ ...tool, lang: langs[index] ?? "vi" })) : []
-}
-
-function readPins(): CanvasCard[] {
-  try {
-    const stored: unknown = JSON.parse(sessionStorage.getItem(PINNED_STORAGE_KEY) ?? "[]")
-    return Array.isArray(stored) ? stored : []
-  } catch {
-    return []
-  }
+    return current
+  })
 }
 
 function completedTools(message: UIMessage): ListedTool[] {
@@ -240,32 +174,21 @@ function completedTools(message: UIMessage): ListedTool[] {
   })
 }
 
-function assistantHasText(messages: UIMessage[]): boolean {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i]
-    if (message?.role === "user") return false
-    if (message?.role === "assistant") return Boolean(messageText(message).trim())
-  }
-  return false
-}
-
 function MessageView({ message, lang }: { message: UIMessage; lang: Lang }) {
   if (message.role === "user") {
-    return <p lang={lang} className="self-end rounded-lg bg-muted px-3 py-2 text-sm whitespace-pre-wrap">{messageText(message)}</p>
+    return <p lang={lang} className="max-w-[90%] self-end rounded-lg bg-muted px-3 py-2 text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">{messageText(message)}</p>
   }
   const text = visibleText(messageText(message))
   if (!text.trim()) return null
   return (
-    <div lang={lang} className="flex flex-col gap-2">
-      <p className="text-sm whitespace-pre-wrap">{text}</p>
-      <AnswerSources tools={completedTools(message)} lang={lang} />
-    </div>
+    <article lang={lang} className="grid min-w-0 gap-2">
+      <p className="text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{text}</p>
+      <AnswerEvidence tools={completedTools(message)} lang={lang} />
+    </article>
   )
 }
 
 function messageText(message: UIMessage): string {
-  return message.parts
-    .filter((part): part is { type: "text"; text: string } => part.type === "text")
-    .map((part) => part.text)
-    .join(" ")
+  return message.parts.filter((part): part is { type: "text"; text: string } => part.type === "text")
+    .map((part) => part.text).join(" ")
 }

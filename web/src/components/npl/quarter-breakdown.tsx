@@ -39,11 +39,16 @@ function Waterfall({ values, lang }: { values: BankBreakdown; lang: Lang }) {
   )
 }
 
-export function QuarterBreakdown({ rows, lang }: { rows: BankBreakdown[]; lang: Lang }) {
+export function QuarterBreakdown({ rows, lang, initialBank, initialYear }: {
+  rows: BankBreakdown[]
+  lang: Lang
+  initialBank?: string
+  initialYear?: string
+}) {
   const vi = lang === "vi"
   const banks = [...new Set(rows.map((row) => row.bank))]
-  const [bank, setBank] = useState(() => banks.includes("MBB") ? "MBB" : banks[0])
-  const [year, setYear] = useState<string | null>(null)
+  const [bank, setBank] = useState(() => initialBank && banks.includes(initialBank) ? initialBank : banks.includes("MBB") ? "MBB" : banks[0])
+  const [year, setYear] = useState<string | null>(initialYear ?? null)
   const choices = rows.filter((row) => row.bank === bank).sort((a, b) => b.year.localeCompare(a.year))
   const values = choices.find((row) => row.year === year) ?? choices[0]
 

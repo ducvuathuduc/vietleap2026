@@ -35,7 +35,7 @@ for (const route of NPL_PAGES) {
 const NAV = {
   vi: ["Tổng quan", "Ngân hàng", "Thị trường", "Phương pháp", "Dữ liệu"],
   en: ["Overview", "Banks", "Market", "Method", "Data"],
-  brand: { vi: "Sau tỷ lệ nợ xấu", en: "Behind the NPL Ratio" },
+  brand: { vi: "Vượt ra ngoài tỷ lệ nợ xấu", en: "Beyond the NPL Ratio" },
 }
 
 async function expectLocalizedHeader(page: Page, lang: Lang) {

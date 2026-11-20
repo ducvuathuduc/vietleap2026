@@ -2,7 +2,7 @@ export const PAGE_SHELL = "min-h-full overflow-x-hidden bg-background text-foreg
 export const SERIES_ATTRIBUTION = "Nguồn: FiinQuant (FiinGroup)"
 export const LARGE_BANKS = ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "STB"] as const
 export const DECODER_DISCLAIMER = {
-  vi: "Tool chỉ nêu cờ cần xem xét, không kết luận ngân hàng che giấu nợ xấu",
+  vi: "Cờ vàng nêu những trường hợp cần xem xét thêm.",
   en: "The tool only raises a flag to review. It does not conclude that a bank is hiding bad debt.",
 }
 export const BADGE_LABEL = {
@@ -23,6 +23,15 @@ const BADGE_SENTENCE = {
 } as const
 
 export type Lang = "vi" | "en"
+export const SITE_TITLE = { vi: "Vượt ra ngoài tỷ lệ nợ xấu", en: "Beyond the NPL Ratio" } as const
+
+export function siteSubtitle(lang: Lang, banks: number, firstYear: string, lastYear: string): string {
+  const span = `${firstYear}–${lastYear}`
+  return lang === "vi"
+    ? `Khung đánh giá chất lượng tín dụng và cảnh báo rủi ro, ${banks} ngân hàng niêm yết, ${span}`
+    : `A credit quality assessment framework, ${banks} listed banks, ${span}`
+}
+
 export type Ownership = "all" | "state" | "private"
 
 export type Term = {
@@ -63,7 +72,10 @@ export type DecompositionRow = {
   denominator_pp: number | null
   numerator_pp: number | null
   d_g2_pp: number | null
+  writeoff_pct_loans?: number | null
 }
+
+type Q1RiseRate = { n: number; rises: number; share_pct: number | null }
 
 export type PublishedPriceForecast = {
   series: { month: string; actual_price: number | null; predicted_price: number | null; in_test: boolean }[]
@@ -115,11 +127,24 @@ export type Snapshot = {
     benchmark: Term
     trend: { down_then_up: { year: number; share_pct: number; n: number }[]; npl_4q_avg_median_pct: number | null; period: string }
   }
-  reversal?: { share_pct: number | null; n: number; reversals: number }
+  reversal?: { share_pct: number | null; n: number; reversals: number; baselines?: {
+    any_q4: Q1RiseRate
+    q4_fell: Q1RiseRate
+    q4_not_fell: Q1RiseRate
+  } }
   decision_rule?: { q4_oos?: Q4Holdout }
   decomposition?: {
     rows: DecompositionRow[]
-    by_quarter: { quarter: string; share_falling_pct: number | null }[]
+    by_quarter: {
+      quarter: string
+      share_falling_pct: number | null
+      n?: number
+      mean_d_npl_pp?: number | null
+      mean_denominator_pp?: number | null
+      mean_numerator_pp?: number | null
+      mean_writeoff_pct_loans?: number | null
+      writeoff_n?: number
+    }[]
   }
   series: { median_by_period: { period: string; npl_median_pct: number | null; npl_p25_pct: number | null; npl_p75_pct: number | null; coverage_median_pct: number | null; n_banks: number }[] }
   quarter_effects: QuarterEffect[]

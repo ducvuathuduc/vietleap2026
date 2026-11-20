@@ -6,12 +6,15 @@ import { useEffect } from "react"
 import { NplAskDock } from "@/components/npl-ai/assistant"
 import { buttonVariants } from "@/components/ui/button"
 import { NPL_NAV } from "@/lib/nav"
+import { SITE_TITLE, siteSubtitle } from "@/lib/npl/view"
 import { cn } from "cn"
 
 export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; yearStart: string; yearEnd: string }) {
   const pathname = usePathname()
   const search = useSearchParams()
   const vi = search.get("lang") !== "en"
+  const lang = vi ? "vi" : "en"
+  const subtitle = siteSubtitle(lang, bankCount, yearStart, yearEnd)
   useEffect(() => {
     document.documentElement.lang = vi ? "vi" : "en"
   }, [vi])
@@ -58,8 +61,8 @@ export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; 
       <div className="mx-auto w-full max-w-6xl px-4 py-2">
         <div className="flex flex-nowrap items-center gap-2 md:flex-wrap">
           <div className="mr-auto min-w-0 flex-1 md:flex-none">
-            <p className="text-base font-semibold leading-tight">{vi ? "Sau tỷ lệ nợ xấu" : "Behind the NPL Ratio"}</p>
-            <p className="hidden text-xs text-muted-foreground md:block">{vi ? `${bankCount} ngân hàng niêm yết, ${yearStart}–${yearEnd}` : `${bankCount} listed banks, ${yearStart}–${yearEnd}`}</p>
+            <p className="text-base font-semibold leading-tight">{SITE_TITLE[lang]}</p>
+            <p className="hidden max-w-[25rem] text-xs leading-snug text-muted-foreground md:block">{subtitle}</p>
           </div>
           <nav className="hidden md:flex flex-wrap gap-1" aria-label={vi ? "Mục" : "Sections"}>
             {sections(false)}
@@ -84,7 +87,7 @@ export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; 
             </a>
           </div>
         </div>
-        <p className="pt-1 text-xs text-muted-foreground md:hidden">{vi ? `${bankCount} ngân hàng niêm yết, ${yearStart}–${yearEnd}` : `${bankCount} listed banks, ${yearStart}–${yearEnd}`}</p>
+        <p className="pt-1 text-xs leading-snug text-muted-foreground md:hidden">{subtitle}</p>
       </div>
     </header>
   )

@@ -10,6 +10,7 @@ import {
   LARGE_BANKS,
   PAGE_SHELL,
   SERIES_ATTRIBUTION,
+  SITE_TITLE,
   applyPublishFlag,
   bankModel,
   bankRows,
@@ -22,6 +23,7 @@ import {
   overviewModel,
   publicCsv,
   sortDataRows,
+  siteSubtitle,
   type Snapshot,
 } from "./view.ts"
 
@@ -469,7 +471,7 @@ test("the decoder flags a coverage decline and a usual Q4 move, and never calls 
   assert.equal(table.rows[0]?.cells[3]?.label, null)
   assert.match(table.rows[0]?.cells[1]?.reading ?? "", /không gọi là cải thiện có cơ sở/)
   assert.equal(table.disclaimer, DECODER_DISCLAIMER.vi)
-  assert.equal(DECODER_DISCLAIMER.vi, "Tool chỉ nêu cờ cần xem xét, không kết luận ngân hàng che giấu nợ xấu")
+  assert.equal(DECODER_DISCLAIMER.vi, "Cờ vàng nêu những trường hợp cần xem xét thêm.")
   assert.equal(BADGE_LABEL.clean.vi, "Cải thiện có cơ sở")
   assert.equal(BADGE_LABEL.g2.vi, "Cờ vàng: nhóm 2 tăng")
   assert.equal(BADGE_LABEL.writeoff.vi, "Cờ vàng: xóa nợ tăng")
@@ -694,8 +696,10 @@ test("the page shell clips horizontal overflow", () => {
   const data = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/data-table.tsx"), "utf8")
   assert.doesNotMatch(data, /vi: "Mã"/)
   const bar = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/site-bar.tsx"), "utf8")
-  assert.match(bar, /Sau tỷ lệ nợ xấu/)
-  assert.match(bar, /Behind the NPL Ratio/)
+  assert.match(bar, /SITE_TITLE\[lang\]/)
+  assert.deepEqual(SITE_TITLE, { vi: "Vượt ra ngoài tỷ lệ nợ xấu", en: "Beyond the NPL Ratio" })
+  assert.match(siteSubtitle("vi", 27, "2021", "2026"), /27 ngân hàng niêm yết, 2021–2026/)
+  assert.match(siteSubtitle("en", 27, "2021", "2026"), /27 listed banks, 2021–2026/)
   assert.doesNotMatch(bar, / · /)
   assert.match(bar, /md:hidden/)
   assert.match(bar, /hidden md:flex/)

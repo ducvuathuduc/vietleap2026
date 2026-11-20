@@ -1,5 +1,5 @@
 // Live eval for the NPL study assistant.
-// Runs 30 fixture-grounded cases (15 VI, 15 EN, 6 adversarial) against the
+// Runs the fixture cases and current-publication cases against the
 // configured provider and grades tool choice, grounding, citations and language.
 // With Langfuse project keys
 // the cases are pushed as dataset items and the run is recorded as a Langfuse
@@ -14,6 +14,7 @@ import { type LanguageModel, type ToolLoopAgent } from "ai"
 import { makeNplAgent } from "../agent.ts"
 import { investmentAdviceNotice } from "../answer-policy.ts"
 import { detectLang } from "../lang.ts"
+import { loadNplSnapshot } from "../snapshot.ts"
 import { loadRepoEnv } from "../../../llm/env.ts"
 import { filterInput, redactPii } from "../../../llm/guards.ts"
 import { providerName, createAssistantModel } from "../../../llm/model.ts"
@@ -25,7 +26,7 @@ const FIXTURE_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const DECODER_PATH = path.join(path.dirname(FIXTURE_PATH), "decoder.fixture.json")
 const DATASET_NAME = "npl-eval"
 const CASE_TIMEOUT_MS = 120_000
-const PASS_BAR = 28
+const PASS_BAR = 38
 
 interface CaseUsage {
   inputTokens: number
@@ -130,6 +131,8 @@ async function main(): Promise<void> {
   const { decoder } = JSON.parse(readFileSync(DECODER_PATH, "utf8")) as Pick<Snapshot, "decoder">
   snapshot.decoder = decoder
   const cases = JSON.parse(readFileSync(CASES_PATH, "utf8")) as EvalCase[]
+  const published = await loadNplSnapshot()
+  const dataFor = (c: EvalCase) => c.published ? published : snapshot
 
   const results: CaseResult[] = []
   let experimentUrl: string | null = null
@@ -139,7 +142,7 @@ async function main(): Promise<void> {
   const delayMs = Number(process.env.EVAL_CASE_DELAY_MS ?? "0") || 0
   const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-  if (projectKeys) {
+  if (projectKeys && !process.argv.includes("--local")) {
     try {
       const { LangfuseClient } = await import("@langfuse/client")
       const lf = new LangfuseClient()
@@ -179,7 +182,7 @@ async function main(): Promise<void> {
       const run = await dataset.runExperiment({
         name: "NPL study assistant eval",
         runName,
-        description: "30 VI/EN cases with 6 adversarial: tool choice, grounded numbers, citations, language (fixture snapshot)",
+        description: "VI/EN cases with fixture and published data, tool choice, grounded numbers, citations and language",
         metadata: { provider, model: chosen.label },
         maxConcurrency: 1,
         task: async (raw: unknown) => {
@@ -187,7 +190,7 @@ async function main(): Promise<void> {
           const c = item.input.id ? byId.get(item.input.id) : undefined
           if (!c) return { pass: 0, tool_ok: 0, guard_clean: 0, citations_ok: 0, language_ok: 0 }
           if (delayMs > 0) await sleep(delayMs)
-          const r = await runCase(snapshot, chosen.model, c)
+          const r = await runCase(dataFor(c), chosen.model, c)
           results.push(r)
           console.log(describe(r))
           return { pass: Number(r.pass), tool_ok: Number(r.tool_ok), guard_clean: Number(r.guard_clean), citations_ok: Number(r.citations_ok), language_ok: Number(r.language_ok) }
@@ -206,19 +209,21 @@ async function main(): Promise<void> {
       console.warn(`langfuse: dataset run skipped (${e instanceof Error ? e.message : String(e)})`)
     }
   } else {
-    console.log("langfuse: dataset run skipped (no LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY)")
+    console.log("langfuse: dataset run skipped (local mode or no project keys)")
   }
 
   const completed = new Set(results.map((r) => r.id))
   for (const c of cases) {
     if (completed.has(c.id)) continue
     if (delayMs > 0) await sleep(delayMs)
-    const r = await runCase(snapshot, chosen.model, c)
+    const r = await runCase(dataFor(c), chosen.model, c)
     results.push(r)
     console.log(describe(r))
   }
 
   const mixed = results.filter((r) => r.mixed)
+  const publishedIds = new Set(cases.filter((c) => c.published).map((c) => c.id))
+  const publishedResults = results.filter((result) => publishedIds.has(result.id))
   const inputTokens = results.reduce((s, r) => s + r.usage.inputTokens, 0)
   const outputTokens = results.reduce((s, r) => s + r.usage.outputTokens, 0)
   const unguardedNumbers = results.reduce((count, r) => count + r.unguarded.length, 0)
@@ -234,6 +239,7 @@ async function main(): Promise<void> {
     expected_numbers_answered: rate(results, (r) => r.numbers_ok),
     language_matched: rate(results, (r) => r.language_ok),
     mixed_language_matched: rate(mixed, (r) => r.language_ok),
+    published_pass: rate(publishedResults, (r) => r.pass),
     unguarded_numbers: unguardedNumbers,
     pass: rate(results, (r) => r.pass),
     usage: { inputTokens, outputTokens },
@@ -250,9 +256,9 @@ async function main(): Promise<void> {
   }
   if (langfuseShutdown) await langfuseShutdown()
   const passed = results.filter((r) => r.pass).length
-  if (results.length !== 30 || passed < PASS_BAR || unguardedNumbers !== 0 ||
+  if (results.length !== cases.length || passed < PASS_BAR || unguardedNumbers !== 0 ||
     mixed.length !== 6 || mixed.some((r) => !r.language_ok)) {
-    console.error("eval: acceptance requires 28/30 passes, no unguarded numbers and all six mixed languages matched")
+    console.error(`eval: acceptance requires ${PASS_BAR}/${cases.length} passes, no unguarded numbers and all six mixed languages matched`)
     process.exitCode = 1
   }
 }

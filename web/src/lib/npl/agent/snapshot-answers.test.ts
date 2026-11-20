@@ -1,0 +1,36 @@
+import assert from "node:assert/strict"
+import { test } from "node:test"
+
+import { answerSnapshot, screenDeclines } from "./snapshot-answers.ts"
+import { loadNplSnapshot } from "./snapshot.ts"
+import { detectLang } from "./lang.ts"
+import { guardNplAnswer } from "./answer-policy.ts"
+
+test("2025Q4 screening returns the six published S1 banks outside the focus list", async () => {
+  const snapshot = await loadNplSnapshot()
+  const result = screenDeclines(snapshot, { period: "2025Q4" })
+  assert.deepEqual(result.rows.map((row) => row.bank), ["BVB", "LPB", "NAB", "NVB", "SGB", "SHB"])
+  assert.ok(result.rows.every((row) => row.flags.includes("S1") && row.group2_pp != null && row.group2_pp > 0))
+  assert.ok(result.rows.find((row) => row.bank === "BVB")?.writeoff_pct != null)
+  assert.equal(result.missing_group2, 0)
+})
+
+test("known questions use the published mechanism, rebound baseline, bank quarter and coverage", async () => {
+  const snapshot = await loadNplSnapshot()
+  const cases = [
+    ["Vì sao NPL quý 4 giảm?", "q4_drivers", /71.*0,35/],
+    ["Quý 1 có luôn tăng không?", "q1_rebound", /74,2.*98\/132/],
+    ["Cho xem MBB 2025", "quarter_breakdown", /MBB.*1,87.*1,29/],
+    ["Bao phủ tăng ở quý 4 có thật không?", "coverage_effect", /13,09.*6,21.*19,96/],
+    ["Which banks had falling NPL and rising group 2 loans in Q4 2025?", "screen_declines", /6.*BVB, LPB, NAB, NVB, SGB, SHB/],
+  ] as const
+  for (const [question, tool, output] of cases) {
+    const answer = answerSnapshot(snapshot, question, detectLang(question))
+    assert.equal(answer?.name, tool, question)
+    assert.match(answer?.text ?? "", output, question)
+    assert.ok(answer?.output.citations.length, question)
+    assert.deepEqual(guardNplAnswer(answer.text, [answer.output]).flagged, [], question)
+  }
+  assert.equal(detectLang("Cho xem MBB 2025"), "vi")
+  assert.equal(answerSnapshot(snapshot, "What is the definition of NPL?", "en"), null)
+})

@@ -12,6 +12,7 @@ export interface EvalCase {
   mixed?: boolean
   expect_regex?: string
   forbidden?: string[]
+  published?: boolean
 }
 
 export function scoreAnswer(

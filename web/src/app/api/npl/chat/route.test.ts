@@ -43,3 +43,19 @@ test("the chat route refuses buy and sell advice in the question language, with 
     assert.match(stream, alternative)
   }
 })
+
+test("the chat route streams one grounded comparison for the 2025Q4 Group 2 question", async () => {
+  const body = JSON.stringify({ messages: [{ id: "s1", role: "user", parts: [{
+    type: "text", text: "Ngân hàng nào có NPL giảm quý 4/2025 nhưng nợ nhóm 2 tăng?",
+  }] }] })
+  const response = await POST(new Request("http://localhost/api/npl/chat", { method: "POST", body }))
+  assert.equal(response.status, 200)
+  const stream = await response.text()
+  const chunks = stream.split(/\r?\n/).filter((line) => line.startsWith("data: ") && line !== "data: [DONE]")
+    .map((line) => JSON.parse(line.slice(6)))
+  const evidence = chunks.filter((part) => part.type === "tool-output-available")
+  assert.equal(evidence.length, 1)
+  assert.equal(evidence[0].output.rows.length, 6)
+  assert.match(chunks.find((part) => part.type === "text-delta").delta, /BVB, LPB, NAB, NVB, SGB, SHB/)
+  assert.ok(!chunks.some((part) => part.type === "data-guard"))
+})

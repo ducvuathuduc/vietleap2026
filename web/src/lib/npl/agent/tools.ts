@@ -57,7 +57,7 @@ function decoderCell(snapshot: Snapshot, code: string, period: string | null | u
     S3: inputs.coverage_contested ? "missing" : check(inputs.d_coverage_pp, status === "coverage" || en.badges.includes("Coverage fell"), (inputs.d_coverage_pp ?? 0) < 0),
     S4: !fell || !period.endsWith("Q4")
       ? (en.dNpl == null ? "missing" : "inapplicable")
-      : check(null, status === "seasonal" || en.badges.includes("Inside the year-end range"), false),
+      : check(inputs.seasonal_band_available ? 0 : null, status === "seasonal" || en.badges.includes("Inside the year-end range"), false),
   }
   return {
     bank: code,

@@ -9,8 +9,9 @@ import { z } from "zod"
 
 import { makeNplAgent } from "@/lib/npl/agent/agent"
 import { guardNplStream, investmentAdviceNotice, messagesForNplModel, nplMessageText } from "@/lib/npl/agent/answer-policy"
-import { detectLang } from "@/lib/npl/agent/lang"
+import { detectLang, type Lang } from "@/lib/npl/agent/lang"
 import { loadNplSnapshot } from "@/lib/npl/agent/snapshot"
+import { answerSnapshot, type SnapshotAnswer } from "@/lib/npl/agent/snapshot-answers"
 import { filterInput } from "@/lib/llm/guards"
 import { createAssistantModel } from "@/lib/llm/model"
 import { rateLimited } from "@/lib/rate-limit"
@@ -36,18 +37,22 @@ const Body = z.object({
   sessionId: z.string().uuid().nullish(),
 })
 
-function noticeStream(notice: string): Response {
+function noticeStream(notice: string, evidence?: SnapshotAnswer, lang: Lang = "vi"): Response {
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       writer.write({ type: "start" })
       const id = crypto.randomUUID()
+      if (evidence) {
+        writer.write({ type: "tool-input-available", toolCallId: id, toolName: evidence.name, input: evidence.input })
+        writer.write({ type: "tool-output-available", toolCallId: id, output: evidence.output })
+      }
       writer.write({ type: "text-start", id })
       writer.write({ type: "text-delta", id, delta: notice })
       writer.write({ type: "text-end", id })
       writer.write({ type: "finish" })
     },
   })
-  return createUIMessageStreamResponse({ stream })
+  return createUIMessageStreamResponse({ stream: evidence ? stream.pipeThrough(guardNplStream(lang)) : stream })
 }
 
 /** One structured line per request. No prompt text, no personal data, no keys. */
@@ -110,6 +115,13 @@ export async function POST(req: Request) {
       return noticeStream(refusal)
     }
 
+    const snapshot = await loadNplSnapshot()
+    const known = answerSnapshot(snapshot, question, lang)
+    if (known) {
+      log.tools.push(known.name)
+      logRequest(log)
+      return noticeStream(known.text, known, lang)
+    }
     const unavailable = lang === "vi" ? "Trợ lý hiện chưa khả dụng. Bạn có thể xem số liệu trực tiếp trên các trang nghiên cứu." : "The assistant is temporarily unavailable. You can find the data on the study pages."
     const llm = createAssistantModel(process.env, body.sessionId)
     if (!llm) {
@@ -118,7 +130,6 @@ export async function POST(req: Request) {
       return noticeStream(unavailable)
     }
 
-    const snapshot = await loadNplSnapshot()
     const agent = makeNplAgent({ snapshot, model: llm.model, sessionId: body.sessionId, lang })
     if (!agent) {
       log.rejected = "offline"

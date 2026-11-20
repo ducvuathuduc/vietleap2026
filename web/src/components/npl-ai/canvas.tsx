@@ -1,361 +1,228 @@
-import Link from "next/link"
+"use client"
 
-import { QuarterChart } from "@/components/npl/charts"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { DECODER_DISCLAIMER, type Lang } from "@/lib/npl/view"
-import type { NplDecoderCell } from "@/lib/npl/agent/tools"
+import { useState, type ReactNode } from "react"
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "lucide-react"
 
+import { MarketChart, QuarterChart } from "@/components/npl/charts"
+import { pageHref, type Lang } from "@/lib/npl/view"
+import type { ScreeningRow, SnapshotAnswers } from "@/lib/npl/agent/snapshot-answers"
 import { BankCanvasChart, CompareCanvasChart, ForecastCanvasChart } from "./canvas-charts"
-import { CHECKS, INPUTS, RATIOS, csvRows, decoderStatus, formatValue, inputSummary, openPage, overviewFigures, points, readResult, toolLabel, type CsvCell } from "./canvas-data"
-import { visibleText } from "./question-lang"
+import { formatValue, openPage, overviewFigures, points, readResult } from "./canvas-data"
 
 export type ListedTool = { id: string; name: string; input: unknown; output: unknown }
-export type CanvasCard = ListedTool & { lang: Lang }
 type Result = NonNullable<ReturnType<typeof readResult>>
+type SortKey = "bank" | "npl_pp" | "group2_pp" | "writeoff_pct" | "coverage_pp" | "flags"
 
-export function AskCanvas({
-  cards,
-  pinned,
-  onTogglePin,
-  onOpenPage,
-  lang,
-}: {
-  cards: CanvasCard[]
-  pinned: ReadonlySet<string>
-  onTogglePin: (id: string) => void
-  onOpenPage: () => void
+const FLAG_LABELS = {
+  S1: { vi: "Nhóm 2", en: "Group 2" },
+  S2: { vi: "Xóa nợ", en: "Write-offs" },
+  S3: { vi: "Bao phủ", en: "Coverage" },
+  S4: { vi: "Mùa vụ", en: "Seasonal" },
+}
+
+function bankLink(bank: string, period: string, waterfall: boolean, lang: Lang) {
+  return waterfall
+    ? `${pageHref("/", lang, { bank, year: period.slice(0, 4) })}#q4-breakdown`
+    : pageHref(`/ngan-hang/${encodeURIComponent(bank)}`, lang)
+}
+
+function BanksTable({ rows, period, lang }: { rows: ScreeningRow[]; period: string; lang: Lang }) {
+  const vi = lang === "vi"
+  const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({ key: "bank", descending: false })
+  const headings: [SortKey, string][] = [
+    ["bank", vi ? "Mã" : "Bank"],
+    ["npl_pp", vi ? "Nợ xấu" : "NPL"],
+    ["group2_pp", vi ? "Nhóm 2" : "Group 2"],
+    ["writeoff_pct", vi ? "Xóa nợ %" : "Write-offs %"],
+    ["coverage_pp", vi ? "Bao phủ" : "Coverage"],
+    ["flags", vi ? "Cờ vàng" : "Flags"],
+  ]
+  const sorted = [...rows].sort((left, right) => {
+    const a = sort.key === "flags" ? left.flags.length : left[sort.key]
+    const b = sort.key === "flags" ? right.flags.length : right[sort.key]
+    if (a == null || b == null) return a === b ? left.bank.localeCompare(right.bank) : a == null ? 1 : -1
+    const difference = typeof a === "string" ? a.localeCompare(String(b)) : a - Number(b)
+    return difference ? (sort.descending ? -difference : difference) : left.bank.localeCompare(right.bank)
+  })
+  if (!rows.length) return null
+  const cell = (value: number | null, digits = 2) => value == null
+    ? <span aria-label={vi ? "Thiếu dữ liệu" : "Data unavailable"}>—</span>
+    : formatValue(value, lang, "", digits)
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <table aria-label={vi ? "Ngân hàng phù hợp" : "Matching banks"} className="w-full border-collapse text-left text-[11px] leading-snug">
+          <thead className="bg-muted/60">
+            <tr>
+              {headings.map(([key, label]) => {
+                const active = sort.key === key
+                const Indicator = active ? sort.descending ? ArrowDownIcon : ArrowUpIcon : ArrowUpDownIcon
+                return (
+                  <th scope="col" key={key} className="px-1 py-1.5 font-medium"
+                    aria-sort={active ? sort.descending ? "descending" : "ascending" : undefined}>
+                    <button type="button" onClick={() => setSort({ key, descending: active && !sort.descending })}
+                      className="inline-flex min-h-6 items-center gap-0.5 text-left underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
+                      {label}<Indicator className="size-2.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    </button>
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((row) => (
+              <tr key={row.bank} className="border-t border-border align-top">
+                <th scope="row" className="px-1 py-2 font-semibold">
+                  <a className="underline underline-offset-2" href={bankLink(row.bank, period, row.waterfall, lang)}>{row.bank}</a>
+                </th>
+                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.npl_pp)}</td>
+                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.group2_pp, row.group2_pp != null && Math.abs(row.group2_pp) < .01 ? 3 : 2)}</td>
+                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.writeoff_pct)}</td>
+                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.coverage_pp)}</td>
+                <td className="px-1 py-2 text-[10px]">{row.flags.map((flag) => FLAG_LABELS[flag][lang]).join(", ") || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="px-2 pt-1.5 text-[11px] text-muted-foreground">
+        {vi ? "Thay đổi tính bằng điểm %. Xóa nợ được ước tính từ dự phòng sử dụng trên dư nợ."
+          : "Changes are in pp. Write-offs use provisions used as a share of loans."}
+      </p>
+    </>
+  )
+}
+
+function Bars({ rows, unit, lang }: {
+  rows: { label: string; value: number | null }[]
+  unit: string
   lang: Lang
 }) {
+  const max = Math.max(...rows.map((row) => Math.abs(row.value ?? 0)), .01)
   return (
-    <section className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto" aria-label={lang === "vi" ? "Số liệu" : "Figures"}>
-      {cards.map((card) => (
-        <ResultCard key={card.id} card={card} pinned={pinned.has(card.id)} onTogglePin={() => onTogglePin(card.id)} onOpenPage={onOpenPage} />
+    <dl className="grid gap-2 p-2 text-xs">
+      {rows.map(({ label, value }) => (
+        <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(2rem,0.8fr)_auto] items-center gap-2">
+          <dt>{label}</dt>
+          <dd aria-hidden="true" className="h-2 rounded-sm bg-muted">
+            {value != null && <div className="h-2 rounded-sm bg-chart-3" style={{ width: `${Math.abs(value) / max * 100}%` }} />}
+          </dd>
+          <dd className="text-right font-semibold whitespace-nowrap tabular-nums">{formatValue(value, lang, unit)}</dd>
+        </div>
       ))}
-    </section>
+    </dl>
   )
 }
 
-function ResultCard({ card, pinned, onTogglePin, onOpenPage }: { card: CanvasCard; pinned: boolean; onTogglePin: () => void; onOpenPage: () => void }) {
-  const vi = card.lang === "vi"
-  const result = readResult(card.name, card.output)
-  return (
-    <Card role="article" size="sm" lang={card.lang} className="min-w-0 shrink-0">
-      <CardHeader>
-        <CardTitle role="heading" aria-level={3}>{result ? finding(result, card.lang) : toolLabel(card.name, card.lang)}</CardTitle>
-        <CardDescription>{result ? sourceLine(result, card.lang) : missing(card.lang)}</CardDescription>
-      </CardHeader>
-      {result ? <CardContent className="min-w-0"><CardBody result={result} lang={card.lang} /></CardContent> : null}
-      <CardFooter className="flex-wrap gap-2">
-        <Button type="button" variant={pinned ? "secondary" : "outline"} size="sm" aria-pressed={pinned} onClick={onTogglePin}>
-          {vi ? "Ghim" : "Pin"}
-        </Button>
-        <Link href={openPage(card.name, card.input, card.lang)} onNavigate={onOpenPage} className={buttonVariants({ variant: "outline", size: "sm" })}>
-          {vi ? "Mở trang" : "Open page"}
-        </Link>
-        <Button type="button" variant="outline" size="sm" onClick={() => downloadCsv(card.name, csvRows(result, card.lang))}>
-          {vi ? "Tải CSV" : "Download CSV"}
-        </Button>
-      </CardFooter>
-    </Card>
-  )
+type StudyResult = { [K in keyof SnapshotAnswers]: { name: K; output: SnapshotAnswers[K] } }[keyof SnapshotAnswers]
+
+function readStudy(tool: ListedTool): StudyResult | null {
+  if (!["screen_declines", "q4_drivers", "q1_rebound", "quarter_breakdown", "coverage_effect"].includes(tool.name)) return null
+  if (!tool.output || typeof tool.output !== "object" || !("citations" in tool.output)) return null
+  return { name: tool.name, output: tool.output } as StudyResult
 }
 
-function finding(result: Result, lang: Lang): string {
+function studyBody(result: StudyResult, lang: Lang): { body: ReactNode; href?: string } {
   const vi = lang === "vi"
   switch (result.name) {
-    case "overview": {
-      const { level } = result.output
-      const value = formatValue(level.npl_median_pct, lang, "%")
-      return vi ? `Nợ xấu trung vị ${level.period} ở mức ${value}` : `Median NPL in ${level.period} was ${value}`
+    case "screen_declines":
+      return { body: <BanksTable rows={result.output.rows} period={result.output.data_period} lang={lang} /> }
+    case "q4_drivers": {
+      const { loan_growth_part_pp, bad_debt_part_pp } = result.output
+      const rows = [
+        { label: vi ? "Do dư nợ" : "Loan growth", value: loan_growth_part_pp },
+        { label: vi ? "Do số dư nợ xấu" : "Bad-debt change", value: bad_debt_part_pp },
+      ]
+      return { body: <Bars rows={rows} lang={lang} unit={points(lang)} />, href: pageHref("/", lang) + "#q4-breakdown" }
     }
-    case "quarter_effects": {
-      const q4 = result.output.effects.find((effect) => effect.quarter === 4)
-      return q4
-        ? `${vi ? "Chênh lệch quý 4 so với quý 1" : "Q4 difference versus Q1"} · ${formatValue(q4.coef_pp, lang, points(lang))}`
-        : toolLabel(result.name, lang)
+    case "q1_rebound": {
+      const { rates } = result.output
+      if (!rates) return { body: null }
+      return { body: <Bars lang={lang} unit="%" rows={[
+        { label: vi ? "Sau mọi quý 4" : "After any Q4", value: rates.any_q4.share_pct },
+        { label: vi ? "Sau quý 4 giảm" : "After Q4 fell", value: rates.q4_fell.share_pct },
+        { label: vi ? "Sau quý 4 không giảm" : "After Q4 did not fall", value: rates.q4_not_fell.share_pct },
+      ]} />, href: pageHref("/", lang) + "#npl-steps" }
     }
-    case "bank_profile": {
-      const { bank } = result.output
-      const latest = bank.series?.at(-1)
-      const value = formatValue(latest?.npl_pct, lang, "%")
-      return latest?.npl_pct != null
-        ? `${bank.code} · ${vi ? "Nợ xấu" : "NPL"} ${value} (${latest.period})`
-        : `${bank.code} · ${vi ? "Diễn biến nợ xấu" : "NPL over time"}`
+    case "quarter_breakdown": {
+      const { bank, data_period, change_pp, q3_pct, q4_pct, q1_pct, loan_growth_part_pp, bad_debt_part_pp } = result.output
+      const href = bankLink(bank, data_period, change_pp != null && change_pp < 0 && loan_growth_part_pp != null &&
+        bad_debt_part_pp != null && q4_pct != null, lang)
+      return { href, body: q4_pct == null ? null : <Bars lang={lang} unit="%" rows={[
+        { label: "Q3", value: q3_pct }, { label: "Q4", value: q4_pct },
+        { label: vi ? "Q1 năm sau" : "Next Q1", value: q1_pct },
+      ]} /> }
     }
-    case "compare_banks": {
-      const rows = result.output.rows.filter((row) => row.adjusted_change_pp != null)
-      const largest = rows.reduce<(typeof rows)[number] | undefined>((max, row) =>
-        !max || row.adjusted_change_pp! > max.adjusted_change_pp! ? row : max, undefined)
-      const label = vi ? "Biến động đã điều chỉnh" : "Adjusted change"
-      return largest ? `${largest.code} · ${label} ${formatValue(largest.adjusted_change_pp, lang, points(lang))}` : label
+    case "coverage_effect": {
+      const e = result.output.effect
+      return { body: e && <QuarterChart lang={lang} bars={[{
+        quarter: 4, coef: e.coef_pp, lo: e.ci95[0] ?? null, hi: e.ci95[1] ?? null,
+      }]} /> }
     }
-    case "decoder":
-    case "adjusted_change": {
-      const { code, row, decoder } = result.output
-      const status = decoder ? decoderStatus(decoder.status, lang) : toolLabel(result.name, lang)
-      return `${code} ${row.period} · ${status}`
-    }
-    case "forecast": {
-      const { code, forecast } = result.output
-      return `${code} · ${vi ? "Dự báo" : "Forecast"} ${formatValue(forecast.npl_pct, lang, "%")} (${forecast.period})`
-    }
-    case "market_reaction":
-      return vi ? `Phản ứng giá qua ${result.output.events_with_car} công bố` : `Price reaction across ${result.output.events_with_car} disclosures`
-    case "method":
-      return visibleText(vi ? result.output.entry.name_vi : result.output.entry.name_en)
-    default:
-      return toolLabel(result.name, lang)
   }
 }
 
-function CardBody({ result, lang }: { result: Result; lang: Lang }) {
+function resultBody(result: Result, lang: Lang): ReactNode {
   const vi = lang === "vi"
   switch (result.name) {
     case "overview":
-      return (
-        <dl className="grid grid-cols-3 gap-2">
-          {overviewFigures(result.output, lang).map(({ label, value, period }) => (
-            <div key={label} className="rounded-md bg-muted p-2">
-              <dt className="text-xs text-muted-foreground">{label}</dt>
-              <dd className="text-base font-semibold tabular-nums">{value}</dd>
-              {period ? <dd className="text-xs text-muted-foreground">{period}</dd> : null}
-            </div>
-          ))}
-        </dl>
-      )
-    case "quarter_effects": {
-      const bars = result.output.effects.map((row) => ({ quarter: row.quarter, coef: row.coef_pp, lo: row.ci95[0] ?? null, hi: row.ci95[1] ?? null }))
-      return (
-        <div className="space-y-2">
-          {bars.length ? <QuarterChart bars={bars} lang={lang} /> : <p className="text-sm">{missing(lang)}</p>}
-          <p className="text-xs text-muted-foreground">
-            {vi ? "Các vạch biểu thị khoảng tin cậy 95%. Đây là liên hệ trong dữ liệu, không phải nhân quả." : "Whiskers show 95% confidence intervals. This is an association in the data, not causation."}
-          </p>
+      return <dl className="grid gap-1.5 p-2 text-xs">{overviewFigures(result.output, lang).map(({ label, value }) => (
+        <div className="flex items-baseline justify-between gap-2" key={label}>
+          <dt>{label}</dt><dd className="font-semibold tabular-nums">{value}</dd>
         </div>
-      )
-    }
-    case "bank_profile": {
-      const { bank, decoder } = result.output
-      return (
-        <div className="space-y-2">
-          {bank.series?.length ? <BankCanvasChart rows={bank.series} lang={lang} /> : <p className="text-sm">{missing(lang)}</p>}
-          {bank.latest && (
-            <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              {vi ? "Kiểm tra kỳ" : "Decoder for"} {bank.latest.period}
-              <Badge variant="outline" className="h-auto whitespace-normal">{decoder ? decoderStatus(decoder.status, lang) : missing(lang)}</Badge>
-            </p>
-          )}
-        </div>
-      )
-    }
-    case "compare_banks":
-      return (
-        <div className="space-y-2">
-          {result.output.rows.length ? <CompareCanvasChart rows={result.output.rows} lang={lang} /> : <p className="text-sm">{missing(lang)}</p>}
-          {result.output.rows.length > 0 && <p className="text-xs text-muted-foreground">{result.output.rows.map((row) => `${row.code} ${row.latest_period ?? "—"}`).join(" · ")}</p>}
-          {result.output.missing.length > 0 && <p className="text-xs text-muted-foreground">{vi ? "Chưa có số liệu" : "No data"} · {result.output.missing.join(", ")}</p>}
-        </div>
-      )
-    case "adjusted_change":
-    case "decoder": {
-      const { row, decoder } = result.output
-      return (
-        <div className="space-y-3 text-sm">
-          <p>{vi ? "Biến động nợ xấu" : "NPL change"} <strong>{formatValue(row.d_npl_pp, lang, points(lang))}</strong> · {vi ? "Đã điều chỉnh mùa vụ" : "Seasonally adjusted"} <strong>{formatValue(row.adjusted_change_pp, lang, points(lang))}</strong></p>
-          {decoder ? <DecoderDetails cell={decoder} lang={lang} /> : <p>{vi ? "Chưa có dữ liệu cho các bước kiểm tra kỳ này." : "Decoder inputs for this quarter are unavailable."}</p>}
-        </div>
-      )
-    }
-    case "forecast": {
-      const { backtest_note_vi, backtest_note_en, backtest_period, mae, note_vi, note_en } = result.output
-      const period = [backtest_period[0], backtest_period.at(-1)].filter(Boolean).join("–")
-      return (
-        <div className="space-y-2">
-          <ForecastCanvasChart output={result.output} lang={lang} />
-          <p className="text-xs"><strong>{vi ? "Kiểm định dự báo" : "Backtest"}{period ? ` (${period})` : ""}.</strong> {visibleText(vi ? backtest_note_vi : backtest_note_en)}</p>
-          <p className="text-xs text-muted-foreground">
-            {vi ? "Sai số tuyệt đối trung bình" : "Mean absolute error"} · {vi ? "dự báo" : "forecast"} {formatValue(mae.model, lang, points(lang))} · {vi ? "giữ nguyên" : "last value"} {formatValue(mae.last_value, lang, points(lang))} · {vi ? "cùng quý năm trước" : "seasonal baseline"} {formatValue(mae.seasonal_naive, lang, points(lang))}
-          </p>
-          <p className="text-xs text-muted-foreground">{vi ? note_vi : note_en}</p>
-        </div>
-      )
-    }
-    case "market_reaction":
-      return <p className="text-sm">{visibleText(vi ? result.output.reading_vi : result.output.reading_en) || missing(lang)}</p>
-    case "method": {
-      const { entry } = result.output
-      return <p className="text-sm">{visibleText(vi ? entry.reading_vi : entry.reading_en)} {visibleText(vi ? entry.does_not_show_vi : entry.does_not_show_en)}</p>
-    }
-    case "limitations":
-      return <ul className="list-disc space-y-1 ps-4 text-sm">{result.output.items.map((item) => <li key={item.en}>{visibleText(item[lang])}</li>)}</ul>
-    case "glossary":
-      return <p className="text-sm">{visibleText(result.output.entry[lang])}</p>
-  }
-}
-
-function DecoderDetails({ cell, lang }: { cell: NplDecoderCell; lang: Lang }) {
-  const vi = lang === "vi"
-  const checkStatus = {
-    flagged: vi ? "Có cờ" : "Flagged",
-    clear: vi ? "Không có cờ" : "No flag",
-    missing: vi ? "Thiếu dữ liệu" : "Missing data",
-    inapplicable: vi ? "Không áp dụng" : "Not applicable",
-  }
-  return (
-    <div className="space-y-2">
-      <p>{vi ? cell.reading_vi : cell.reading_en}</p>
-      <ul className="space-y-1">
-        {CHECKS.map(([key, labelVi, labelEn]) => (
-          <li key={key} className="flex flex-wrap items-center justify-between gap-1 text-xs">
-            {vi ? labelVi : labelEn}
-            <Badge variant={cell.checks[key] === "flagged" ? "secondary" : "outline"}>{checkStatus[cell.checks[key]]}</Badge>
-          </li>
-        ))}
-      </ul>
-      <Collapsible>
-        <CollapsibleTrigger className={buttonVariants({ variant: "outline", size: "sm" })}>{vi ? "Đầu vào & nguồn" : "Inputs & sources"}</CollapsibleTrigger>
-        <CollapsibleContent className="mt-2 space-y-2 text-xs">
-          <dl className="space-y-1">
-            {INPUTS.map(([key, labelVi, labelEn]) => (
-              <div key={key} className="flex justify-between gap-2">
-                <dt>{vi ? labelVi : labelEn}</dt>
-                <dd className="tabular-nums">{formatValue(cell.inputs[key], lang, vi ? " tỷ đồng" : " VND bn")}</dd>
-              </div>
-            ))}
-          </dl>
-          <ul className="space-y-1">
-            {RATIOS.map(([key, labelVi, labelEn]) => {
-              const ratio = cell.inputs.ratios[key]
-              return <li key={key}>{vi ? labelVi : labelEn} · {formatValue(ratio.value, lang, "%")}{ratio.source ? ` · ${ratio.source}` : ""}{ratio.page == null ? "" : ` · ${vi ? "trang" : "p."} ${ratio.page}`}</li>
-            })}
-          </ul>
-        </CollapsibleContent>
-      </Collapsible>
-      <p className="text-xs text-muted-foreground">{DECODER_DISCLAIMER[lang]}</p>
-    </div>
-  )
-}
-
-export function AnswerSources({ tools, lang }: { tools: ListedTool[]; lang: Lang }) {
-  const vi = lang === "vi"
-  return (
-    <Collapsible>
-      <CollapsibleTrigger className={buttonVariants({ variant: "outline", size: "sm" })}>
-        {vi ? "Nguồn & phép tính" : "Sources & calculation"}
-      </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-2 pt-2 text-xs">
-        {tools.length === 0 ? <p className="text-muted-foreground">{vi ? "Chưa có phép tính." : "No calculation for this answer."}</p> : null}
-        {tools.map((tool) => {
-          const result = readResult(tool.name, tool.output)
-          const inputs = result?.name === "method" ? finding(result, lang) : inputSummary(tool.name, tool.input, lang)
-          return (
-            <div key={tool.id} className="rounded-md border border-border p-2">
-              <p className="font-medium">{toolLabel(tool.name, lang)}</p>
-              <p className="text-muted-foreground">{vi ? "Đầu vào" : "Inputs"} · {inputs}</p>
-              {result ? <>
-                <p className="text-muted-foreground">{sourceLine(result, lang)}</p>
-                {result.output.data_period ? <p className="text-muted-foreground">{vi ? "Kỳ dữ liệu" : "Data period"} · {result.output.data_period}</p> : null}
-                <ReturnedNumbers result={result} lang={lang} />
-              </> : <p className="text-muted-foreground">{missing(lang)}</p>}
-            </div>
-          )
-        })}
-      </CollapsibleContent>
-    </Collapsible>
-  )
-}
-
-function ReturnedNumbers({ result, lang }: { result: Result; lang: Lang }) {
-  const vi = lang === "vi"
-  const pp = (value: number | null | undefined) => formatValue(value, lang, points(lang))
-  const pct = (value: number | null | undefined) => formatValue(value, lang, "%")
-  let numbers: string[]
-  switch (result.name) {
-    case "overview":
-      numbers = overviewFigures(result.output, lang).map((item) => `${item.label} · ${item.value}`)
-      if (result.output.last_median?.coverage_median_pct != null) {
-        numbers.push(`${vi ? "Bao phủ trung vị" : "Median coverage"} · ${pct(result.output.last_median.coverage_median_pct)} (${result.output.last_median.period})`)
-      }
-      break
+      ))}</dl>
     case "quarter_effects":
-      numbers = result.output.effects.map((row) => `Q${row.quarter} · ${pp(row.coef_pp)} (${pp(row.ci95[0])} – ${pp(row.ci95[1])}; n = ${row.n})`)
-      break
-    case "bank_profile": {
-      const { bank } = result.output
-      const last = bank.series?.at(-1)
-      numbers = [
-        `${last?.period ?? bank.latest?.period ?? "—"} · NPL ${pct(last?.npl_pct)} · ${vi ? "bao phủ" : "coverage"} ${pct(last?.coverage_pct)}`,
-        `${vi ? "Trung vị quý 4" : "Q4 median"} ${pp(bank.q4_change_median_pp)} · ${vi ? "quý 1" : "Q1"} ${pp(bank.q1_rebound_median_pp)}`,
-        `${vi ? "Đã điều chỉnh" : "Adjusted change"} · ${pp(bank.latest?.adjusted_change_pp)}`,
-      ]
-      break
-    }
+      return <QuarterChart lang={lang} bars={result.output.effects.map((row) => ({
+        quarter: row.quarter, coef: row.coef_pp, lo: row.ci95[0] ?? null, hi: row.ci95[1] ?? null,
+      }))} />
+    case "bank_profile":
+      return result.output.bank.series?.length ? <BankCanvasChart lang={lang} rows={result.output.bank.series} /> : null
     case "compare_banks":
-      numbers = result.output.rows.map((row) => `${row.code} ${row.latest_period ?? ""} · ${vi ? "gốc" : "raw"} ${pp(row.d_npl_pp)} · ${vi ? "đã điều chỉnh" : "adjusted"} ${pp(row.adjusted_change_pp)}`)
-      break
+      return result.output.rows.length ? <CompareCanvasChart lang={lang} rows={result.output.rows} /> : null
+    case "decoder":
     case "adjusted_change":
-    case "decoder": {
-      const { row, decoder } = result.output
-      numbers = [`${vi ? "Biến động gốc" : "Raw change"} ${pp(row.d_npl_pp)} · ${vi ? "đã điều chỉnh" : "adjusted"} ${pp(row.adjusted_change_pp)}`]
-      if (decoder) numbers.push(...RATIOS.map(([key, labelVi, labelEn]) => `${vi ? labelVi : labelEn} · ${pct(decoder.inputs.ratios[key].value)}`))
-      break
-    }
-    case "forecast": {
-      const { forecast, mae } = result.output
-      numbers = [
-        `${forecast.period} · ${pct(forecast.npl_pct)} (${vi ? "khoảng 80%" : "80% interval"} ${pct(forecast.lo80)} – ${pct(forecast.hi80)})`,
-        `${vi ? "Sai số trung bình" : "Mean absolute error"} · ${pp(mae.model)} · ${vi ? "giữ nguyên" : "last value"} ${pp(mae.last_value)} · ${vi ? "mùa vụ" : "seasonal"} ${pp(mae.seasonal_naive)}`,
-      ]
-      break
-    }
+      return <Bars lang={lang} unit={points(lang)} rows={[
+        { label: vi ? "Thay đổi công bố" : "Reported change", value: result.output.row.d_npl_pp },
+        { label: vi ? "Sau điều chỉnh mùa vụ" : "After seasonal adjustment", value: result.output.row.adjusted_change_pp },
+      ]} />
+    case "forecast":
+      return <ForecastCanvasChart lang={lang} output={result.output} />
     case "market_reaction":
-      numbers = [
-        `${result.output.events_with_car} ${vi ? "công bố có lợi suất" : "disclosures with returns"}`,
-        ...result.output.car_all.map((row) => `${vi ? "Lợi suất bất thường tích lũy, ngày" : "Cumulative abnormal return, day"} ${row.day} · ${pct(row.mean_car_pct)} (${pct(row.ci95?.[0])} – ${pct(row.ci95?.[1])}; n = ${row.n})`),
-      ]
-      break
-    case "method":
-      numbers = [`${vi ? "Số quan sát" : "Observations"} · ${result.output.entry.n}`]
-      break
+      return result.output.car_all.length ? <MarketChart lang={lang} rows={result.output.car_all.map((row) => ({
+        day: row.day, all: row.mean_car_pct, allLo: row.ci95?.[0] ?? null, allHi: row.ci95?.[1] ?? null,
+        q4: null, q4Lo: null, q4Hi: null,
+      }))} /> : null
     default:
       return null
   }
-  if (numbers.length === 0) return null
-  return <ul className="mt-1 space-y-1">{numbers.map((number) => <li key={number}>{number}</li>)}</ul>
 }
 
-function sourceLine(result: Result, lang: Lang): string {
+export function AnswerEvidence({ tools, lang }: { tools: ListedTool[]; lang: Lang }) {
   const vi = lang === "vi"
-  if (result.name === "glossary") return vi ? "Nguồn · Chú giải của nghiên cứu" : "Source · Study glossary"
-  const sources = new Set(["FiinQuant (FiinGroup)"])
-  if ((result.name === "decoder" || result.name === "adjusted_change") && result.output.decoder) {
-    for (const ratio of Object.values(result.output.decoder.inputs.ratios)) if (ratio.source) sources.add(ratio.source)
-  }
-  return `${vi ? "Nguồn" : "Source"} · ${[...sources].join(" · ")}`
-}
+  const study = tools.map(readStudy).find((result) => result != null)
+  const matched = tools.flatMap((tool) => {
+    const result = readResult(tool.name, tool.output)
+    return result ? [{ tool, result }] : []
+  })
+  const chosen = matched.find(({ result }) => !["method", "glossary", "limitations"].includes(result.name)) ?? matched[0]
+  if (!study && !chosen) return null
 
-function missing(lang: Lang): string {
-  return lang === "vi" ? "Chưa có số liệu công bố." : "No published figures available."
-}
+  const figure = study ? studyBody(study, lang) : null
+  const legacy = chosen?.result
+  const body = figure ? figure.body : legacy ? resultBody(legacy, lang) : null
+  const period = study?.output.data_period ?? legacy?.output.data_period
+  const methodological = !study && legacy && ["method", "glossary", "limitations"].includes(legacy.name)
+  const href = figure?.href ?? (!study && chosen ? openPage(chosen.tool.name, chosen.tool.input, lang) : null)
+  const source = methodological ? vi ? "Phương pháp nghiên cứu" : "Study methodology" : "FiinQuant (FiinGroup)"
 
-function downloadCsv(name: string, rows: CsvCell[][]): void {
-  const body = rows.map((row) => row.map(csvCell).join(",")).join("\r\n")
-  const blob = new Blob(["\uFEFF", body], { type: "text/csv;charset=utf-8" })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = `npl-${name.replace(/[^a-z_]/g, "")}.csv`
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-function csvCell(value: CsvCell): string {
-  if (value == null || typeof value === "number") return value == null ? "" : String(value)
-  const text = /^[=+@-]/.test(value) ? `'${value}` : value
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+  return (
+    <figure aria-label={vi ? "Số liệu đối chiếu" : "Answer evidence"} className="min-w-0 overflow-hidden rounded-lg border border-border">
+      {body}
+      <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-2 py-2 text-[11px] text-muted-foreground">
+        <span>{vi ? "Nguồn" : "Source"} {source}{period ? ` (${period})` : ""}</span>
+        {href && <a href={href} className="font-medium text-foreground underline underline-offset-2">{vi ? "Xem trên trang" : "See on the page"}</a>}
+      </figcaption>
+    </figure>
+  )
 }

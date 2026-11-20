@@ -26,6 +26,7 @@ test("agent exposes the NPL tools including a bank-quarter decoder", async () =>
     "adjusted_change",
     "bank_profile",
     "compare_banks",
+    "coverage_effect",
     "decoder",
     "forecast",
     "glossary",
@@ -33,7 +34,11 @@ test("agent exposes the NPL tools including a bank-quarter decoder", async () =>
     "market_reaction",
     "method",
     "overview",
+    "q1_rebound",
+    "q4_drivers",
+    "quarter_breakdown",
     "quarter_effects",
+    "screen_declines",
   ])
 })
 

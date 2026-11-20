@@ -5,6 +5,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { SITE_TITLE } from "@/lib/npl/view";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nợ xấu ngân hàng",
-  description: "Mức giảm NPL quý 4 của ngân hàng niêm yết là cải thiện bền hay hiệu ứng mùa vụ.",
+  title: SITE_TITLE.vi,
+  description: "Khung đánh giá chất lượng tín dụng và cảnh báo rủi ro.",
   robots: { index: true, follow: true },
 };
 

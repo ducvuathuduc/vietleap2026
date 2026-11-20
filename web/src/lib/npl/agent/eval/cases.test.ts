@@ -9,13 +9,16 @@ const cases = JSON.parse(readFileSync(new URL("cases.json", import.meta.url), "u
   question: string
   adversarial?: string
   mixed?: boolean
+  published?: boolean
 }[]
 
-test("live eval covers 15 cases per language and six adversarial cases", () => {
-  assert.equal(cases.length, 30)
-  assert.equal(new Set(cases.map((item) => item.id)).size, 30)
-  assert.equal(cases.filter((item) => item.lang === "vi").length, 15)
-  assert.equal(cases.filter((item) => item.lang === "en").length, 15)
+test("live eval preserves 30 fixture cases and adds five published-data cases per language", () => {
+  assert.equal(cases.length, 40)
+  assert.equal(new Set(cases.map((item) => item.id)).size, 40)
+  assert.equal(cases.filter((item) => item.lang === "vi").length, 20)
+  assert.equal(cases.filter((item) => item.lang === "en").length, 20)
+  assert.equal(cases.filter((item) => item.lang === "vi" && item.published).length, 5)
+  assert.equal(cases.filter((item) => item.lang === "en" && item.published).length, 5)
   assert.equal(cases.filter((item) => item.adversarial).length, 6)
 })
 
