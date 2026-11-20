@@ -1,6 +1,14 @@
-import seed from "../../../../seed/npl/snapshot.json" with { type: "json" }
+import { connection } from "next/server"
+import { readSnapshotSelection } from "../../../lib/npl/snapshot-source.ts"
 
-// Keep container liveness independent of the upstream S3 connection.
-export function GET() {
-  return Response.json({ ok: true, snapshot_id: seed.meta.snapshot_id, product: "npl" })
+export async function GET() {
+  await connection()
+  const { snapshot, source } = await readSnapshotSelection()
+  return Response.json({
+    ok: true,
+    snapshot_id: snapshot.meta.snapshot_id,
+    generated_at: snapshot.meta.generated_at,
+    source,
+    product: "npl",
+  }, { headers: { "Cache-Control": "no-store" } })
 }

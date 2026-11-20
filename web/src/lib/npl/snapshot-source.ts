@@ -26,8 +26,8 @@ type WireSnapshot = Omit<typeof seed, "banks" | "decoder" | "robustness" | "mark
   }
 }
 
-// The previous publication can still be in S3 during a rollout. Validate the
-// new sections when present, while continuing to accept the previous snapshot.
+// Accept older wire formats for parsing. The reader checks whether an S3
+// publication can supply the current pages before serving it.
 const readerSchema = {
   ...schema,
   required: schema.required.filter((key) => key !== "decomposition"),
@@ -55,8 +55,9 @@ const STAR_SCHEMA = [
 ]
 let client: S3Client | undefined
 let bundled: Snapshot | undefined
-let cached: { uri: string; snapshot: Snapshot; expires: number } | undefined
-let pending: { uri: string; load: Promise<Snapshot> } | undefined
+type Selection = { snapshot: Snapshot; source: "s3" | "seed" }
+let cached: { uri: string; selection: Selection; expires: number } | undefined
+let pending: { uri: string; load: Promise<Selection> } | undefined
 
 function coefficient(fit: WireRegression | undefined, name: string): Term | null {
   const term = fit?.terms[name]
@@ -166,28 +167,69 @@ function parseSnapshot(value: unknown): Snapshot {
   }
 }
 
-async function fetchSnapshot(uri: string): Promise<Snapshot> {
+function bundledSelection(publishBankSeries = true): Selection {
+  const snapshot = bundled ??= parseSnapshot(seed)
+  // Switching sources must not override an explicit publication restriction.
+  return {
+    snapshot: publishBankSeries ? snapshot : { ...snapshot, meta: { ...snapshot.meta, publish_bank_series: false } },
+    source: "seed",
+  }
+}
+
+function hasRows(rows: unknown): boolean {
+  return Array.isArray(rows) && rows.length > 0
+}
+
+function hasPageData(snapshot: Partial<WireSnapshot>): boolean {
+  const decomposition = snapshot.decomposition
+  const quarters = decomposition?.by_quarter
+  const hasQuarterShares = Array.isArray(quarters) && ["Q1", "Q4"].every((quarter) =>
+    quarters.some((row) => row?.quarter === quarter && typeof row.share_falling_pct === "number"),
+  )
+  const price = snapshot.market?.m8
+  return hasQuarterShares &&
+    (snapshot.meta?.publish_bank_series === false || hasRows(decomposition?.rows)) &&
+    hasRows(price?.basket?.series) && hasRows(price?.vnindex?.series) && hasRows(price?.band_table) &&
+    Boolean(snapshot.decision_rule?.q4_oos && snapshot.reversal?.baselines) && hasRows(snapshot.decoder?.rows)
+}
+
+async function fetchSnapshot(uri: string): Promise<Selection> {
   const match = /^s3:\/\/([^/]+)\/(.+)$/.exec(uri)
   if (!match) throw new Error("NPL_SNAPSHOT_S3_URI must be an s3://bucket/key URI")
   client ??= new S3Client({}) // The SDK resolves credentials from the ECS task role.
   const { Body } = await client.send(new GetObjectCommand({ Bucket: match[1], Key: match[2] }))
   if (!Body) throw new Error("NPL snapshot S3 object has no body")
-  return parseSnapshot(JSON.parse(await Body.transformToString()))
+  const raw: unknown = JSON.parse(await Body.transformToString())
+  const candidate = raw as Partial<WireSnapshot> | null
+  const generatedAt = Date.parse(candidate?.meta?.generated_at ?? "")
+  if (candidate && Number.isFinite(generatedAt)) {
+    const reason = generatedAt < Date.parse(seed.meta.generated_at) ? "older" :
+      !hasPageData(candidate) ? "incomplete" : null
+    if (reason) {
+      console.warn(`[npl] Serving bundled snapshot because the S3 publication is ${reason}`)
+      return bundledSelection(candidate.meta?.publish_bank_series !== false)
+    }
+  }
+  return { snapshot: parseSnapshot(raw), source: "s3" }
 }
 
-export async function readSnapshot(): Promise<Snapshot> {
+export async function readSnapshotSelection(): Promise<Selection> {
   const uri = process.env.NPL_SNAPSHOT_S3_URI
-  if (!uri) return bundled ??= parseSnapshot(seed)
-  if (cached?.uri === uri && cached.expires > Date.now()) return cached.snapshot
+  if (!uri) return bundledSelection()
+  if (cached?.uri === uri && cached.expires > Date.now()) return cached.selection
   if (pending?.uri === uri) return pending.load
 
   const request = { uri, load: fetchSnapshot(uri) }
   pending = request
   try {
-    const snapshot = await request.load
-    if (pending === request) cached = { uri, snapshot, expires: Date.now() + CACHE_MS }
-    return snapshot
+    const selection = await request.load
+    if (pending === request) cached = { uri, selection, expires: Date.now() + CACHE_MS }
+    return selection
   } finally {
     if (pending === request) pending = undefined
   }
+}
+
+export async function readSnapshot(): Promise<Snapshot> {
+  return (await readSnapshotSelection()).snapshot
 }

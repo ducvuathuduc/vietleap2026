@@ -101,22 +101,56 @@ test("reads S3 with the configured bucket and key, deduplicates requests and exp
   assert.equal(send.mock.callCount(), 2)
 })
 
-test("accepts the previous S3 publication without the new judge-page fields", async (t) => {
-  setSource(t, "s3://vietleap-test/snapshots/npl/previous-format.json")
-  const previous = structuredClone(seed)
-  Reflect.deleteProperty(previous, "decomposition")
-  Reflect.deleteProperty(previous.market, "m8")
-  Reflect.deleteProperty(previous.market, "windows")
-  Reflect.deleteProperty(previous.decision_rule, "q4_oos")
-  t.mock.method(S3Client.prototype, "send", async () => ({
-    Body: { transformToString: async () => JSON.stringify(previous) },
+test("serves the bundled snapshot when S3 is older and caches the decision", async (t) => {
+  setSource(t, "s3://vietleap-test/snapshots/npl/older.json")
+  const object = { ...seed, meta: { ...seed.meta, snapshot_id: "older-cloud",
+    generated_at: new Date(Date.parse(seed.meta.generated_at) - 1_000).toISOString() } }
+  const warn = t.mock.method(console, "warn", () => {})
+  const send = t.mock.method(S3Client.prototype, "send", async () => ({
+    Body: { transformToString: async () => JSON.stringify(object) },
   }))
-  const snapshot = await readSnapshot()
-  assert.equal(snapshot.meta.snapshot_id, seed.meta.snapshot_id)
-  assert.equal(snapshot.decomposition, undefined)
-  assert.equal(snapshot.market.m8, undefined)
-  assert.equal(snapshot.decision_rule?.q4_oos, undefined)
+
+  const [first, second] = await Promise.all([readSnapshot(), readSnapshot()])
+  assert.equal(first.meta.snapshot_id, seed.meta.snapshot_id)
+  assert.equal(first, second)
+  assert.equal(await readSnapshot(), first)
+  assert.equal(send.mock.callCount(), 1)
+  assert.equal(warn.mock.callCount(), 1)
+  assert.match(String(warn.mock.calls[0].arguments[0]), /older/)
 })
+
+test("fallback retains an explicit S3 restriction on bank series", async (t) => {
+  setSource(t, "s3://vietleap-test/snapshots/npl/restricted-older.json")
+  const object = { ...seed, meta: { ...seed.meta, publish_bank_series: false,
+    generated_at: new Date(Date.parse(seed.meta.generated_at) - 1_000).toISOString() } }
+  t.mock.method(console, "warn", () => {})
+  t.mock.method(S3Client.prototype, "send", async () => ({
+    Body: { transformToString: async () => JSON.stringify(object) },
+  }))
+  const snapshot = applyPublishFlag(await readSnapshot())
+  assert.equal(snapshot.meta.snapshot_id, seed.meta.snapshot_id)
+  assert.equal(snapshot.meta.publish_bank_series, false)
+  assert.ok(snapshot.banks.every((bank) => !bank.series))
+})
+
+for (const section of ["decomposition", "market", "decision_rule"]) {
+  test(`serves the seed if a newer S3 snapshot lacks ${section}`, async (t) => {
+    setSource(t, `s3://vietleap-test/snapshots/npl/no-${section}.json`)
+    const object = structuredClone(seed)
+    object.meta.snapshot_id = "incomplete-cloud"
+    object.meta.generated_at = new Date(Date.parse(seed.meta.generated_at) + 1_000).toISOString()
+    Reflect.deleteProperty(object, section)
+    const warn = t.mock.method(console, "warn", () => {})
+    t.mock.method(S3Client.prototype, "send", async () => ({
+      Body: { transformToString: async () => JSON.stringify(object) },
+    }))
+    const snapshot = await readSnapshot()
+    assert.equal(snapshot.meta.snapshot_id, seed.meta.snapshot_id)
+    assert.ok(snapshot.decomposition?.rows.length && snapshot.market.m8 && snapshot.decision_rule?.q4_oos)
+    assert.equal(warn.mock.callCount(), 1)
+    assert.match(String(warn.mock.calls[0].arguments[0]), /incomplete/)
+  })
+}
 
 test("rejects an invalid S3 snapshot and retries the same key after correction", async (t) => {
   setSource(t, "s3://vietleap-test/snapshots/npl/corrected.json")
