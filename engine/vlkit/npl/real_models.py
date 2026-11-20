@@ -215,7 +215,47 @@ def heterogeneity(panel):
             "regression": _fit(data, "d_npl_pct", terms, bank=True)[0]}
 
 
-def linkage(panel):
+SCREENING_LINKAGE = {
+    "d_group2_ratio_pct": ("thay đổi tỷ lệ nợ nhóm 2", "change in the group 2 loan ratio"),
+    "d_broad_problem_ratio_pct": ("thay đổi tỷ lệ nợ nhóm 2–5", "change in the group 2–5 loan ratio"),
+    "loan_growth_qoq_pct": ("tăng trưởng dư nợ theo quý", "quarter-on-quarter loan growth"),
+    "writeoff_ratio_pct": ("dự phòng sử dụng trên dư nợ đầu quý", "provisions used over opening loans"),
+    "d_provision_ratio_pct": ("thay đổi tỷ lệ dự phòng trên dư nợ", "change in provisions over loans"),
+}
+
+
+def _screening_linkage(panel, amounts):
+    keys = ["bank_code", "period"]
+    data = panel[[*keys, "quarter", "quarter_id"]].merge(amounts, on=keys, how="left", validate="one_to_one")
+    data = _quarters(data.sort_values(keys))
+    loans = data.customer_loans.where(data.customer_loans.gt(0))
+    data["group2_ratio_pct"] = 100 * data.group2_loans / loans
+    data["broad_problem_ratio_pct"] = 100 * (data.group2_loans + data.groups345_loans) / loans
+    data["provision_ratio_pct"] = 100 * data.provision_balance / loans
+    bank = data.groupby("bank_code")
+    adjacent = bank.quarter_id.diff().eq(1)
+    opening = bank.customer_loans.shift().where(adjacent).replace(0, np.nan)
+    for level in ["group2_ratio_pct", "broad_problem_ratio_pct", "provision_ratio_pct"]:
+        data[f"d_{level}"] = bank[level].diff().where(adjacent)
+    data["loan_growth_qoq_pct"] = 100 * (loans / opening - 1)
+    data["writeoff_ratio_pct"] = 100 * data.writeoffs / opening
+    fits = {}
+    for outcome, (vi, en) in SCREENING_LINKAGE.items():
+        result, _ = _fit(data, outcome, QUARTER_TERMS, bank=True, bootstrap=True)
+        limit_vi = "Mẫu gồm các ngân hàng-quý đủ dữ liệu. Hệ số mùa vụ không nhận diện quan hệ nhân quả."
+        limit_en = "The sample covers bank-quarters with usable inputs. The seasonal coefficient does not identify causation."
+        if outcome == "writeoff_ratio_pct":
+            limit_vi += " Dự phòng đã sử dụng là chỉ báo thay thế cho xóa nợ."
+            limit_en += " Provisions used are a proxy for write-offs."
+        fits[outcome] = {
+            **result, "reading_vi": f"So sánh {vi} của từng quý với Quý 1 trong cùng ngân hàng.",
+            "reading_en": f"Compare {en} in each quarter with Q1 within the same bank.",
+            "what_this_does_not_show": limit_vi, "what_this_does_not_show_en": limit_en,
+        }
+    return fits
+
+
+def linkage(panel, screening_amounts=None):
     data = _quarters(panel)
     outcomes = ["d_coverage_pct", "d_nim_pct", "loan_growth_yoy_pct"]
     changes = [f"d_{name}" for name in RATIOS if name != "roa_pct"]
@@ -223,11 +263,14 @@ def linkage(panel):
     matrix = core.corr()
     present = core.notna().astype(int)
     counts = present.T @ present
-    return {
+    result = {
         "seasonal": {outcome: _fit(data, outcome, QUARTER_TERMS, bank=True)[0] for outcome in outcomes},
         "correlation": matrix.to_dict(), "correlation_n": counts.to_dict(),
         "roa_note": "Nguồn FiinQuant không trả ROA. / The FiinQuant feed does not return ROA.",
     }
+    if screening_amounts is not None:
+        result["screening_seasonal"] = _screening_linkage(panel, screening_amounts)
+    return result
 
 
 def event_paths(market, calendar):

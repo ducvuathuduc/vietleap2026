@@ -616,11 +616,14 @@ test("the published snapshot shows group-2 and write-off badges only when those 
     const g2Known = row.delta_g2_ratio != null || (row.signals ?? []).some((signal) => signal.id === "S1")
     const writeoffKnown = row.delta_writeoff_ratio != null || (row.signals ?? []).some((signal) => signal.id === "S2")
     const text = cell.badges.join(" ")
-    if (cell.status === "clean") {
+    if (row.status === "clean") {
+      assert.equal(cell.status, "clean")
+      assert.ok(g2Known && writeoffKnown)
       assert.deepEqual(cell.badges, ["Cải thiện có cơ sở"])
       assert.equal(cell.pending, null)
       continue
     }
+    assert.notEqual(cell.status, "clean")
     if (g2Known) {
       sawGroup2 += 1
       assert.match(text, row.delta_g2_ratio != null && row.delta_g2_ratio <= 0 && !(row.signals ?? []).some((signal) => signal.id === "S1") ? /Nhóm 2 không tăng/ : /Nhóm 2 tăng/)
@@ -641,7 +644,11 @@ test("the published snapshot shows group-2 and write-off badges only when those 
   assert.ok(ctg?.badges.includes("Nhóm 2 tăng"))
   assert.notEqual(ctg?.pending, both)
   assert.ok(sawGroup2 > 0)
-  assert.equal(sawWriteoff, (decoder.rows ?? []).filter((row) => row.delta_npl_ratio != null && row.delta_npl_ratio < 0 && (row.delta_writeoff_ratio != null || (row.signals ?? []).some((signal) => signal.id === "S2"))).length)
+  const expectedWriteoffBadges = (decoder.rows ?? []).filter((row) =>
+    row.status !== "clean" && row.delta_npl_ratio != null && row.delta_npl_ratio < 0 &&
+    (row.delta_writeoff_ratio != null || (row.signals ?? []).some((signal) => signal.id === "S2")),
+  )
+  assert.equal(sawWriteoff, expectedWriteoffBadges.length)
 })
 
 test("the page shell clips horizontal overflow", () => {

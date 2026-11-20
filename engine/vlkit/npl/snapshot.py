@@ -42,6 +42,8 @@ SOURCE_SPECS = {
     "foreign_daily": ("FiinQuant · Giao dịch nước ngoài / foreign trading",
                       FIIN + "/ham-va-cong-thuc/1.-danh-muc-and-thong-tin-co-ban/1.5.-lay-du-lieu-room-ndtnn"),
     "report_calendar": ("Lịch hạn công bố / disclosure deadline calendar", DEADLINE_SOURCE),
+    "fiin_screening": ("FiinQuant · Chỉ tiêu BCTC ngân hàng / bank statement indicators",
+                       FIIN + "/fiinquant-en/function-and-formula/screening-function"),
 }
 EXTRA_SOURCES = {
     "disclosure_dates": ("Công bố BCTC / filing disclosures", "https://api.hsx.vn/n/api/v1/News/NewsFeed", ".csv"),
@@ -57,6 +59,8 @@ EXTRA_SOURCES = {
 def _sources(silver, counts):
     sources = []
     for key, (name, url) in SOURCE_SPECS.items():
+        if key == "fiin_screening" and key not in counts:
+            continue
         calendar = key == "report_calendar"
         file = silver / (f"{key}.csv" if calendar else f"{key}.parquet")
         timestamp = datetime.fromtimestamp(file.stat().st_mtime, LOCAL_TIME)
@@ -246,6 +250,7 @@ def _methods(models):
 
 def _linkage(m5):
     linkage = {**m5, "seasonal": {key: fit for key, fit in m5["seasonal"].items() if key != "d_roa_pct"}}
+    linkage.pop("screening_seasonal", None)  # Structured estimates are in results.json and model_coefficients.csv.
     for measure in ("correlation", "correlation_n"):
         linkage[measure] = {key: {name: value for name, value in row.items() if name != "d_roa_pct"}
                             for key, row in m5[measure].items() if key != "d_roa_pct"}
@@ -312,8 +317,11 @@ def build_snapshot(results, gold, silver):
                  en="The sample covers listed banks with consolidated data. Means and medians weight banks equally."),
             dict(vi="Chỉ báo 4 quý lấy trung vị của bình quân NPL 4 quý liên tiếp theo từng ngân hàng.",
                  en="The four-quarter statistic is the median of each bank’s average NPL ratio over four consecutive quarters."),
-            dict(vi="FiinQuant không trả ROA. Hai tín hiệu về nợ nhóm 2 và xóa nợ cần dữ liệu ghi chú BCTC.",
-                 en="FiinQuant does not return ROA. The group 2 and write-off flags require financial statement notes."),
+            (dict(vi="FiinQuant không trả ROA. Dự phòng sử dụng trong quý là chỉ báo thay thế cho xóa nợ.",
+                  en="FiinQuant does not return ROA. Quarterly provisions used are a proxy for write-offs.")
+             if "fiin_screening" in m1["source_rows"] else
+             dict(vi="FiinQuant không trả ROA. Hai tín hiệu về nợ nhóm 2 và xóa nợ cần dữ liệu ghi chú BCTC.",
+                  en="FiinQuant does not return ROA. The group 2 and write-off flags require financial statement notes.")),
             dict(vi="Đọc nghiên cứu thị trường cùng độ phủ ngày công bố thực tế. Khoảng dự báo lấy từ sai số lịch sử.",
                  en="Read market estimates alongside actual disclosure date coverage. Prediction intervals use historical residuals."),
             dict(vi="Thời điểm nguồn ghi theo lần sửa tệp Silver cuối cùng.",

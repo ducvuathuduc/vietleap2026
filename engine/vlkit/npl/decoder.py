@@ -19,7 +19,7 @@ SEASON = ["expected_change_pp", "lo80_pp", "hi80_pp"]
 COVERAGE_TOLERANCE = .0001  # One basis point of coverage, in fraction units.
 SIGNALS = {
     "S1": ("Rủi ro có thể dồn sang nhóm 2", "Risk may be moving into group 2"),
-    "S2": ("Giảm nhờ xóa nợ", "Fall driven by write-offs"),
+    "S2": ("Tỷ lệ xóa nợ hoặc dự phòng sử dụng tăng", "Write-offs or provisions used rose relative to loans"),
     "S3": ("Đệm dự phòng mỏng đi", "Provision buffer thinner"),
     "S4": ("Nhịp mùa vụ cuối năm", "Usual year-end movement"),
 }
@@ -52,8 +52,13 @@ def _vendor_ratios(panel):
     return data[[*KEYS, *RATIOS, *CHANGES, "lagged_coverage", "nim"]]
 
 
-def _notes_ratios(notes):
-    amounts, _ = statement_amounts(notes)
+def _notes_ratios(notes, screening=None):
+    amounts, _ = statement_amounts(notes, screening=screening)
+    has_screening = screening is not None and not screening.empty
+    if has_screening:
+        observed = amounts.loc[amounts.source.eq("fiin_screening")].set_index(KEYS).drop(columns="source")
+        pdf = amounts.loc[amounts.source.eq("notes_bank_quarter")].set_index(KEYS).drop(columns="source")
+        amounts = observed.combine_first(pdf).reset_index()
     fields = {"customer_loans": "loans_vnd_bn", "group2_loans": "group2_vnd_bn", "groups345_loans": "npl_vnd_bn",
               "provision_balance": "provision_vnd_bn", "writeoffs": "writeoff_vnd_bn"}
     amounts = amounts[[*KEYS, *fields]].rename(columns=fields)
@@ -65,6 +70,11 @@ def _notes_ratios(notes):
     amounts["basis"] = "consolidated"
     amounts["writeoff_basis"] = "quarter"
     credit = derive_credit_quality(amounts.reindex(columns=SILVER))
+    if has_screening:
+        reported = observed.index[observed.writeoffs.notna()]
+        proxy = pd.Series(pd.MultiIndex.from_frame(credit[KEYS]).isin(reported), index=credit.index)
+        comparable = proxy.eq(proxy.groupby(credit.bank_code).shift(fill_value=False))
+        credit["delta_writeoff_ratio"] = credit["delta_writeoff_ratio"].where(comparable)
     return credit[[*KEYS, *AMOUNTS, *RATIOS, *CHANGES, "lagged_coverage"]]
 
 
@@ -132,23 +142,28 @@ def _decoder_fit(data, *, grid_n, vendor):
     }
 
 
-def build_decoder(panel, seasonal, notes):
-    """Build the vendor history and attach statement inputs by bank and quarter."""
+def build_decoder(panel, seasonal, notes, screening=None):
+    """Attach screening inputs first, using the audited PDFs for missing fields."""
     vendor = _vendor_ratios(panel)
-    statements = _notes_ratios(notes)
+    pdf = _notes_ratios(notes)
+    statements = _notes_ratios(notes, screening) if screening is not None else pdf
     start, end = panel.period.min(), panel.period.max()
     periods = pd.period_range(end=end, periods=6, freq="Q").astype(str).tolist()
     banks = sorted(vendor.bank_code.unique())
     history = pd.period_range(start, end, freq="Q").astype(str).tolist()
     statements = statements.loc[statements.bank_code.isin(banks) & statements.period.le(end)]
+    pdf = pdf.loc[pdf.bank_code.isin(banks) & pdf.period.le(end)]
 
     note_fields = ["g2_ratio", "delta_g2_ratio", "writeoff_ratio", "delta_writeoff_ratio",
                    "npl_formation", "broad_problem_ratio"]
     grid = pd.MultiIndex.from_product([banks, history], names=KEYS).to_frame(index=False)
     board = grid.merge(vendor.drop(columns=note_fields), on=KEYS, how="left", validate="one_to_one")
     board = board.merge(
-        statements[[*KEYS, *AMOUNTS, *note_fields, "coverage", "delta_coverage"]]
-        .rename(columns={"coverage": "notes_coverage", "delta_coverage": "notes_delta_coverage"}),
+        statements[[*KEYS, *AMOUNTS, *note_fields]],
+        on=KEYS, how="left", validate="one_to_one",
+    ).merge(
+        pdf[[*KEYS, "coverage", "delta_coverage"]].rename(
+            columns={"coverage": "notes_coverage", "delta_coverage": "notes_delta_coverage"}),
         on=KEYS, how="left", validate="one_to_one",
     ).merge(seasonal[[*KEYS, *SEASON]], on=KEYS, how="left", validate="one_to_one")
 
@@ -186,7 +201,7 @@ def build_decoder(panel, seasonal, notes):
             "outcome": "delta_npl_ratio", "regressors": REGRESSORS,
             "estimator": "bank fixed effects OLS; bank-clustered SE; restricted wild cluster bootstrap",
             "fiinquant": _decoder_fit(vendor, grid_n=len(banks) * len(history), vendor=True),
-            "notes": _decoder_fit(statements, grid_n=None, vendor=False),
+            "notes": _decoder_fit(pdf, grid_n=None, vendor=False),
         },
         "reading_vi": ("Đọc cờ vàng khi tỷ lệ nợ xấu giảm và đọc trạng thái Thiếu dữ liệu cùng các cờ đã xác định. "
                        "S4 dùng dải mùa vụ M7 ước lượng từ dữ liệu FiinQuant."),

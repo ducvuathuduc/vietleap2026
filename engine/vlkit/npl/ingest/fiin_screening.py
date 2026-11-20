@@ -1,35 +1,28 @@
-"""FiinQuant screening: the bank note fields for every ticker, one indicator per call.
+"""Land FiinQuant statement indicators, validate bank-quarters and reconcile the PDF audit sample."""
 
-`StockScreening` is an AND across its conditions, so a bank missing one field drops out of a multi-field request;
-every call therefore asks for ONE indicator and the results are merged by ticker. Values come back in VND and are
-converted to VND billion here. The note table FGFB_COFS_DR_NoteBank prints the provision movement cumulatively from
-1 January, so the flow basis is measured against the Yearly interim before any quarter flow is derived.
-
-What lands where: every call's raw frame and sidecar go to bronze/fiinscreen/<run_id> through the normal Collector;
-the merged long table goes to silver/fiin_screening.parquet, the rows that fail a gate to
-silver/fiin_screening_quarantine.parquet, and the gate rows to silver/fiin_screening_gate.csv.
-"""
-
+from collections import Counter, defaultdict
+from hashlib import sha256
+import json
+import math
 from pathlib import Path
 
 import pandas as pd
 
 from .extra_landing import read_silver, write_silver
-from .fiin import Collector
+from .fiin import Collector, quiet_sdk
 from .files import now
-from .notes_contract import SILVER_COLUMNS, to_quarterly
-from .notes_gates import passes_silver, run_gates
+from .notes_contract import GROUP_FIELDS, NPL_FIELDS, SILVER_COLUMNS, agreement
+from .notes_gates import GATE_COLUMNS, groups_gate, npl_gate
 from .runner import LAKE, ROOT
 
 DOC = "https://docs.fiinquant.vn/fiinquant-en/function-and-formula/screening-function"
 SCREEN = "fiin_screening.parquet"
 QUARANTINE = "fiin_screening_quarantine.parquet"
 GATES = "fiin_screening_gate.csv"
+SOURCE = "fiinquant_screening"
 BRONZE = "fiinscreen"
 TICKER = "Mã CK"
-DIVISOR = 1e9                       # the screening values are VND
 
-# field -> FiinQuant indicator name (FGFB_COFS_DR_NoteBank unless the table says otherwise)
 INDICATORS = {
     "group_1_current": "4.1. Nợ đủ tiêu chuẩn",
     "group_2_watch": "4.2. Nợ cần chú ý",
@@ -37,7 +30,7 @@ INDICATORS = {
     "group_4_doubtful": "4.4. Nợ nghi ngờ",
     "group_5_loss": "4.5. Nợ xấu có khả năng mất vốn",
     "loans_customer": "6.1. Cho vay khách hàng",
-    "provision_balance_sheet": "6.2. Dự phòng rủi ro cho vay khách hàng ",
+    "provision_balance_sheet": "6.2. Dự phòng rủi ro cho vay khách hàng",
     "provision_total": "9. Dự phòng cho vay khách hàng",
     "provision_opening_general": "9.1.1. Số đầu kỳ",
     "provision_charge_general": "9.1.2. Trích lập trong kỳ",
@@ -50,178 +43,327 @@ INDICATORS = {
     "provision_used_for_losses": "18. Tăng/giảm nguồn dự phòng để bù đắp tổn thất các khoản",
     "npl_written_off_stock": "3. Nợ khó đòi đã xử lý",
 }
-# fields summed from their note components so the notes schema sees one movement table
-COMPOSED = {"provision_opening": ("provision_opening_general", "provision_opening_specific"),
-            "provision_charge": ("provision_charge_general", "provision_charge_specific"),
-            "provision_used_writeoff": ("provision_used_general", "provision_used_specific")}
-QUARTERLY = ["2021Q1", "2021Q2", "2021Q3", "2021Q4", "2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2",
-             "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4",
-             "2026Q1", "2026Q2", "2026Q3"]
+COMPOSED = {
+    "provision_opening": ("provision_opening_general", "provision_opening_specific"),
+    "provision_charge": ("provision_charge_general", "provision_charge_specific"),
+    "provision_used_writeoff": ("provision_used_general", "provision_used_specific"),
+}
+FLOWS = {
+    "provision_charge_general", "provision_used_general", "provision_charge_specific",
+    "provision_used_specific", "provision_expense", "loans_change_period",
+    "provision_used_for_losses", "provision_charge", "provision_used_writeoff",
+}
+UNSIGNED = {
+    "provision_balance_sheet", "provision_total", "provision_closing",
+    "provision_opening_general", "provision_opening_specific", "provision_opening",
+    "provision_used_general", "provision_used_specific", "provision_used_writeoff",
+}
+QUARTERLY = [f"{year}Q{quarter}" for year in range(2021, 2027) for quarter in range(1, 5)
+             if (year, quarter) <= (2026, 3)]
 
 
 def interim(period):
-    """'2025Q2' -> ('Quarterly', 'Q2-2025'): FiinQuant's interim naming."""
-    year, quarter = str(period)[:4], str(period)[5:]
-    return "Quarterly", f"Q{quarter}-{year}"
+    return ("Yearly", period[:4]) if period.endswith("FY") else ("Quarterly", f"Q{period[-1]}-{period[:4]}")
 
 
-def values_of(frame, name, ticker=TICKER):
-    """ticker -> value in VND billion for one indicator reply (the column is the indicator name)."""
-    if frame is None or not len(frame):
+def values_of(frame, name):
+    """Read a single indicator in VND and return values in billion VND."""
+    if frame is None or frame.empty or TICKER not in frame:
         return {}
-    columns = [column for column in frame.columns if str(column).startswith(name)]
-    if not columns or ticker not in frame:
+    columns = [column for column in frame if str(column).startswith(name.strip())]
+    if len(columns) != 1:
         return {}
-    series = pd.to_numeric(frame[columns[0]], errors="coerce")
-    return {str(bank): float(value) / DIVISOR for bank, value in zip(frame[ticker], series)
-            if pd.notna(value)}
+    values = pd.to_numeric(frame[columns[0]], errors="coerce")
+    return {str(bank).strip().upper(): float(value) / 1e9
+            for bank, value in zip(frame[TICKER], values) if pd.notna(bank) and pd.notna(value)}
 
 
-def collect(collector, fields, periods, banks=None, sleep=None):
-    """One call per (field, period): [(bank, period, field, value_vnd_bn, raw_sha256)] in VND billion."""
-    screening = collector.client.StockScreening()
+def _rows(frame, field, period, digest, banks):
+    return [{"bank": bank, "period": period, "field": field, "value_vnd_bn": value, "raw_sha256": digest}
+            for bank, value in values_of(frame, INDICATORS[field]).items() if banks is None or bank in banks]
+
+
+def collect(collector, fields, periods, banks=None):
+    """Request one indicator at a time so missing fields do not filter other indicators."""
+    with quiet_sdk():
+        screening = collector.client.StockScreening()
     rows = []
     for field in fields:
-        name = INDICATORS[field]
         for period in periods:
+            if period.endswith("FY") and field not in FLOWS:
+                continue
             code, interim_id = interim(period)
-            params = {"indicator": name, "interimCode": code, "indicatorInterimId": interim_id, "field": field}
-            frame = collector.call(BRONZE, params, lambda name=name, code=code, interim_id=interim_id: screening.get(
-                filter=[{"indicatorName": name, "interimCode": code, "indicatorInterimId": interim_id,
-                         "conditionValues": [-1e15, 1e15]}]))
-            sha = collector.calls[-1]["raw_sha256"] if collector.calls else ""
-            for bank, value in values_of(frame, name).items():
-                if banks is None or bank in banks:
-                    rows.append({"bank": bank, "period": period, "field": field, "value_vnd_bn": value,
-                                 "raw_sha256": sha})
-            if sleep is not None:
-                sleep()
+            condition = {"indicatorName": INDICATORS[field], "interimCode": code, "indicatorInterimId": interim_id,
+                         "conditionValues": [-1e18, 1e18]}
+            params = {"field": field, "period": period, "filter": [condition]}
+
+            def operation():
+                reply = screening.get(filter=[{**condition, "conditionValues": condition["conditionValues"].copy()}])
+                if reply is None:
+                    raise ValueError(f"no FiinQuant response for {field} {period}")
+                return json.loads(reply.to_json(orient="records", force_ascii=False, double_precision=15))
+
+            frame = collector.call(BRONZE, params, operation, doc_url=DOC)
+            rows.extend(_rows(frame, field, period, collector.calls[-1]["raw_sha256"], banks))
     return rows
 
 
-def compose(rows):
-    """Add the summed movement fields (opening / charge / used) and provision_closing to the part rows."""
-    by_key = {}
-    for row in rows:
-        by_key.setdefault((row["bank"], row["period"]), {})[row["field"]] = row
-    out = list(rows)
-    for (bank, period), fields in by_key.items():
-        for field, parts in COMPOSED.items():
-            found = [fields.get(part) for part in parts]
-            if any(part is None for part in found):
+def replay(lake, runs, fields, periods, banks):
+    """Load specified Bronze runs in order. Later runs replace an earlier request."""
+    calls = {}
+    root = lake / "bronze" / BRONZE
+    for run in runs:
+        if Path(run).name != run or not (root / run).is_dir():
+            raise ValueError(f"unknown Bronze run: {run}")
+        for path in sorted((root / run).glob("*.json")):
+            if path.name.endswith(".raw.json"):
                 continue
-            out.append({**found[0], "field": field, "value_vnd_bn": round(sum(part["value_vnd_bn"] for part in found), 6)})
-        if "provision_total" in fields:
-            out.append({**fields["provision_total"], "field": "provision_closing"})
+            meta = json.loads(path.read_bytes())
+            field, period = (meta["params"][key] for key in ("field", "period"))
+            if field not in fields or period not in periods:
+                continue
+            content = path.with_suffix(".raw.json").read_bytes()
+            if sha256(content).hexdigest() != meta["raw_sha256"]:
+                raise ValueError(f"Bronze digest mismatch: {field} {period}")
+            calls[field, period] = _rows(pd.DataFrame(json.loads(content)), field, period, meta["raw_sha256"], banks)
+    missing = [(field, period) for field in fields for period in periods
+               if (not period.endswith("FY") or field in FLOWS) and (field, period) not in calls]
+    if missing:
+        raise ValueError(f"missing Bronze requests: {missing[:8]} ({len(missing)} total)")
+    return [row for batch in calls.values() for row in batch], len(calls)
+
+
+def flow_basis(rows):
+    """Distinguish a cumulative Q4 from four separate quarters using the yearly amount."""
+    groups = defaultdict(dict)
+    for row in rows:
+        field, period = row["field"], row["period"]
+        if field in FLOWS:
+            value = row["value_vnd_bn"]
+            groups[row["bank"], period[:4], field][period[4:]] = abs(value) if field in UNSIGNED else value
+
+    assessed = {}
+    by_bank = defaultdict(Counter)
+    by_field = defaultdict(Counter)
+    for (bank, year, field), values in groups.items():
+        annual = values.get("FY")
+        if annual is None or "Q4" not in values:
+            continue
+        ytd = agreement(values["Q4"], annual, rel=.005)
+        quarters = [values.get(f"Q{q}") for q in range(1, 5)]
+        complete = all(value is not None for value in quarters)
+        single = complete and agreement(sum(quarters), annual, rel=.005)
+        earlier_usage = field in UNSIGNED and any(value is not None and value > .001 for value in quarters[:3])
+        if ytd and not single and (complete or earlier_usage):
+            label = "ytd"
+        elif single and not ytd:
+            label = "quarter"
+        else:
+            label = "mismatch" if complete and not ytd else "unknown"
+        assessed[bank, year, field] = label
+        if label in {"quarter", "ytd"}:
+            by_bank[bank, field][label] += 1
+            by_field[field][label] += 1
+
+    basis = assessed.copy()
+    for bank, year, field in groups:
+        key = (bank, year, field)
+        if basis.get(key) == "mismatch":
+            basis[key] = "unknown"
+            continue
+        if basis.get(key) in {"quarter", "ytd"}:
+            continue
+        votes = by_bank[bank, field]
+        if len(votes) == 1:
+            basis[key] = next(iter(votes))
+        elif not votes and len(by_field[field]) == 1:
+            basis[key] = next(iter(by_field[field]))
+        else:
+            basis[key] = "unknown"
+
+    evidence = {field: {
+        "compared": dict(Counter(label for key, label in assessed.items() if key[2] == field)),
+        "classified": dict(Counter(label for key, label in basis.items() if key[2] == field)),
+    } for field in sorted({key[2] for key in groups})}
+    return basis, evidence
+
+
+def compose(rows):
+    """Sum compatible component values; the balance-sheet provision is the closing stock."""
+    groups = defaultdict(dict)
+    for row in rows:
+        key = (row["bank"], row["period"], row.get("basis"))
+        groups[key][row["field"]] = row
+    out = list(rows)
+    for fields in groups.values():
+        for field, parts in COMPOSED.items():
+            if all(part in fields for part in parts):
+                first, second = (fields[part] for part in parts)
+                out.append({**first, "field": field, "value_vnd_bn": first["value_vnd_bn"] + second["value_vnd_bn"],
+                            "raw_sha256": "|".join((first["raw_sha256"], second["raw_sha256"]))})
+        closing = fields.get("provision_balance_sheet") or fields.get("provision_total")
+        if closing is not None:
+            out.append({**closing, "field": "provision_closing", "value_vnd_bn": abs(closing["value_vnd_bn"])})
+        if all(field in fields for field in NPL_FIELDS):
+            parts = [fields[field] for field in NPL_FIELDS]
+            out.append({**parts[0], "field": "groups_3_5", "value_vnd_bn": sum(part["value_vnd_bn"] for part in parts),
+                        "raw_sha256": "|".join(part["raw_sha256"] for part in parts)})
     return out
 
 
-def flow_basis(collector, field="provision_charge", year="2025", quarters=("2024Q4", "2025Q2")):
-    """('quarter'|'ytd', evidence) from comparing a Q4 Quarterly reply with the same year's Yearly reply."""
-    screening = collector.client.StockScreening()
-    totals = {}
-    for code, interim_id in (("Quarterly", f"Q4-{year}"), ("Yearly", year)):
-        frame = collector.call(BRONZE, {"evidence": field, "interimCode": code, "interimInterimId": interim_id},
-                               lambda code=code, interim_id=interim_id, name=INDICATORS[field]: screening.get(
-                                   filter=[{"indicatorName": name, "interimCode": code,
-                                            "indicatorInterimId": interim_id,
-                                            "conditionValues": [-1e15, 1e15]}]))
-        totals[code] = values_of(frame, INDICATORS[field])
-    shared = sorted(set(totals["Quarterly"]) & set(totals["Yearly"]))
-    if not shared:
-        return "unknown", {"shared": 0}
-    equal = sum(abs(totals["Quarterly"][bank] - totals["Yearly"][bank]) <= max(1.0, 0.01 * abs(totals["Yearly"][bank]))
-                for bank in shared)
-    basis = "ytd" if equal >= 0.8 * len(shared) else "quarter"
-    return basis, {"shared": len(shared), "equal": equal, "year": year,
-                   "example": {bank: {"quarterly": totals["Quarterly"][bank], "yearly": totals["Yearly"][bank]}
-                               for bank in shared[:3]}}
-
-
-def to_silver(rows, basis="ytd"):
-    """The notes-schema long table: balances point, flows ytd plus the derived single quarters."""
-    records = []
+def to_silver(rows, basis):
+    """Derive single quarters within the same bank, field and year."""
+    reported = {}
     for row in rows:
-        field = row["field"]
-        if field in ("provision_opening_general", "provision_charge_general", "provision_used_general",
-                     "provision_opening_specific", "provision_charge_specific", "provision_used_specific",
-                     "provision_total", "provision_balance_sheet", "provision_expense", "loans_change_period",
-                     "provision_used_for_losses"):
-            continue                    # parts and memo fields: kept in the bronze and the composition, not silver
-        flow = field in ("provision_charge", "provision_used_writeoff", "provision_used_for_losses")
-        records.append({"bank": row["bank"], "period": row["period"], "field": field,
-                        "basis": "ytd" if flow and basis != "quarter" else "point",
-                        "value_vnd_bn": round(float(row["value_vnd_bn"]), 6), "page": 1, "source_url": DOC,
-                        "statement_type": "consolidated", "unit": "bn", "reader": "fiinquant_screening",
-                        "grade": "single", "raw_sha256": row.get("raw_sha256") or ""})
-    frame = pd.DataFrame(records, columns=SILVER_COLUMNS)
-    if basis == "ytd":
-        frame = pd.DataFrame(to_quarterly(frame.to_dict("records")), columns=SILVER_COLUMNS)
-    return frame
+        bank, period, field = (row[key] for key in ("bank", "period", "field"))
+        if period.endswith("FY"):
+            continue
+        value = row["value_vnd_bn"]
+        if field in UNSIGNED:
+            value = abs(value)
+        key = (bank, period, field)
+        label = basis if isinstance(basis, str) else basis.get((bank, period[:4], field), "unknown")
+        clock = {"quarter": "quarterly", "ytd": "ytd"}.get(label, "unknown") if field in FLOWS else "point"
+        reported[key] = {**row, "basis": clock, "value_vnd_bn": value}
+    records = list(reported.values())
+    for (bank, period, field), row in reported.items():
+        if row["basis"] not in {"ytd", "unknown"}:
+            continue
+        quarter = int(period[-1])
+        if quarter == 1:
+            records.append({**row, "basis": "quarterly"})
+        elif row["basis"] == "ytd":
+            previous = reported.get((bank, period[:5] + str(quarter - 1), field))
+            if previous is not None and previous["basis"] == "ytd":
+                records.append({**row, "basis": "quarterly",
+                                "value_vnd_bn": row["value_vnd_bn"] - previous["value_vnd_bn"],
+                                "raw_sha256": "|".join((row["raw_sha256"], previous["raw_sha256"]))})
+        elif field in UNSIGNED and row["value_vnd_bn"] == 0:
+            prior = [reported.get((bank, f"{period[:5]}{q}", field)) for q in range(1, quarter)]
+            if all(previous is not None and previous["value_vnd_bn"] == 0 for previous in prior):
+                records.append({**row, "basis": "quarterly",
+                                "raw_sha256": "|".join([*(previous["raw_sha256"] for previous in prior),
+                                                        row["raw_sha256"]])})
+    return pd.DataFrame([
+        {**row, "page": None, "source_url": DOC, "statement_type": "consolidated", "unit": "bn",
+         "reader": SOURCE, "grade": "single"}
+        for row in compose(records)
+    ], columns=SILVER_COLUMNS)
 
 
-def audit(screening, pdf, tolerance=0.005):
-    """Match rate of the screening values against the PDF bank-quarters that overlap them."""
-    if pdf is None or not len(pdf) or screening is None or not len(screening):
-        return {"pairs": 0, "match": 0, "rate": None, "by_field": {}}
-    left = screening[screening["basis"].isin(["point", "ytd"])].copy()
-    right = pdf[pdf["basis"].isin(["point", "ytd"])].copy()
-    left["key"] = left["bank"].astype(str) + "|" + left["period"].astype(str) + "|" + left["field"]
-    right["key"] = right["bank"].astype(str) + "|" + right["period"].astype(str) + "|" + right["field"]
-    left = left.groupby("key").first()
-    right = right.groupby("key").first()
-    shared = sorted(set(left.index) & set(right.index))
-    by_field = {}
-    for key in shared:
-        ours, theirs = float(left.loc[key, "value_vnd_bn"]), float(right.loc[key, "value_vnd_bn"])
-        ok = abs(ours - theirs) <= max(0.001, tolerance * max(abs(ours), abs(theirs)))
-        field = key.rsplit("|", 1)[1]
-        block = by_field.setdefault(field, {"pairs": 0, "match": 0})
-        block["pairs"] += 1
-        block["match"] += int(ok)
-    matches = sum(block["match"] for block in by_field.values())
-    return {"pairs": len(shared), "match": matches, "rate": round(matches / len(shared), 4) if shared else None,
-            "by_field": {field: {**block, "rate": round(block["match"] / block["pairs"], 4)}
-                         for field, block in by_field.items()}}
+def _quality(silver, vendor_pct):
+    rows, reasons, field_reasons = [], {}, {}
+    for (bank, period), group in silver.groupby(["bank", "period"], sort=True):
+        values = group.loc[group.basis.eq("point")].set_index("field")["value_vnd_bn"].to_dict()
+        loans = values.get("loans_customer")
+        parts = [values.get(field) for field in GROUP_FIELDS]
+        total = sum(parts) if all(value is not None for value in parts) else None
+        group_result = groups_gate(values)
+        npl_result = npl_gate({**values, "loans_customer": total}, vendor_pct.get((bank, period)))
+        bad_loans = loans is not None and not 1_000 <= loans <= 10_000_000
+        negative_stock_or_usage = group.field.isin([*GROUP_FIELDS, *UNSIGNED, "npl_written_off_stock"])
+        suspicious = ~group.value_vnd_bn.map(math.isfinite) | (negative_stock_or_usage & group.value_vnd_bn.lt(0))
+        if loans is not None and not bad_loans:
+            suspicious |= group.value_vnd_bn.abs().gt(loans) & ~group.field.eq("npl_written_off_stock")
+        for field, parts in COMPOSED.items():
+            bad_bases = group.loc[suspicious & group.field.isin(parts), "basis"]
+            suspicious |= group.field.eq(field) & group.basis.isin(bad_bases)
+        bad_fields = group.loc[suspicious, "field"]
+        magnitude = ("fail" if not bad_fields.empty or bad_loans
+                     else "skipped" if loans is None else "pass")
+        magnitude_result = {
+            "gate": "magnitude", "status": magnitude, "value": loans, "threshold": None,
+            "detail": f"Gross loans {loans} bn VND (expected 1,000–10,000,000); out-of-range fields: "
+                      f"{', '.join(sorted(bad_fields.unique())) or 'none'}",
+        }
+        checks = [group_result, npl_result, magnitude_result]
+        rows.extend({"bank": bank, "period": period, **check} for check in checks)
+        core_invalid = bad_loans or bad_fields.isin(GROUP_FIELDS).any() or loans is None
+        required = checks if core_invalid else checks[:2]
+        problems = [f"{check['gate']}: {check['detail']}" for check in required if check["status"] != "pass"]
+        if problems:
+            reasons[bank, period] = "; ".join(problems)
+        field_reasons.update({index: f"magnitude: {magnitude_result['detail']}" for index in bad_fields.index})
+    return pd.DataFrame(rows, columns=GATE_COLUMNS), reasons, field_reasons
 
 
-def run_screening(lake=LAKE, credentials=None, today=None, fields=None, periods=None, collector=None, sleep=None):
-    """Pull the screening fields, gate them, write silver/quarantine/gates and return the run log."""
+def audit(screening, pdf, tolerance=.005):
+    """Compare all overlapping like-for-like balances and flows before quarantine."""
+    keys = ["bank", "period", "field", "basis"]
+    columns = [*keys, "screening_vnd_bn", "pdf_vnd_bn", "pdf_grade", "pdf_scope", "comparable", "match"]
+    overlap = pd.DataFrame(columns=columns)
+    if pdf is not None and not pdf.empty and not screening.empty:
+        sample = pdf.rename(columns={"grade": "pdf_grade", "statement_type": "pdf_scope",
+                                     "value_vnd_bn": "pdf_vnd_bn"})
+        sample = sample.reindex(columns=[*keys, "pdf_vnd_bn", "pdf_grade", "pdf_scope"])
+        sample.loc[sample.field.eq("provision_opening"), "basis"] = "point"
+        overlap = screening[[*keys, "value_vnd_bn"]].rename(columns={"value_vnd_bn": "screening_vnd_bn"}).merge(
+            sample, on=keys)
+        overlap["comparable"] = overlap.pdf_grade.isin(["single", "verified"]) & overlap.pdf_scope.eq("consolidated")
+        scale = overlap[["screening_vnd_bn", "pdf_vnd_bn"]].abs().max(axis=1)
+        overlap["match"] = (overlap.screening_vnd_bn - overlap.pdf_vnd_bn).abs().le((tolerance * scale).clip(lower=.001))
+    vetted = overlap.loc[overlap.comparable.eq(True)]
+    counts = vetted.groupby("field")["match"].agg(pairs="size", match="sum")
+    by_field = {field: {"pairs": int(block.pairs), "match": int(block.match), "rate": block.match / block.pairs}
+                for field, block in counts.iterrows()}
+    matches = int(vetted["match"].sum())
+    return {"overlaps": len(overlap), "pairs": len(vetted), "match": matches,
+            "rate": matches / len(vetted) if len(vetted) else None,
+            "by_field": by_field}, overlap[columns]
+
+
+def run_screening(lake=LAKE, credentials=None, today=None, fields=None, periods=None, collector=None, bronze_runs=None):
+    """Land the complete batch, keeping quality failures and the PDF audit available for review."""
     lake = Path(lake)
     run_id = "fiinscreen-" + now().strftime("%Y%m%dT%H%M%S")
-    periods = list(periods or QUARTERLY)
-    fields = list(fields or INDICATORS)
+    periods, fields = list(periods or QUARTERLY), list(fields or INDICATORS)
+    annual = sorted({period[:4] + "FY" for period in periods if period.endswith("Q4")})
     vendor = read_silver(lake, "bank_quarter.parquet")
-    banks = sorted(vendor["ticker"].astype(str).unique()) if vendor is not None else []
-    collector = collector or Collector(credentials or ROOT / ".env.local", lake, run_id, today=today, sleep=sleep)
-    if collector.client is None:
-        collector.login()
-    basis, evidence = flow_basis(collector) if "provision_charge" in fields else ("quarter", {})
-    rows = compose(collect(collector, fields, periods, banks=set(banks), sleep=sleep))
-    silver = to_silver(rows, basis=basis)
-    vendor_pct = {}
-    if vendor is not None and "npl" in vendor:
-        values = pd.to_numeric(vendor["npl"], errors="coerce")
-        scale = 100.0 if values.dropna().le(1).all() else 1.0
-        vendor_pct = {(str(row.ticker), str(row.period)): float(row.npl) * scale
-                      for row in vendor.itertuples() if pd.notna(row.npl)}
-    gates, summary = run_gates(silver, vendor=vendor_pct)
-    status = {}
-    for row in gates.to_dict("records"):
-        status.setdefault((row["bank"], row["period"]), {})[row["gate"]] = row["status"]
-    clean = silver[silver.apply(lambda row: passes_silver(status.get((str(row["bank"]), str(row["period"])), {})),
-                                axis=1)] if len(silver) else silver
-    quarantine = silver[~silver.index.isin(clean.index)] if len(silver) else silver
-    write_silver(lake, SCREEN, clean, {"run_id": run_id, "basis_evidence": evidence, "flow_basis": basis})
-    write_silver(lake, QUARANTINE, quarantine, {"run_id": run_id, "reason": "a protective gate did not pass"})
-    if len(gates):
-        write_silver(lake, GATES, gates, {"run_id": run_id})
-    pdf = read_silver(lake, "notes_bank_quarter.parquet")
-    match = audit(clean, pdf)
-    log = {"run_id": run_id, "flow_basis": basis, "basis_evidence": evidence, "banks": len(banks),
-           "periods": [periods[0], periods[-1]], "calls": len(collector.calls), "rows": len(silver),
-           "silver_rows": int(len(clean)), "quarantine_rows": int(len(quarantine)),
-           "gates": summary, "audit": match,
-           "coverage": {field: int(clean[clean.field.eq(field)]["bank"].nunique()) if len(clean) else 0
-                        for field in sorted(set(clean["field"]))} if len(clean) else {}}
-    return log
+    if vendor is None or vendor.empty:
+        raise ValueError("bank_quarter.parquet is required for screening coverage and the NPL gate")
+    if "basis" in vendor:
+        vendor = vendor.loc[vendor.basis.eq("consolidated")]
+    vendor = vendor.assign(ticker=vendor.ticker.str.strip().str.upper().replace({"BIDV": "BID"}))
+    banks = set(vendor.ticker)
+    if bronze_runs:
+        rows, calls = replay(lake, bronze_runs, fields, periods + annual, banks)
+    else:
+        if collector is None:
+            collector = Collector(credentials or ROOT / ".env.local", lake, run_id, today=today)
+        if collector.client is None:
+            collector.login()
+        rows = collect(collector, fields, periods + annual, banks)
+        calls = len(collector.calls)
+    if not rows:
+        raise ValueError("no screening observations for the bank panel")
+    basis, evidence = flow_basis(rows)
+    silver = to_silver(rows, basis)
+    ratios = pd.to_numeric(vendor["npl"], errors="coerce") * 100
+    vendor_pct = {(bank, period): value for bank, period, value in zip(vendor.ticker, vendor.period, ratios)
+                  if pd.notna(value)}
+    gates, reasons, field_reasons = _quality(silver, vendor_pct)
+    reason = pd.Series([reasons.get((row.bank, row.period), field_reasons.get(row.Index))
+                        for row in silver.itertuples()], index=silver.index, dtype="string")
+    clean = silver.loc[reason.isna()]
+    quarantine = silver.loc[reason.notna()].assign(reason=reason)
+    audit_summary, audit_rows = audit(silver, read_silver(lake, "notes_bank_quarter.parquet"))
+    coverage = silver.groupby(["field", "period"]).bank.nunique()
+    coverage = coverage.reindex(pd.MultiIndex.from_product(
+        [sorted(set(fields) | set(silver.field)), periods], names=["field", "period"]), fill_value=0)
+    accepted = clean.groupby(["field", "period"]).bank.nunique()
+    coverage_rows = coverage.rename("reported_banks").to_frame()
+    coverage_rows["accepted_banks"] = accepted.reindex(coverage.index, fill_value=0)
+    quarterly = clean.loc[clean.basis.eq("quarterly")].groupby(["field", "period"]).bank.nunique()
+    coverage_rows["accepted_quarterly_banks"] = quarterly.reindex(coverage.index, fill_value=0)
+    meta = {"run_id": run_id, "bronze_runs": list(bronze_runs or [run_id]), "flow_basis_evidence": evidence}
+    for name, frame in ((SCREEN, clean), (QUARANTINE, quarantine)):
+        write_silver(lake, name, frame.assign(flow_basis=frame.basis, basis=SOURCE), meta)
+    write_silver(lake, GATES, gates, meta)
+    write_silver(lake, "fiin_screening_audit.csv", audit_rows, meta)
+    write_silver(lake, "fiin_screening_coverage.csv", coverage_rows.reset_index(), meta)
+    status = gates.groupby("gate").status.value_counts().unstack(fill_value=0)
+    counts = {field: {period: int(value) for period, value in block.droplevel("field").items()}
+              for field, block in coverage.groupby(level="field")}
+    return {"run_id": run_id, "basis_evidence": evidence, "banks": len(banks), "calls": calls, "rows": len(silver),
+            "silver_rows": len(clean), "quarantine_rows": len(quarantine), "gates": status.to_dict(orient="index"),
+            "audit": audit_summary, "coverage": counts}

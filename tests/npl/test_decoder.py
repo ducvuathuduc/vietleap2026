@@ -83,6 +83,47 @@ def test_vendor_reduced_fit_uses_lagged_coverage_and_preserves_missing_fields(si
             assert row["status"] == "missing"
 
 
+def test_screening_fills_decoder_and_pdf_is_only_a_fallback():
+    panel, _ = clean_quarters(pd.DataFrame({"ticker": ["VCB"] * 3,
+        "period": ["2025Q1", "2025Q2", "2025Q3"], "npl_pct": [5., 4., 3.], "coverage_pct": [100.] * 3}))
+    _, seasonal = decision_rule(panel)
+    screening = pd.DataFrame([
+        dict(bank="VCB", period=period, field=field, value_vnd_bn=value, basis="fiinquant_screening",
+             flow_basis="quarterly" if field == "provision_used_writeoff" else "point",
+             statement_type="consolidated", reader="fiinquant_screening", grade="single", page=None,
+             source_url="https://test.com/screening")
+        for period, group2, used in [("2025Q1", 4., 1.), ("2025Q2", 5., 2.), ("2025Q3", 6., 4.)]
+        for field, value in [("loans_customer", 100.), ("group_2_watch", group2), ("provision_used_writeoff", used)]
+        if not (period == "2025Q1" and field == "group_2_watch")
+    ])
+    notes = pd.DataFrame([
+        dict(bank="VCB", period=period, field="group_2_watch", value_vnd_bn=value, basis="point",
+             statement_type="consolidated", grade="verified", page=2, source_url="https://test.com/filing")
+        for period, value in [("2025Q1", 4.), ("2025Q2", 10.), ("2025Q3", 12.)]
+    ])
+    first, second, third = build_decoder(panel, seasonal, notes, screening)["rows"]
+    assert [row["group2_vnd_bn"] for row in [first, second, third]] == [4., 5., 6.]
+    assert third["writeoff_ratio"] == pytest.approx(.04)
+    assert {"S1", "S2"} <= {signal["id"] for signal in third["signals"]}
+
+
+def test_decoder_does_not_flag_a_switch_from_reported_writeoffs_to_the_proxy():
+    periods = ["2025Q1", "2025Q2", "2025Q3"]
+    panel, _ = clean_quarters(pd.DataFrame({"ticker": ["VCB"] * 3, "period": periods,
+        "npl_pct": [5., 4., 3.], "coverage_pct": [100.] * 3}))
+    _, seasonal = decision_rule(panel)
+    pdf = pd.DataFrame([dict(bank="VCB", period=period, field=field, value_vnd_bn=value, basis="consolidated",
+                             grade="verified", page=2, source_url="https://test.com/filing")
+                        for period in periods for field, value in [("loans_customer", 100.), ("writeoff_period", 2.)]])
+    screening = pd.DataFrame([dict(bank="VCB", period="2025Q3", field="provision_used_writeoff", value_vnd_bn=5.,
+        basis="fiinquant_screening", flow_basis="quarterly", statement_type="consolidated",
+        grade="single", page=None, source_url="https://test.com/screening")])
+    latest = build_decoder(panel, seasonal, pdf, screening)["rows"][-1]
+    assert latest["writeoff_ratio"] == pytest.approx(.05)
+    assert latest["delta_writeoff_ratio"] is None
+    assert "S2" not in {signal["id"] for signal in latest["signals"]}
+
+
 def test_statement_regression_recovers_lagged_coverage_with_eight_banks(silver):
     panel, _ = clean_quarters(pd.read_parquet(silver / "bank_quarter.parquet"))
     _, seasonal = decision_rule(panel)

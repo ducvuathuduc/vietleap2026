@@ -8,7 +8,7 @@ import pytest
 
 from vlkit.npl.pipeline import main
 from vlkit.npl.real_data import clean_calendar, clean_quarters
-from vlkit.npl.real_models import QUARTER_TERMS, _fit, _quarters, event_paths, seasonal_models
+from vlkit.npl.real_models import QUARTER_TERMS, _fit, _quarters, event_paths, linkage, seasonal_models
 
 
 def test_cleaning_preserves_missing_and_breaks_nonconsecutive_changes():
@@ -28,6 +28,28 @@ def test_cleaning_preserves_missing_and_breaks_nonconsecutive_changes():
     assert len(log) == 7
     assert [(entry["before"], entry["after"]) for entry in log][2] == (5, 4)
 
+
+
+def test_m5_screening_fits_quarterly_mechanisms_and_preserves_gaps(silver):
+    panel, _ = clean_quarters(pd.read_parquet(silver / "bank_quarter.parquet"))
+    rng = np.random.default_rng(23)
+    amounts = panel[["bank_code", "period"]].copy()
+    q4 = panel.quarter.eq(4)
+    amounts["customer_loans"] = 1000 + rng.normal(0, 20, len(panel)) + 50 * q4
+    amounts["group2_loans"] = 20 + rng.normal(0, 2, len(panel)) + 10 * q4
+    amounts["groups345_loans"] = 15 + rng.normal(0, 1, len(panel))
+    amounts["provision_balance"] = 10 + rng.normal(0, 1, len(panel)) + 3 * q4
+    amounts["writeoffs"] = 3 + rng.normal(0, .3, len(panel)) + 2 * q4
+    gap = amounts.bank_code.eq("VCB") & amounts.period.eq("2024Q3")
+    fits = linkage(panel, amounts.loc[~gap])["screening_seasonal"]
+    assert set(fits) == {"d_group2_ratio_pct", "d_broad_problem_ratio_pct", "loan_growth_qoq_pct",
+                         "writeoff_ratio_pct", "d_provision_ratio_pct"}
+    assert fits["d_group2_ratio_pct"]["n"] == len(panel) - 8 - 2
+    for fit in fits.values():
+        term = fit["terms"]["Q4"]
+        assert fit["clusters"] == 8 and term["coefficient"] > 0
+        assert term["ci95"] and term["p"] is not None and term["wild_p"] is not None
+        assert fit["reading_vi"] and fit["reading_en"] and fit["what_this_does_not_show"]
 
 
 def test_vendor_fractions_outliers_and_calendar_provenance():

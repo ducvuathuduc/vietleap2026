@@ -12,8 +12,11 @@ from matplotlib import pyplot as plt
 
 from .decoder import build_decoder
 from .real_data import DEADLINE_SOURCE, OWNERSHIP_SOURCES, RATIOS, clean_calendar, clean_market, clean_quarters, read_silver, write_star
-from .real_context import mechanism, policy_context
-from .real_models import decision_rule, descriptives, forecast, heterogeneity, linkage, market_study, reversal, seasonal_models
+from .real_context import mechanism, policy_context, statement_amounts
+from .real_models import (
+    SCREENING_LINKAGE, decision_rule, descriptives, forecast, heterogeneity, linkage, market_study, reversal,
+    seasonal_models,
+)
 from .snapshot_metrics import dashboard_metrics, json_safe
 
 
@@ -229,6 +232,15 @@ def _readings(models):
         )
     errors = m7["backtest"]["mae_pp"]
     roa_n = sum(row["roa_pct_count"] for row in m1["by_period"])
+    screening_fits = m5.get("screening_seasonal", {})
+    screening_vi = " ".join(
+        f"Quý 4 so với Quý 1, {SCREENING_LINKAGE[key][0]}: {_term_text(fit, 'Q4')}, điểm %."
+        for key, fit in screening_fits.items()
+    )
+    screening_en = " ".join(
+        f"Q4 versus Q1, {SCREENING_LINKAGE[key][1]}: {_term_text(fit, 'Q4', english=True)}, pp."
+        for key, fit in screening_fits.items()
+    )
     vi = [
         (f"NPL trung vị là {_number(first['npl_pct_median'])}% ở {first['period']} "
          f"và {_number(last['npl_pct_median'])}% ở {last['period']}. Có {roa_n} quan sát ROA hợp lệ. "
@@ -245,7 +257,7 @@ def _readings(models):
          f"{_term_text(m4['regression'], 'Q4_state')} điểm %.",
          "Tương tác so sánh mẫu hình theo nhóm. Thiết kế không nhận diện tác động nhân quả của sở hữu hoặc NPL ban đầu."),
         (f"So với Quý 1, hệ số Quý 4 của thay đổi bao phủ là "
-         f"{_term_text(m5['seasonal']['d_coverage_pct'], 'Q4')} điểm %. Nguồn FiinQuant không trả ROA.",
+         f"{_term_text(m5['seasonal']['d_coverage_pct'], 'Q4')} điểm %. Nguồn FiinQuant không trả ROA. {screening_vi}".strip(),
          "Các thay đổi đồng thời có thể phản ánh mẫu số chung, điều chỉnh kế toán hoặc yếu tố khác chưa đo được."),
         (f"Từ {event_span or 'mẫu hiện có'}, có {dates['actual_date_n']}/{dates['bank_quarters_n']} ngân hàng-quý có ngày thực tế, "
          f"{dates['actual_date_car_n']} có CAR quanh ngày đó. Ưu tiên ngày thực tế cho hệ số dự kiến "
@@ -273,7 +285,8 @@ def _readings(models):
          f"for banks with high starting NPL and by {_term_text(m4['regression'], 'Q4_state', english=True)} pp for state banks.",
          "The design does not identify a causal effect of ownership or starting NPL."),
         (f"The Q4 change in coverage relative to Q1 is {_term_text(m5['seasonal']['d_coverage_pct'], 'Q4', english=True)} pp; "
-         "FiinQuant has no ROA observations.", "Common denominators, accounting adjustments and unmeasured factors may contribute."),
+         f"FiinQuant has no ROA observations. {screening_en}".strip(),
+         "Common denominators, accounting adjustments and unmeasured factors may contribute."),
         (f"In {event_span or 'the available sample'}, {dates['actual_date_n']}/{dates['bank_quarters_n']} bank-quarters have "
          f"actual dates and {dates['actual_date_car_n']} have CAR on those dates. Using actual dates when available gives "
          f"expected {_term_text(preferred, expected, english=True)} and surprise {_term_text(preferred, surprise, english=True)}; "
@@ -380,7 +393,7 @@ def _write_tables(folder, models):
         "M2": {**{variant: m2[variant] for variant in ["baseline", "year_fe", "drop_2021_2022", "median_regression"]},
                **m2["by_ownership"]},
         "M3": {"baseline": m3["regression"]}, "M4": {"combined": m4["regression"]},
-        "M5": m5["seasonal"], "M6": m6["regressions"],
+        "M5": {**m5["seasonal"], **m5.get("screening_seasonal", {})}, "M6": m6["regressions"],
     }
     rows = []
     for model, variants in regression_groups.items():
@@ -483,10 +496,12 @@ def run_real(silver, out):
     m2, _ = seasonal_models(main)
     m3 = reversal(main)
     m4 = heterogeneity(main)
-    m5 = linkage(main)
+    screening = tables.get("fiin_screening")
+    screening_amounts = statement_amounts(None, screening=screening)[0] if screening is not None else None
+    m5 = linkage(main, screening_amounts)
     m7, adjusted = forecast(main)
     m7["decision_rule"], decisions = decision_rule(main)
-    decoder = build_decoder(main, decisions, tables.get("notes_bank_quarter"))
+    decoder = build_decoder(main, decisions, tables.get("notes_bank_quarter"), screening)
     m6, events = market_study(main, market, calendar, tables.get("disclosure_dates"))
     decision_data = decisions.drop(columns=["d_npl_pct", "status_vi", "status_en"]).rename(
         columns={"adjusted_change_pp": "adjusted_d_npl_pct", "status": "decision_status"})
@@ -532,6 +547,7 @@ def run_real(silver, out):
         "notes_bank_quarter": "Giữ BCTC hợp nhất có trang và nguồn, lấy số dư cuối kỳ và xóa nợ theo quý, loại contested và số xung đột.",
         "notes_links": "Ghép phạm vi BCTC theo ngân hàng, quý và URL; dòng phạm vi không xác định chưa dùng cho bộ giải mã.",
         "notes_gate": "Kiểm kê các kết quả đối chiếu từ B5.",
+        "fiin_screening": "Dùng trường đã qua đối chiếu. Dự phòng sử dụng trong quý là chỉ báo thay thế cho xóa nợ.",
     }
     audit += ["", "## Kiểm kê Silver", "", "| Tệp | Dòng đọc | Xử lý |", "|---|---:|---|"]
     for name, detail in audits.items():

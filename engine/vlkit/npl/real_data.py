@@ -156,7 +156,7 @@ def read_silver(folder):
     absent = [path.name for path in [*paths.values(), calendar] if not path.is_file()]
     if absent:
         raise ValueError(f"Thiếu đầu vào Silver: {', '.join(absent)}")
-    optional_parquet = ("sbv_system", "wdi_bank", "notes_bank_quarter")
+    optional_parquet = ("sbv_system", "wdi_bank", "notes_bank_quarter", "fiin_screening")
     optional_csv = ("field_map_ratios", "disclosure_dates", "case_tcb", "legal_register", "notes_links", "notes_gate")
     paths.update({name: folder / f"{name}.parquet" for name in optional_parquet
                   if (folder / f"{name}.parquet").is_file()})

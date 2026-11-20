@@ -36,12 +36,15 @@ def main(argv=None):
     parser.add_argument("--notes-annual", help="comma-separated years to probe the audited annual (NAM) statements")
     parser.add_argument("--screening", action="store_true",
                         help="pull the FiinQuant screening note fields for every bank (no PDFs)")
+    parser.add_argument("--screening-bronze", nargs="+", metavar="RUN_ID",
+                        help="rebuild screening Silver from these completed Bronze runs, oldest first")
     parser.add_argument("--out", type=Path, default=ROOT / "out/npl/eda")
     args = parser.parse_args(argv)
-    if args.screening:
+    if args.screening or args.screening_bronze:
         from .fiin_screening import run_screening
 
-        log = run_screening(lake=args.lake, credentials=args.credentials)
+        log = run_screening(lake=args.lake, credentials=args.credentials, today=args.as_of,
+                            bronze_runs=args.screening_bronze)
         print(json.dumps(log, ensure_ascii=False, indent=2, default=str))
         return 0 if log["rows"] else 1
     if args.notes and args.notes_merge:

@@ -54,7 +54,7 @@ def _forbearance_timeline(register):
     return sorted(entries.values(), key=lambda row: row["effective_from"])
 
 
-def statement_amounts(notes, tcb=None):
+def statement_amounts(notes, tcb=None, *, screening=None):
     """Resolve statement fields by verification grade and preserve their sources."""
     keys = ["bank_code", "period", "source"]
     aliases = {alias: field for field, names in NOTES_FIELDS.items() for alias in names}
@@ -70,6 +70,13 @@ def statement_amounts(notes, tcb=None):
         data = data.rename(columns={"bank": "bank_code", "value_vnd_bn": "value"})
         data["priority"] = data.grade.eq("verified").astype(int)
         inputs.append(data.assign(source="notes_bank_quarter"))
+    if screening is not None and not screening.empty:
+        stocks = screening.flow_basis.eq("point")
+        writeoffs = screening.flow_basis.eq("quarterly") & screening.field.eq("provision_used_writeoff")
+        data = screening.loc[screening.basis.eq("fiinquant_screening") & (stocks | writeoffs)].copy()
+        data["field"] = data["field"].replace({"provision_used_writeoff": "writeoff_period"})
+        data = data.rename(columns={"bank": "bank_code", "value_vnd_bn": "value"})
+        inputs.append(data.assign(source="fiin_screening", priority=0))
     if tcb is not None and not tcb.empty:
         # The case extractor's provision-used value does not identify a quarterly write-off.
         case = tcb.rename(columns={"quarter": "period", "metric": "field", "value_bn_vnd": "value",
@@ -94,7 +101,8 @@ def statement_amounts(notes, tcb=None):
         if "source_url" not in long:
             long["source_url"] = None
         long["page"] = pd.to_numeric(long["page"], errors="coerce")
-        long = long.loc[long.page.gt(0) & long.source_url.astype("string").str.match(r"^https?://", na=False)]
+        has_locator = long.page.gt(0) | long.source.eq("fiin_screening")
+        long = long.loc[has_locator & long.source_url.astype("string").str.match(r"^https?://", na=False)]
         fields = [*keys, "field"]
         long = long.dropna(subset=fields + ["source_url"])
         long = long.loc[long["priority"].eq(long.groupby(fields)["priority"].transform("max"))]
