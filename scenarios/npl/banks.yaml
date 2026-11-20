@@ -1,0 +1,74 @@
+# Tên ngân hàng niêm yết cho snapshot NPL. Mã BIDV được đọc thành BID.
+banks:
+  - ticker: BIDV
+    name_vi: Ngân hàng TMCP Đầu tư và Phát triển Việt Nam
+    name_en: Joint Stock Commercial Bank for Investment and Development of Vietnam
+  - ticker: VCB
+    name_vi: Ngân hàng TMCP Ngoại thương Việt Nam
+    name_en: Joint Stock Commercial Bank for Foreign Trade of Vietnam
+  - ticker: CTG
+    name_vi: Ngân hàng TMCP Công thương Việt Nam
+    name_en: Joint Stock Commercial Bank for Industry and Trade of Vietnam
+  - ticker: ACB
+    name_vi: Ngân hàng TMCP Á Châu
+    name_en: Asia Commercial Joint Stock Bank
+  - ticker: ABB
+    name_vi: Ngân hàng TMCP An Bình
+    name_en: An Binh Commercial Joint Stock Bank
+  - ticker: BAB
+    name_vi: Ngân hàng TMCP Bắc Á
+    name_en: Bac A Commercial Joint Stock Bank
+  - ticker: EIB
+    name_vi: Ngân hàng TMCP Xuất Nhập Khẩu Việt Nam
+    name_en: Vietnam Export Import Commercial Joint Stock Bank
+  - ticker: LPB
+    name_vi: Ngân hàng TMCP Lộc Phát Việt Nam
+    name_en: LPBank (Vietnam Commercial Joint Stock Bank for Private Enterprise)
+  - ticker: MBB
+    name_vi: Ngân hàng TMCP Quân đội
+    name_en: Military Commercial Joint Stock Bank
+  - ticker: MSB
+    name_vi: Ngân hàng TMCP Hàng Hải Việt Nam
+    name_en: Vietnam Maritime Commercial Joint Stock Bank
+  - ticker: NAB
+    name_vi: Ngân hàng TMCP Nam Á
+    name_en: Nam A Commercial Joint Stock Bank
+  - ticker: OCB
+    name_vi: Ngân hàng TMCP Phương Đông
+    name_en: Orient Commercial Joint Stock Bank
+  - ticker: STB
+    name_vi: Ngân hàng TMCP Sài Gòn Thương Tín
+    name_en: Saigon Thuong Tin Commercial Joint Stock Bank
+  - ticker: SHB
+    name_vi: Ngân hàng TMCP Sài Gòn - Hà Nội
+    name_en: Saigon-Hanoi Commercial Joint Stock Bank
+  - ticker: TCB
+    name_vi: Ngân hàng TMCP Kỹ thương Việt Nam
+    name_en: Vietnam Technological and Commercial Joint Stock Bank
+  - ticker: TPB
+    name_vi: Ngân hàng TMCP Tiên Phong
+    name_en: Tien Phong Commercial Joint Stock Bank
+  - ticker: VIB
+    name_vi: Ngân hàng TMCP Quốc tế Việt Nam
+    name_en: Vietnam International Commercial Joint Stock Bank
+  - ticker: VBB
+    name_vi: Ngân hàng TMCP Việt Nam Thương Tín
+    name_en: Viet Nam Thuong Tin Commercial Joint Stock Bank
+  - ticker: VPB
+    name_vi: Ngân hàng TMCP Việt Nam Thịnh Vượng
+    name_en: Vietnam Prosperity Joint Stock Bank
+  - ticker: HDB
+    name_vi: Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh
+    name_en: Ho Chi Minh City Development Joint Stock Bank
+  - ticker: SSB
+    name_vi: Ngân hàng TMCP Đông Nam Á
+    name_en: Southeast Asia Commercial Joint Stock Bank
+  - ticker: KLB
+    name_vi: Ngân hàng TMCP Kiên Long
+    name_en: Kien Long Commercial Joint Stock Bank
+  - ticker: SGB
+    name_vi: Ngân hàng TMCP Sài Gòn Công Thương
+    name_en: Saigon Bank for Industry and Trade
+  - ticker: PGB
+    name_vi: Ngân hàng TMCP Xăng dầu Petrolimex
+    name_en: Petrolimex Group Commercial Joint Stock Bank

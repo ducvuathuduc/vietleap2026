@@ -907,6 +907,28 @@ def _charts(out, history, basket, vnindex, spec_i, spec_ii, threshold):
     _save(fig, out / "chart_threshold.png")
 
 
+def _published_series(history, scored, price_column, ret_column):
+    base = history[["month", price_column, ret_column]].rename(columns={
+        price_column: "actual_price", ret_column: "actual_log_return",
+    })
+    predicted = scored[["month", "predicted_npl", "predicted_price_npl"]].rename(columns={
+        "predicted_npl": "predicted_log_return", "predicted_price_npl": "predicted_price",
+    })
+    merged = base.merge(predicted, on="month", how="left")
+    merged = merged.loc[merged["month"].ge("2021-01")]
+    rows = []
+    for record in merged.itertuples(index=False):
+        rows.append({
+            "month": str(record.month),
+            "actual_price": None if pd.isna(record.actual_price) else float(record.actual_price),
+            "actual_log_return": None if pd.isna(record.actual_log_return) else float(record.actual_log_return),
+            "predicted_log_return": None if pd.isna(record.predicted_log_return) else float(record.predicted_log_return),
+            "predicted_price": None if pd.isna(record.predicted_price) else float(record.predicted_price),
+            "in_test": bool(str(record.month) >= TEST_START and pd.notna(record.predicted_log_return)),
+        })
+    return rows
+
+
 def _series_csv(frame, ret_column, price_column, path):
     columns = {
         "month": "month",
@@ -929,10 +951,8 @@ def _series_csv(frame, ret_column, price_column, path):
     out[keep].to_csv(path, index=False)
 
 
-def run(silver, out):
+def run(silver, out=None):
     silver = Path(silver)
-    out = Path(out)
-    out.mkdir(parents=True, exist_ok=True)
     import duckdb
     with duckdb.connect() as db:
         raw = db.read_parquet(str(silver / "bank_quarter.parquet")).df()
@@ -948,7 +968,8 @@ def run(silver, out):
     extra["period"] = extra["period"].astype(str).str.strip().str.upper()
     roe = pd.to_numeric(raw["roe"], errors="coerce") if "roe" in raw.columns else pd.Series(np.nan, index=raw.index)
     extra["roe"] = roe.to_numpy()
-    extra["bvps"] = pd.to_numeric(raw["valuation_ratios_book_value_per_share"], errors="coerce")
+    book = raw["valuation_ratios_book_value_per_share"] if "valuation_ratios_book_value_per_share" in raw.columns else np.nan
+    extra["bvps"] = pd.to_numeric(book, errors="coerce")
     panel = quarters.merge(extra, on=["ticker", "period"], how="left")
     panel["period"] = panel["period"].astype(str)
     roe_non_null = int(panel["roe"].notna().sum())
@@ -1010,7 +1031,16 @@ def run(silver, out):
     if compared and all(compared):
         spec_i["reading_vi"] += " Dấu hệ số của cả ba nhóm đổi so với phép không kiểm soát trên cùng các dòng."
         spec_i["reading_en"] += " All three band coefficients change sign relative to the no-control fit on the same rows."
-    threshold = _threshold(regression, controls)
+    if regression["bank_code"].nunique() < 2:
+        threshold = {
+            "k": None, "ci95": None, "bootstrap_reps_requested": KINK_REPS, "bootstrap_reps_used": 0,
+            "bootstrap_seed": BOOTSTRAP_SEED, "share_of_draws_at_k": None, "n": int(len(regression)),
+            "clusters": int(regression["bank_code"].nunique()) if len(regression) else 0, "period": None,
+            "controls": list(controls), "fixed_effects": "quarter", "ssr": None, "grid": [], "slopes": {},
+            "unavailable_reason": "fewer_than_two_banks",
+        }
+    else:
+        threshold = _threshold(regression, controls)
     threshold["reading_vi"] = _threshold_reading(threshold)
     threshold["reading_en"] = _threshold_reading(threshold, english=True)
     threshold["what_this_does_not_show"] = {
@@ -1033,6 +1063,8 @@ def run(silver, out):
             "vi": CAVEAT["vi"] + " " + metrics["timing"]["vi"] + " Dự báo một bước dùng giá thực của tháng trước, không phải một đường giá tích lũy từ mô hình.",
             "en": CAVEAT["en"] + " " + metrics["timing"]["en"] + " The one-step price uses the previous actual price, not a path compounded from model prices.",
         }
+    basket_metrics["series"] = _published_series(history, basket, "basket_price", "basket_ret")
+    vnindex_metrics["series"] = _published_series(history, vnindex, "vnindex_price", "vnindex_ret")
 
     table = _band_table(valued)
     table_bits = ", ".join(
@@ -1091,11 +1123,16 @@ def run(silver, out):
             "vnindex": vnindex_metrics,
         },
     }
-    _charts(out, history, basket, vnindex, spec_i, spec_ii, threshold)
+    payload = _jsonable(results)
+    if out is None:
+        return payload
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    if threshold.get("grid"):
+        _charts(out, history, basket, vnindex, spec_i, spec_ii, threshold)
     _series_csv(basket, "ret", "basket_price", out / "basket_monthly.csv")
     _series_csv(vnindex, "ret", "vnindex_price", out / "vnindex_monthly.csv")
     pd.DataFrame(table).to_csv(out / "band_table.csv", index=False)
-    payload = _jsonable(results)
     (out / "results_m8.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return payload
 

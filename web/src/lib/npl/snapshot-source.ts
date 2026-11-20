@@ -10,9 +10,11 @@ import { nextPeriod, type QuarterEffect, type Snapshot, type SnapshotBank, type 
 type WireCoefficient = { coefficient: number; ci95: (number | null)[]; p: number | null; wild_p?: number | null }
 type WireRegression = { n: number; clusters?: number; terms: Record<string, WireCoefficient>; period?: string[]; unavailable_reason?: string }
 type WireDecoderRow = { bank_code: string; period: string; delta_npl_ratio?: number | null; expected_change_pp?: number | null }
-type WireSnapshot = Omit<typeof seed, "banks" | "decoder" | "robustness" | "market"> & {
+type WireSnapshot = Omit<typeof seed, "banks" | "decoder" | "robustness" | "market" | "decomposition" | "decision_rule"> & {
   banks: Omit<SnapshotBank, "quarters" | "quarter_means" | "pairs">[]
   decoder?: { rows: WireDecoderRow[]; fiinquant_rows?: WireDecoderRow[]; reading_vi?: string; reading_en?: string }
+  decomposition?: Snapshot["decomposition"]
+  decision_rule?: Snapshot["decision_rule"]
   robustness: {
     leave_one_bank_out: Snapshot["robustness"]["leave_one_bank_out"]
     drop_2021_2022: WireRegression
@@ -24,7 +26,24 @@ type WireSnapshot = Omit<typeof seed, "banks" | "decoder" | "robustness" | "mark
   }
 }
 
-const validate = addFormats(new Ajv2020({ strict: false })).compile<WireSnapshot>(schema)
+// The previous publication can still be in S3 during a rollout. Validate the
+// new sections when present, while continuing to accept the previous snapshot.
+const readerSchema = {
+  ...schema,
+  required: schema.required.filter((key) => key !== "decomposition"),
+  properties: {
+    ...schema.properties,
+    market: {
+      ...schema.properties.market,
+      required: schema.properties.market.required.filter((key) => key !== "m8"),
+    },
+    decision_rule: {
+      ...schema.properties.decision_rule,
+      required: schema.properties.decision_rule.required.filter((key) => key !== "q4_oos"),
+    },
+  },
+}
+const validate = addFormats(new Ajv2020({ strict: false })).compile<WireSnapshot>(readerSchema)
 const CACHE_MS = 10 * 60 * 1000
 const STAR_SCHEMA = [
   { table: "dim_bank", keys: "bank_code", grain: "Một ngân hàng hoặc chỉ số / bank or index" },

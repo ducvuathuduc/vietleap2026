@@ -1,8 +1,8 @@
-// Provider switch for the RateWatch assistant.
+// Provider switch for the NPL assistant.
 // LLM_PROVIDER=openai|gateway|groq forces a provider; otherwise the first
 // configured one wins: Langfuse AI Gateway (default per brief), then OpenAI
 // direct, then Groq, and with no key at all the offline deterministic mode
-// (ratewatchModel() returns null and the route answers without an LLM).
+// (createAssistantModel() returns null and the route answers without an LLM).
 // When the gateway is used, model calls are recorded by the gateway itself —
 // instrumentation.ts must not also trace them (double recording).
 import { createGroq } from "@ai-sdk/groq"
@@ -33,7 +33,7 @@ export function providerName(env: NodeJS.ProcessEnv = process.env): ProviderName
   return "offline"
 }
 
-export interface RatewatchModel {
+export interface AssistantModel {
   model: LanguageModel
   provider: ProviderName
   label: string
@@ -48,7 +48,7 @@ export function gatewayHeaders(sessionId?: string | null): Record<string, string
   return sid ? { "langfuse-session-id": sid } : undefined
 }
 
-export function ratewatchModel(env: NodeJS.ProcessEnv = process.env, sessionId?: string | null): RatewatchModel | null {
+export function createAssistantModel(env: NodeJS.ProcessEnv = process.env, sessionId?: string | null): AssistantModel | null {
   const provider = providerName(env)
   if (provider === "offline") return null
   if (provider === "gateway") {

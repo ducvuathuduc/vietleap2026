@@ -1,5 +1,6 @@
 """D2 panel, inference, event alignment and publication checks."""
 import json
+from pathlib import Path
 
 import duckdb
 import numpy as np
@@ -151,11 +152,21 @@ def test_wild_bootstrap_counts_ties_with_three_clusters():
     assert model["terms"]["Q4"]["wild_p"] > .15
 
 
+def test_pipeline_image_runs_screening_after_the_main_ingest():
+    text = Path(__file__).resolve().parents[2].joinpath("Dockerfile.pipeline").read_text(encoding="utf-8")
+    ingest = 'python -m vlkit.npl.ingest --all --credentials "$credentials"'
+    screening = 'python -m vlkit.npl.ingest --screening --credentials "$credentials"'
+    assert text.index(screening) > text.index(ingest)
+
+
 def test_real_cli_publishes_models_and_gold(silver):
     out = silver / "gold"
     main(["--real", str(silver), "--out", str(out)])
     results = json.loads((out / "results.json").read_text(encoding="utf-8"))
-    assert set(results) == {f"M{i}" for i in range(1, 8)} | {"decoder"}
+    assert set(results) == {f"M{i}" for i in range(1, 9)} | {"decoder", "decomposition"}
+    assert results["M8"]["forecast"]["basket"]["series"]
+    assert any(point["in_test"] for point in results["M8"]["forecast"]["basket"]["series"])
+    assert results["decomposition"]["unavailable_reason"] == "no_screening_table"
     assert all(results[f"M{i}"]["reading"] and results[f"M{i}"]["what_this_does_not_show"] for i in range(1, 8))
     assert len(results["decoder"]["rows"]) == 184
     assert len(results["decoder"]["focus"]) == 48

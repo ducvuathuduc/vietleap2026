@@ -21,10 +21,10 @@ const legacy = ["/lab/analyst", "/print?dataset=demo", "/ban-do", "/chinh-sach",
 
 test("production hides legacy pages and APIs by default and leaves NPL and health reachable", () => {
   const original = process.env
-  process.env = { ...original, NODE_ENV: "production", ENABLE_LAB: "0", ENABLE_RATEWATCH: "0" }
+  process.env = { ...original, NODE_ENV: "production", ENABLE_LAB: "0" }
   try {
     checkRoutes(legacy, 404)
-    checkRoutes(["/api/ratewatch/chat"], 404)
+    checkRoutes(["/api/retired", "/api/retired/chat", "/api/npl/missing"], 404)
     checkRoutes(["/", "/giai-ma", "/du-lieu/csv", "/api/health", "/api/npl/chat"], 200)
   } finally {
     process.env = original

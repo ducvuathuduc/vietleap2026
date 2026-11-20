@@ -11,20 +11,11 @@ export const NPL_ROUTES = [
   "/giai-ma",
 ] as const
 
-export const RATEWATCH_ROUTES = [
-  "/ban-do",
-  "/chinh-sach",
-  "/lai-suat",
-  "/lai-suat/phuong-phap",
-] as const
-
-// Canonical tickers in the published NPL panel and the RateWatch edition.
+// Canonical tickers in the published NPL panel.
 export const NPL_BANK_CODES = [
   "ABB", "ACB", "BAB", "BID", "BVB", "CTG", "EIB", "HDB", "KLB", "LPB", "MBB", "MSB", "NAB", "NVB",
   "OCB", "PGB", "SGB", "SHB", "SSB", "STB", "TCB", "TPB", "VAB", "VBB", "VCB", "VIB", "VPB",
 ] as const
-
-export const RATEWATCH_BANK_CODES = ["AGRIBANK", "BIDV", "EXIMBANK", "HDB", "MSB", "OCB", "PVCOMBANK", "STB", "TCB", "VCBNEO", "VIETBANK"] as const
 
 /** Debug/internal leaks that must never appear as rendered page text. */
 export const FORBIDDEN_TEXT = /\b(?:get_ratios|fixture|run_id|undefined|NaN|stack|console)\b|\bError:/i
@@ -66,7 +57,7 @@ export function decoderCell(page: Page, lang: Lang) {
 export async function switchTo(page: Page, lang: Lang) {
   const current = lang === "en" ? "Ngôn ngữ" : "Language"
   const group = page.getByRole("group", { name: current, exact: true })
-  await group.getByRole("button", { name: lang.toUpperCase(), exact: true }).click()
+  await group.getByRole("link", { name: lang.toUpperCase(), exact: true }).click()
   await page.waitForURL((url) => lang === "en" ? url.searchParams.get("lang") === "en" : !url.searchParams.has("lang"))
   await expect(page.locator("html")).toHaveAttribute("lang", lang)
 }

@@ -1,31 +1,29 @@
 "use client"
 
-import { CountUp } from "@/components/ratewatch/count-up"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { CountUp } from "@/components/npl/count-up"
 import { formatNumber, type Lang } from "@/lib/npl/view"
 
-export function KeyNumbers({
-  cards,
-  lang,
-}: {
-  cards: { title: string; value: number; digits: number; suffix: string; help: string }[]
-  lang: Lang
-}) {
+type Metric = { label: string; value: number | null; compare?: number | null; digits: number; unit: string }
+
+export function KeyNumbers({ metrics, lang }: { metrics: Metric[]; lang: Lang }) {
+  function number(value: number | null, digits: number, unit: string) {
+    return value == null ? "—" : <CountUp value={value} text={(amount) => formatNumber(amount, lang, digits) + unit} />
+  }
+
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      {cards.map((card) => (
-        <Card key={card.title}>
-          <CardHeader>
-            <CardTitle>{card.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            <p className="text-2xl font-semibold tabular-nums">
-              <CountUp value={card.value} text={(value) => `${formatNumber(value, lang, card.digits)}${card.suffix}`} />
-            </p>
-            <p className="text-sm text-muted-foreground">{card.help}</p>
-          </CardContent>
-        </Card>
+    <dl className="grid divide-y divide-border border-y border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      {metrics.map((metric) => (
+        <div key={metric.label} className="flex flex-col gap-0.5 py-2.5 sm:pr-4 sm:pl-4 sm:first:pl-0">
+          <dt className="text-xs font-medium text-muted-foreground sm:text-sm">{metric.label}</dt>
+          <dd className="text-2xl font-semibold tracking-tight tabular-nums sm:text-[1.75rem]">
+            {number(metric.value, metric.digits, metric.unit)}
+            {metric.compare != null && (
+              <><span className="mx-2 text-sm font-normal text-muted-foreground">{lang === "vi" ? "so với" : "vs"}</span>
+                {number(metric.compare, metric.digits, metric.unit)}</>
+            )}
+          </dd>
+        </div>
       ))}
-    </div>
+    </dl>
   )
 }

@@ -1,4 +1,4 @@
-// Guards for the RateWatch AI assistant.
+// Guards for the NPL assistant.
 // Input: reject prompts that carry personal data (Vietnamese citizen ID, phone
 // numbers, bank account numbers, emails) with a polite VI/EN notice — private
 // data must never enter a prompt, a trace or a log (JUDGE.md section 4).

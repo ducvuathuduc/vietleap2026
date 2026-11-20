@@ -1,6 +1,6 @@
 import type { UIMessage, UIMessageChunk } from "ai"
 
-import { filterInput, numberCandidates, UNGROUNDED_MARK, type GuardResult } from "../../ratewatch/agent/guards.ts"
+import { filterInput, numberCandidates, UNGROUNDED_MARK, type GuardResult } from "../../llm/guards.ts"
 import type { Lang } from "./lang.ts"
 
 const INVESTMENT_REQUEST = /\b(?:should (?:i|we|one) (?:buy|sell|invest)|would you (?:buy|sell|invest)|(?:recommend|suggest)\b.{0,35}\b(?:buy(?:ing)?|sell(?:ing)?|invest(?:ing)?)|(?:buy|sell) or (?:buy|sell)|(?:buy|sell|invest)\b.{0,40}\b(?:stock|shares?)|co nen (?:mua|ban|dau tu)|nen (?:mua|ban|dau tu)|khuyen nghi (?:mua|ban|dau tu)|(?:mua|ban) co phieu)\b/i

@@ -66,6 +66,9 @@ test("runtime publish flag redacts vendor level fields and keeps the decoder's d
 
   assert.ok(publicSnapshot.banks.every((bank) => bank.series?.length))
   assert.ok(privateSnapshot.banks.every((bank) => !bank.series))
+  if (publicSnapshot.decomposition) {
+    assert.deepEqual(privateSnapshot.decomposition, { by_quarter: publicSnapshot.decomposition.by_quarter, rows: [] })
+  }
   const { decoder } = privateSnapshot
   assert.ok(decoder && !Array.isArray(decoder))
   const row = decoder.rows?.find((item) => item.bank_code === "VCB" && item.period === "2025Q2")
@@ -96,6 +99,22 @@ test("reads S3 with the configured bucket and key, deduplicates requests and exp
   now += 1
   assert.equal((await readSnapshot()).meta.snapshot_id, "cloud-test")
   assert.equal(send.mock.callCount(), 2)
+})
+
+test("accepts the previous S3 publication without the new judge-page fields", async (t) => {
+  setSource(t, "s3://vietleap-test/snapshots/npl/previous-format.json")
+  const previous = structuredClone(seed)
+  Reflect.deleteProperty(previous, "decomposition")
+  Reflect.deleteProperty(previous.market, "m8")
+  Reflect.deleteProperty(previous.decision_rule, "q4_oos")
+  t.mock.method(S3Client.prototype, "send", async () => ({
+    Body: { transformToString: async () => JSON.stringify(previous) },
+  }))
+  const snapshot = await readSnapshot()
+  assert.equal(snapshot.meta.snapshot_id, seed.meta.snapshot_id)
+  assert.equal(snapshot.decomposition, undefined)
+  assert.equal(snapshot.market.m8, undefined)
+  assert.equal(snapshot.decision_rule?.q4_oos, undefined)
 })
 
 test("rejects an invalid S3 snapshot and retries the same key after correction", async (t) => {

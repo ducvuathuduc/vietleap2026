@@ -5,7 +5,7 @@ import { isStepCount, tool, ToolLoopAgent, type LanguageModel, type Tool } from 
 import { z } from "zod"
 
 import type { Snapshot } from "../view.ts"
-import { ratewatchModel } from "../../ratewatch/agent/model.ts"
+import { createAssistantModel } from "../../llm/model.ts"
 import { detectLang, type Lang } from "./lang.ts"
 import * as npl from "./tools.ts"
 
@@ -114,7 +114,7 @@ export function makeNplAgent(input: {
   sessionId?: string | null
   lang?: Lang
 }): ToolLoopAgent | null {
-  const model = input.model === undefined ? ratewatchModel(input.env, input.sessionId)?.model ?? null : input.model
+  const model = input.model === undefined ? createAssistantModel(input.env, input.sessionId)?.model ?? null : input.model
   if (!model) return null
   return new ToolLoopAgent({
     model,

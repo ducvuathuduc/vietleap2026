@@ -1,0 +1,50 @@
+import { expect, test } from "@playwright/test"
+
+import { NPL_BANK_CODES } from "./helpers"
+
+test("home explains the Q4 pattern and links the heatmap to banks", async ({ page }) => {
+  await page.goto("/")
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Tỷ lệ nợ xấu thường đẹp hơn vào quý 4")
+  const chart = page.getByRole("table", { name: "Thay đổi tỷ lệ nợ xấu theo quý và ngân hàng" })
+  await expect(chart.getByRole("rowheader")).toHaveCount(NPL_BANK_CODES.length)
+  const first = chart.getByRole("link").first()
+  await first.focus()
+  await page.keyboard.press("ArrowRight")
+  const next = chart.getByRole("link").nth(1)
+  await expect(next).toBeFocused()
+  await expect(next).toHaveAccessibleName(/ABB, .*Nợ xấu .* đến .* Thay đổi/)
+  await next.click()
+  await expect(page).toHaveURL(/\/ngan-hang\/ABB$/)
+})
+
+test("home lets a judge pick a bank and year for the Q4 breakdown", async ({ page }) => {
+  await page.goto("/")
+  await page.getByRole("link", { name: "Thử một ngân hàng" }).click()
+  await expect(page.getByRole("heading", { name: "Mổ xẻ một lần NPL giảm" })).toBeVisible()
+  const bank = page.getByRole("combobox", { name: "Ngân hàng", exact: true })
+  await bank.click()
+  await page.getByRole("option", { name: "BID", exact: true }).click()
+  await expect(page.getByRole("link", { name: "Xem ngân hàng BID" })).toBeVisible()
+  const year = page.getByRole("combobox", { name: "Năm", exact: true })
+  await year.click()
+  const choice = page.getByRole("option").last()
+  const label = await choice.innerText()
+  await choice.click()
+  await expect(year).toContainText(label)
+  await expect(page.getByRole("list", { name: "Các bước thay đổi tỷ lệ nợ xấu" }).getByRole("listitem")).toHaveCount(5)
+  await expect(page.getByText("Cờ vàng cần xem xét", { exact: true })).toBeVisible()
+  const reading = page.getByRole("region", { name: "Đọc mức giảm quý 4 trong ba bước" })
+  await expect(reading.getByRole("heading", { name: "Thử với dữ liệu chưa dùng để đặt quy tắc" })).toBeVisible()
+  await expect(reading).toContainText("chưa đủ để phân biệt hai nhóm")
+})
+
+test("market switches the price comparison to VNINDEX", async ({ page }) => {
+  await page.goto("/thi-truong")
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Biết nợ xấu chưa giúp dự báo giá tốt hơn")
+  const group = page.getByRole("group", { name: "Chọn nhóm cổ phiếu" })
+  await expect(group.getByRole("button", { name: "Rổ cổ phiếu ngân hàng" })).toHaveAttribute("aria-pressed", "true")
+  await group.getByRole("button", { name: "VNINDEX" }).click()
+  await expect(group.getByRole("button", { name: "VNINDEX" })).toHaveAttribute("aria-pressed", "true")
+  await expect(page.getByText("Sai số giá trung bình", { exact: false })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "P/B theo nhóm nợ xấu" })).toBeVisible()
+})

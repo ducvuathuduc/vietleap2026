@@ -11,8 +11,8 @@ import { makeNplAgent } from "@/lib/npl/agent/agent"
 import { guardNplStream, investmentAdviceNotice, messagesForNplModel, nplMessageText } from "@/lib/npl/agent/answer-policy"
 import { detectLang } from "@/lib/npl/agent/lang"
 import { loadNplSnapshot } from "@/lib/npl/agent/snapshot"
-import { filterInput } from "@/lib/ratewatch/agent/guards"
-import { ratewatchModel } from "@/lib/ratewatch/agent/model"
+import { filterInput } from "@/lib/llm/guards"
+import { createAssistantModel } from "@/lib/llm/model"
 import { rateLimited } from "@/lib/rate-limit"
 
 export const maxDuration = 120
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     }
 
     const unavailable = lang === "vi" ? "Trợ lý hiện chưa khả dụng. Bạn có thể xem số liệu trực tiếp trên các trang nghiên cứu." : "The assistant is temporarily unavailable. You can find the data on the study pages."
-    const llm = ratewatchModel(process.env, body.sessionId)
+    const llm = createAssistantModel(process.env, body.sessionId)
     if (!llm) {
       log.rejected = "offline"
       logRequest(log)

@@ -1,15 +1,11 @@
-"""SBV system credit and deposit growth by month, plus the system LDR context.
-
-Reuses the RateWatch SBV article parser (``vlkit.ratewatch.sources.macro.parse_monthly``) so the two
-products read the same published figures from the same SBV API.
-"""
+"""SBV system credit and deposit growth by month, plus the system LDR context."""
 
 from urllib.parse import quote
 
 import pandas as pd
 
-from ...ratewatch.sources.macro import parse_monthly
 from .extra_landing import FetchError, land, write_silver
+from .sbv_articles import parse_monthly
 
 SBV = "https://sbv.gov.vn"
 CREDIT_ID, DEPOSIT_ID = "10034332", "10038520"

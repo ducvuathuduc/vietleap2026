@@ -45,7 +45,7 @@ async function expectLocalizedHeader(page: Page, lang: Lang) {
   expect.soft(await nav.getByRole("link").allInnerTexts()).toEqual(NAV[lang])
   await expect.soft(header.getByText(NAV.brand[lang], { exact: true }).first()).toBeVisible()
   const language = page.getByRole("group", { name: lang === "vi" ? "Ngôn ngữ" : "Language", exact: true })
-  await expect.soft(language.getByRole("button", { name: lang.toUpperCase(), exact: true })).toHaveAttribute("aria-pressed", "true")
+  await expect.soft(language.getByRole("link", { name: lang.toUpperCase(), exact: true })).toHaveAttribute("aria-current", "true")
 }
 
 const LABEL_ROLES = [
@@ -70,7 +70,7 @@ async function visiblePageLabels(page: Page) {
 
 const INVARIANT_LABELS = new Set([
   ...NPL_BANK_CODES,
-  "VI", "EN", "NPL", "NIM", "LDR", "ROA", "P/B",
+  "VI", "EN", "NPL", "NIM", "LDR", "ROA", "P/B", "VNINDEX",
   "Agribank", "Eximbank", "HDBank", "PVcomBank", "Sacombank", "Techcombank", "VCBNeo", "VietBank",
   "Open Next.js Dev Tools",
 ])

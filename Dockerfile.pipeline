@@ -27,6 +27,7 @@ snapshot=web/seed/npl/snapshot.json
 
 aws s3 sync "$lake_uri" data/lake/npl/
 python -m vlkit.npl.ingest --all --credentials "$credentials"
+python -m vlkit.npl.ingest --screening --credentials "$credentials"
 python -m vlkit.npl.pipeline --real data/lake/npl/silver --out out/npl
 python -m vlkit.npl.snapshot \
   --results out/npl/results.json \

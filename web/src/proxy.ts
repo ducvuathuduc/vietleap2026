@@ -11,6 +11,7 @@ const LEGACY_PATHS = [
   "/api/brief", "/api/chat", "/api/datasets", "/api/export", "/api/hoi-dap",
   "/api/ingest", "/api/jobs", "/api/sources", "/api/sql", "/api/story", "/api/warehouse",
 ]
+const PUBLIC_API_PATHS = new Set(["/api/health", "/api/npl/chat"])
 
 function atOrBelow(pathname: string, prefix: string) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -21,9 +22,10 @@ export function proxy(request: NextRequest) {
   const production = process.env.NODE_ENV === "production"
 
   if (production) {
-    const legacyBlocked = process.env.ENABLE_LAB !== "1" && LEGACY_PATHS.some((prefix) => atOrBelow(pathname, prefix))
-    const ratewatchBlocked = process.env.ENABLE_RATEWATCH !== "1" && atOrBelow(pathname, "/api/ratewatch")
-    if (legacyBlocked || ratewatchBlocked) {
+    const legacy = LEGACY_PATHS.some((prefix) => atOrBelow(pathname, prefix))
+    const legacyBlocked = legacy && process.env.ENABLE_LAB !== "1"
+    const unknownApi = !legacy && atOrBelow(pathname, "/api") && !PUBLIC_API_PATHS.has(pathname)
+    if (legacyBlocked || unknownApi) {
       return new NextResponse(null, { status: 404 })
     }
   }

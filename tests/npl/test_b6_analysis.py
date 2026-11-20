@@ -67,6 +67,45 @@ def test_decision_backtest_is_prior_only_and_matches_the_next_q1():
     assert rows.loc[rows.period.eq("2023Q4"), "status"].item() == "within_normal_season"
 
 
+def _oos_panel(contaminate_2025=False):
+    periods = pd.period_range("2021Q1", "2024Q4", freq="Q")
+    seasonal = {1: 0.5, 2: 0.0, 3: 0.0, 4: -0.5}
+    rows = []
+    for bank in "ABCD":
+        for period in periods:
+            rows.append(dict(bank_code=bank, period=str(period), quarter=int(period.quarter),
+                             year=int(period.year), d_npl_pct=seasonal[period.quarter]))
+    scored = {"A": -2.0, "B": -0.5, "C": 0.4, "D": -0.05}
+    outcome = {"A": 1.0, "B": -0.2, "C": 0.5, "D": 0.3}
+    for bank in "ABCD":
+        for quarter in (1, 2, 3):
+            value = 50.0 if contaminate_2025 and quarter == 2 else seasonal[quarter]
+            rows.append(dict(bank_code=bank, period=f"2025Q{quarter}", quarter=quarter, year=2025, d_npl_pct=value))
+        rows.append(dict(bank_code=bank, period="2025Q4", quarter=4, year=2025, d_npl_pct=scored[bank]))
+        rows.append(dict(bank_code=bank, period="2026Q1", quarter=1, year=2026, d_npl_pct=outcome[bank]))
+    return pd.DataFrame(rows)
+
+
+def test_q4_oos_band_stops_at_2024q4_and_scores_only_2025q4_declines():
+    clean = decision_rule(_oos_panel())[0]["q4_oos"]
+    contaminated = decision_rule(_oos_panel(contaminate_2025=True))[0]["q4_oos"]
+    assert clean["train_through"] == "2024Q4"
+    assert clean["scored_period"] == "2025Q4"
+    assert clean["outcome_period"] == "2026Q1"
+    assert clean["improving"]["n"] == 1 and clean["improving"]["share_pct"] == 100
+    assert clean["improving"]["ci95"] is None
+    assert clean["within_normal_season"]["n"] == 1 and clean["within_normal_season"]["share_pct"] == 0
+    assert clean["deteriorating"]["n"] == 1 and clean["deteriorating"]["reversals"] == 1
+    assert clean["unusual"]["n"] == 2 and clean["unusual"]["share_pct"] == 100
+    assert clean["unusual"]["ci95"] == pytest.approx([100, 100])
+    assert clean["improving"]["n"] + clean["within_normal_season"]["n"] + clean["deteriorating"]["n"] == 3
+    for label in ("improving", "deteriorating", "within_normal_season", "unusual"):
+        assert contaminated[label]["n"] == clean[label]["n"]
+        assert contaminated[label]["share_pct"] == clean[label]["share_pct"]
+    assert "2024Q4" in clean["reading_vi"] and "2026Q1" in clean["reading_vi"]
+    assert "2024Q4" in clean["reading_en"] and "2026Q1" in clean["reading_en"]
+
+
 def test_mechanism_uses_contiguous_stocks_and_four_complete_writeoffs():
     fields = {"customer_loans": [100, 110, 120, 150, 150],
               "group2_loans": [5, 5, 6, 9, 8], "groups345_loans": [3, 4, 6, 5, 6],

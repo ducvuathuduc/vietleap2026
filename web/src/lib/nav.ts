@@ -29,13 +29,6 @@ export const NPL_NAV = [
   { title: "Dữ liệu", url: "/du-lieu", en: "Data", keywords: ["du lieu", "csv"] },
 ] as const
 
-export const RATEWATCH_NAV = [
-  { title: "Lãi suất hôm nay", url: "/lai-suat", keywords: ["lai suat", "tien gui", "hom nay"] },
-  { title: "Bản đồ", url: "/ban-do", keywords: ["ban do", "tinh"] },
-  { title: "Chính sách", url: "/chinh-sach", keywords: ["chinh sach", "tran", "bao hiem"] },
-  { title: "Phương pháp", url: "/lai-suat/phuong-phap", keywords: ["phuong phap", "nguon"] },
-] as const
-
 export const NAV = [
   { title: "Tổng quan", url: "/", keywords: ["overview", "tong quan"] },
   { title: "Chỉ số & ASEAN", url: "/asean", keywords: ["asean", "chi so", "so sanh"] },

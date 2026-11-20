@@ -17,7 +17,7 @@ from .watermark import day_start, load, quarter_periods, save, year_periods
 
 ROOT = Path(__file__).resolve().parents[4]
 LAKE = ROOT / "data/lake/npl"
-BANKS = ROOT / "scenarios/ratewatch/banks.yaml"
+BANKS = ROOT / "scenarios/npl/banks.yaml"
 FIRST_QUARTER, FIRST_DAY, FIRST_YEAR = "2021Q1", "2011-01-01", 2021
 PERMISSION_DAYS = 5475  # SDK: history is limited to 5475 days before today
 PRICE_FIELDS = ["open", "high", "low", "close", "volume", "value", "bu", "sd", "fb", "fs", "fn"]

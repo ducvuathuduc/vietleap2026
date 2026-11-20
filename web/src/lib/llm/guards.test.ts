@@ -1,4 +1,4 @@
-// Run: node --test src/lib/ratewatch/agent/guards.test.ts
+// Run: node --test src/lib/llm/guards.test.ts
 import assert from "node:assert/strict"
 import { test } from "node:test"
 

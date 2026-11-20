@@ -1,8 +1,8 @@
-// Run: node --test src/lib/ratewatch/agent/model.test.ts
+// Run: node --test src/lib/llm/model.test.ts
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { gatewayHeaders, providerName, ratewatchModel, PROVIDER_ENV_KEYS } from "./model.ts"
+import { gatewayHeaders, providerName, createAssistantModel, PROVIDER_ENV_KEYS } from "./model.ts"
 
 function withEnv<T>(env: Record<string, string | undefined>, fn: () => T): T {
   const saved: Record<string, string | undefined> = {}
@@ -42,23 +42,23 @@ test("provider switch: LLM_PROVIDER forces a provider", () => {
   withEnv({ LLM_PROVIDER: "offline" }, () => assert.equal(providerName(), "offline"))
 })
 
-test("ratewatchModel returns null in offline mode", () => {
-  withEnv({}, () => assert.equal(ratewatchModel(), null))
+test("createAssistantModel returns null in offline mode", () => {
+  withEnv({}, () => assert.equal(createAssistantModel(), null))
 })
 
-test("ratewatchModel builds a model for each provider with the expected label", () => {
+test("createAssistantModel builds a model for each provider with the expected label", () => {
   withEnv({ LANGFUSE_GATEWAY_HOST: "https://gateway.jp.cloud.langfuse.com", LANGFUSE_GATEWAY_KEY: "gk" }, () => {
-    const m = ratewatchModel()!
+    const m = createAssistantModel()!
     assert.equal(m.provider, "gateway")
     assert.ok(m.label.includes("gpt-6-luna"))
   })
   withEnv({ OPENAI_API_KEY: "ok", OPENAI_MODEL: "gpt-6-luna" }, () => {
-    const m = ratewatchModel()!
+    const m = createAssistantModel()!
     assert.equal(m.provider, "openai")
     assert.ok(m.label.includes("gpt-6-luna"))
   })
   withEnv({ GROQ_API_KEY: "gr" }, () => {
-    const m = ratewatchModel()!
+    const m = createAssistantModel()!
     assert.equal(m.provider, "groq")
     assert.ok(m.label.includes("openai/gpt-oss-120b"))
   })
@@ -66,7 +66,7 @@ test("ratewatchModel builds a model for each provider with the expected label", 
 
 test("gateway base URL points at the Langfuse gateway OpenAI surface", () => {
   withEnv({ LANGFUSE_GATEWAY_HOST: "https://gateway.jp.cloud.langfuse.com/", LANGFUSE_GATEWAY_KEY: "gk" }, () => {
-    const m = ratewatchModel()!
+    const m = createAssistantModel()!
     assert.ok(m.gatewayBaseUrl === "https://gateway.jp.cloud.langfuse.com/openai/v1")
   })
 })

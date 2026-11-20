@@ -1,6 +1,6 @@
 import { expect, test, type APIResponse } from "@playwright/test"
 
-import { isProductionTarget, RATEWATCH_BANK_CODES, RATEWATCH_ROUTES } from "./helpers"
+import { isProductionTarget } from "./helpers"
 
 const SECURITY_HEADERS = [
   ["content-security-policy", /default-src 'self'/],
@@ -41,8 +41,11 @@ test.describe("internal routes @production", () => {
   test.skip(({ baseURL }) => !isProductionTarget(baseURL), "production-only checks require a production BASE_URL or E2E_PROD=1 for a local production server")
 
   const hiddenPaths = [
-    "/lab", "/lab/analyst", "/analyst", "/print", "/api/ratewatch", "/api/ratewatch/chat",
+    "/lab", "/lab/analyst", "/analyst", "/print", "/api/retired", "/api/retired/chat", "/api/npl/missing",
     "/api/brief/packs", "/api/datasets", "/api/sources/kinds", "/api/warehouse/tables",
+    "/ban-do", "/chinh-sach", "/lai-suat", "/lai-suat/phuong-phap", "/tai-lieu/lai-suat",
+    ...["AGRIBANK", "BIDV", "EXIMBANK", "HDB", "MSB", "OCB", "PVCOMBANK", "STB", "TCB", "VCBNEO", "VIETBANK"]
+      .map((code) => `/lai-suat/ngan-hang/${code}`),
   ]
   for (const path of hiddenPaths) {
     test(`GET ${path} returns a direct 404`, async ({ request }) => {
@@ -51,16 +54,8 @@ test.describe("internal routes @production", () => {
     })
   }
 
-  const legacyRatewatch = [...RATEWATCH_ROUTES, ...RATEWATCH_BANK_CODES.map((code) => `/lai-suat/ngan-hang/${code}`), "/tai-lieu/lai-suat"]
-  for (const path of legacyRatewatch) {
-    test(`GET ${path} returns a direct 404`, { tag: "@legacy" }, async ({ request }) => {
-      const response = await request.get(path, { maxRedirects: 0 })
-      expect(response.status()).toBe(404)
-    })
-  }
-
-  test("POST /api/ratewatch/chat returns a direct 404", async ({ request }) => {
-    const response = await request.post("/api/ratewatch/chat", { data: {}, maxRedirects: 0 })
+  test("POST to an unknown API route returns a direct 404", async ({ request }) => {
+    const response = await request.post("/api/retired/chat", { data: {}, maxRedirects: 0 })
     expect(response.status()).toBe(404)
   })
 })

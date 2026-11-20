@@ -1,4 +1,4 @@
-// Run: node --test src/lib/ratewatch/agent/env.test.ts
+// Run: node --test src/lib/llm/env.test.ts
 import assert from "node:assert/strict"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"

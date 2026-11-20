@@ -11,6 +11,8 @@ matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 
 from .decoder import build_decoder
+from .decompose import decompose_screening
+from .market_model import run as run_market_model
 from .real_data import DEADLINE_SOURCE, OWNERSHIP_SOURCES, RATIOS, clean_calendar, clean_market, clean_quarters, read_silver, write_star
 from .real_context import mechanism, policy_context, statement_amounts
 from .real_models import (
@@ -522,6 +524,8 @@ def run_real(silver, out):
         result.update(reading=vi, what_this_does_not_show=vi_limit,
                       reading_en=en, what_this_does_not_show_en=en_limit)
     models["decoder"] = decoder
+    models["M8"] = run_market_model(silver)
+    models["decomposition"] = decompose_screening(screening, tables.get("notes_bank_quarter"))
     m1["findings"] = _findings(models)
     changed = int(calendar["deadline"].ne(calendar["silver_deadline"]).sum())
     audit = ["# Nhật ký làm sạch dữ liệu NPL", "", "| Bước | Dòng trước | Dòng sau | Thực hiện |", "|---|---:|---:|---|"]

@@ -388,6 +388,106 @@ def market_study(panel, market, calendar, disclosure=None):
     }, events
 
 
+def _reversal_class(pairs, selected):
+    sample = pairs.loc[selected]
+    n = len(sample)
+    count = int(sample["reversed"].sum()) if n else 0
+    return {
+        "n": n,
+        "reversals": count,
+        "share_pct": 100 * count / n if n else None,
+        "clusters": int(sample.bank_code.nunique()) if n else 0,
+        "ci95": _bank_bootstrap_share(sample.reversed, sample.bank_code) if n else None,
+        "period": ["2025Q4", "2026Q1"] if n else None,
+    }
+
+
+def _q4_oos_reading(classes, *, english=False):
+    names = (
+        ("improving", "cải thiện", "improving"),
+        ("within_normal_season", "trong mùa vụ", "within the seasonal band"),
+        ("deteriorating", "xấu đi", "deteriorating"),
+        ("unusual", "khác thường", "unusual"),
+    )
+    parts = []
+    for key, vi_name, en_name in names:
+        item = classes[key]
+        if not item["n"]:
+            parts.append(f"{en_name} n=0" if english else f"{vi_name} n=0")
+            continue
+        interval = item["ci95"]
+        if english:
+            band = "no bootstrap interval (fewer than two banks)" if not interval else \
+                f"bootstrap 95% {_fmt_share(interval[0])} to {_fmt_share(interval[1])}"
+            parts.append(f"{en_name} {item['reversals']}/{item['n']} ({_fmt_share(item['share_pct'])}%, {band})")
+        else:
+            band = "chưa có khoảng bootstrap vì dưới hai ngân hàng" if not interval else \
+                f"KTC bootstrap 95% {_fmt_share(interval[0])}–{_fmt_share(interval[1])}"
+            parts.append(f"{vi_name} {item['reversals']}/{item['n']} ({_fmt_share(item['share_pct'])}%, {band})")
+    if english:
+        return (
+            "The 80% seasonal band is estimated once on data through 2024Q4 and applied only to banks whose NPL fell in 2025Q4. "
+            "The outcome is the 2026Q1 reversal rate, an actual change of the opposite sign. "
+            + "; ".join(parts) + ". "
+            "One holdout quarter does not show that the rule causes the reversal."
+        )
+    return (
+        "Dải mùa vụ 80% được ước lượng một lần trên dữ liệu đến hết 2024Q4 và chỉ áp vào các ngân hàng có NPL giảm ở 2025Q4. "
+        "Kết quả là tỷ lệ đảo chiều ở 2026Q1, tức thay đổi thực tế trái dấu. "
+        + "; ".join(parts) + ". "
+        "Một quý kiểm tra không cho thấy quy tắc gây ra đảo chiều."
+    )
+
+
+def _fmt_share(value):
+    return f"{value:.1f}"
+
+
+def _empty_class():
+    return {"n": 0, "reversals": 0, "share_pct": None, "clusters": 0, "ci95": None, "period": None}
+
+
+def _q4_oos(data):
+    """One seasonal band fit through 2024Q4, scored on 2025Q4 declines against 2026Q1."""
+    classes = {label: _empty_class() for label in ("unusual", "improving", "deteriorating", "within_normal_season")}
+    train = data.loc[data.period.le(FORECAST_TRAIN_THROUGH)].dropna(subset=["d_npl_pct"])
+    target = data.loc[data.period.eq("2025Q4")].copy()
+    x = _design(train, QUARTER_TERMS, bank=True) if len(train) else pd.DataFrame()
+    ranked = len(x) > len(x.columns) and np.linalg.matrix_rank(x.to_numpy()) == len(x.columns)
+    if ranked and len(target):
+        fit = sm.OLS(train["d_npl_pct"], x).fit()
+        predict = _design(target, QUARTER_TERMS, bank=True)
+        for column in x.columns.difference(predict.columns):
+            predict[column] = target.bank_code.eq(column.removeprefix("bank_code_"))
+        expected = predict[x.columns].astype(float) @ fit.params
+        scored = target.loc[target.bank_code.isin(train.bank_code) & target.d_npl_pct.notna()].copy()
+        scored["adjusted_change_pp"] = scored["d_npl_pct"] - expected.loc[scored.index]
+        scored = scored.loc[scored.d_npl_pct.lt(0)]
+        outcome = data.loc[data.period.eq("2026Q1"), ["bank_code", "d_npl_pct"]].dropna()
+        pairs = scored.merge(outcome.rename(columns={"d_npl_pct": "q1_delta"}), on="bank_code", validate="one_to_one")
+        if len(pairs):
+            pairs["reversed"] = (pairs["d_npl_pct"] * pairs["q1_delta"]).lt(0)
+            lo, hi = fit.resid.quantile([.1, .9])
+            improving = pairs["adjusted_change_pp"].lt(lo - 1e-10)
+            deteriorating = pairs["adjusted_change_pp"].gt(hi + 1e-10)
+            classes = {
+                "improving": _reversal_class(pairs, improving),
+                "deteriorating": _reversal_class(pairs, deteriorating),
+                "within_normal_season": _reversal_class(pairs, ~improving & ~deteriorating),
+                "unusual": _reversal_class(pairs, improving | deteriorating),
+            }
+    return {
+        "train_through": FORECAST_TRAIN_THROUGH,
+        "scored_period": "2025Q4",
+        "outcome_period": "2026Q1",
+        "sample": "2025Q4 declines with a 2026Q1 change",
+        "band_level_pct": 80,
+        **classes,
+        "reading_vi": _q4_oos_reading(classes),
+        "reading_en": _q4_oos_reading(classes, english=True),
+    }
+
+
 def decision_rule(panel):
     """Use the M7 model and residual quantiles with training strictly before each target."""
     data = _quarters(panel)
@@ -455,6 +555,7 @@ def decision_rule(panel):
         "reading_en": "Compare the actual NPL change minus its expected change with the M7 80% residual band; below is improving, above is deteriorating, and inside is within normal season.",
         "does_not_show_vi": "Cờ khác thường chỉ đặt ưu tiên rà soát; đảo chiều là hai thay đổi NPL thực tế liên tiếp trái dấu và chưa xác định nguyên nhân.",
         "does_not_show_en": "An unusual flag prioritizes review; a reversal is two consecutive actual NPL changes with opposite signs and does not establish a cause.",
+        "q4_oos": _q4_oos(data),
     }, rows[fields]
 
 

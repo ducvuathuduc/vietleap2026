@@ -14,9 +14,9 @@ import { type LanguageModel, type ToolLoopAgent } from "ai"
 import { makeNplAgent } from "../agent.ts"
 import { investmentAdviceNotice } from "../answer-policy.ts"
 import { detectLang } from "../lang.ts"
-import { loadRepoEnv } from "../../../ratewatch/agent/env.ts"
-import { filterInput, redactPii } from "../../../ratewatch/agent/guards.ts"
-import { providerName, ratewatchModel } from "../../../ratewatch/agent/model.ts"
+import { loadRepoEnv } from "../../../llm/env.ts"
+import { filterInput, redactPii } from "../../../llm/guards.ts"
+import { providerName, createAssistantModel } from "../../../llm/model.ts"
 import type { Snapshot } from "../../view.ts"
 import { scoreAnswer, type EvalCase } from "./score.ts"
 
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
   const outPath = outArg >= 0 ? process.argv[outArg + 1] : undefined
 
   const provider = providerName()
-  const chosen = ratewatchModel(process.env, `eval-npl-${new Date().toISOString().slice(0, 10)}`)
+  const chosen = createAssistantModel(process.env, `eval-npl-${new Date().toISOString().slice(0, 10)}`)
   if (!chosen) {
     console.error("eval: offline — no LLM key configured, live eval needs a provider")
     process.exit(1)

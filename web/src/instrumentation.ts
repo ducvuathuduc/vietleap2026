@@ -6,7 +6,7 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return
 
-  const { loadRepoEnv } = await import("./lib/ratewatch/agent/env")
+  const { loadRepoEnv } = await import("./lib/llm/env")
   loadRepoEnv()
 
   const publicKey = process.env.LANGFUSE_PUBLIC_KEY?.trim()
@@ -15,8 +15,8 @@ export async function register() {
 
   const { NodeSDK } = await import("@opentelemetry/sdk-node")
   const { LangfuseSpanProcessor } = await import("@langfuse/otel")
-  const { redactPii } = await import("./lib/ratewatch/agent/guards")
-  const { providerName } = await import("./lib/ratewatch/agent/model")
+  const { redactPii } = await import("./lib/llm/guards")
+  const { providerName } = await import("./lib/llm/model")
 
   const sdk = new NodeSDK({
     spanProcessors: [

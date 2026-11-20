@@ -13,6 +13,7 @@
     "linkage",
     "market",
     "forecast",
+    "decomposition",
     "robustness",
     "method",
     "limitations",
@@ -406,7 +407,8 @@
       "type": "object",
       "required": [
         "car_by_day",
-        "regressions"
+        "regressions",
+        "m8"
       ],
       "properties": {
         "car_by_day": {
@@ -488,10 +490,12 @@
         "period_start": { "anyOf": [{ "$ref": "#/$defs/period" }, { "type": "null" }] },
         "period_end": { "anyOf": [{ "$ref": "#/$defs/period" }, { "type": "null" }] },
         "reading_vi": { "type": "string", "minLength": 1 },
-        "reading_en": { "type": "string", "minLength": 1 }
+        "reading_en": { "type": "string", "minLength": 1 },
+        "m8": { "$ref": "#/$defs/priceModel" }
       },
       "additionalProperties": false
     },
+    "decomposition": { "$ref": "#/$defs/decomposition" },
     "forecast": {
       "type": "object",
       "required": [
@@ -647,7 +651,7 @@
     },
     "decision_rule": {
       "type": "object",
-      "required": ["latest_period", "latest", "q4_backtest", "band_level_pct", "reading_vi", "reading_en",
+      "required": ["latest_period", "latest", "q4_backtest", "q4_oos", "band_level_pct", "reading_vi", "reading_en",
                    "does_not_show_vi", "does_not_show_en"],
       "properties": {
         "latest_period": { "$ref": "#/$defs/period" },
@@ -657,6 +661,7 @@
             "allOf": [{ "$ref": "#/$defs/decision" }, { "required": ["bank_code"] }]
           }
         },
+        "q4_oos": { "$ref": "#/$defs/q4Oos" },
         "q4_backtest": {
           "type": "object",
           "required": ["unusual", "improving", "deteriorating", "within_normal_season"],
@@ -762,6 +767,87 @@
     }
   },
   "$defs": {
+    "pricePoint": {
+      "type": "object",
+      "required": ["month", "actual_price", "actual_log_return", "predicted_log_return", "predicted_price", "in_test"],
+      "properties": {
+        "month": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" },
+        "actual_price": { "type": ["number", "null"] },
+        "actual_log_return": { "type": ["number", "null"] },
+        "predicted_log_return": { "type": ["number", "null"] },
+        "predicted_price": { "type": ["number", "null"] },
+        "in_test": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "priceTarget": {
+      "type": "object",
+      "required": ["series", "mae_return", "mae_price", "direction_hit_rate", "dm_p", "reading_vi", "reading_en"],
+      "properties": {
+        "series": { "type": "array", "items": { "$ref": "#/$defs/pricePoint" } },
+        "mae_return": { "type": ["number", "null"] },
+        "mae_price": { "type": ["number", "null"] },
+        "direction_hit_rate": {},
+        "dm_p": { "type": ["number", "null"] },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "priceModel": {
+      "type": "object",
+      "required": ["basket", "vnindex", "band_table", "bands", "threshold", "reading_vi", "reading_en"],
+      "properties": {
+        "basket": { "$ref": "#/$defs/priceTarget" },
+        "vnindex": { "$ref": "#/$defs/priceTarget" },
+        "band_table": { "type": "array" },
+        "bands": { "type": "object" },
+        "threshold": { "type": "object" },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "decompositionRow": {
+      "type": "object",
+      "required": ["bank_code", "period", "npl_pct", "d_npl_pp", "denominator_pp", "numerator_pp",
+                   "loan_growth_qoq_pct", "g2_pct", "d_g2_pp", "writeoff_pct_loans"],
+      "properties": {
+        "bank_code": { "type": "string", "minLength": 1 },
+        "period": { "$ref": "#/$defs/period" },
+        "npl_pct": { "type": "number" },
+        "d_npl_pp": { "type": "number" },
+        "denominator_pp": { "type": "number" },
+        "numerator_pp": { "type": "number" },
+        "loan_growth_qoq_pct": { "type": "number" },
+        "g2_pct": { "type": "number" },
+        "d_g2_pp": { "type": "number" },
+        "writeoff_pct_loans": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "decomposition": {
+      "type": "object",
+      "required": ["rows", "by_quarter", "reading_vi", "reading_en", "q4_2025_check"],
+      "properties": {
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/decompositionRow" } },
+        "by_quarter": { "type": "array" },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 },
+        "q4_2025_check": {
+          "type": "object",
+          "required": ["artefact", "quarantine", "reading_vi", "reading_en"],
+          "properties": {
+            "artefact": { "type": "boolean" },
+            "quarantine": { "type": "array", "items": { "type": "string" } },
+            "reading_vi": { "type": "string", "minLength": 1 },
+            "reading_en": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
     "decoderRow": {
       "type": "object",
       "required": ["bank_code", "period", "status", "status_vi", "status_en", "signals", "missing_inputs",
@@ -819,6 +905,38 @@
         "unavailable_fields": { "type": "array", "items": { "type": "string" } },
         "n_by_field": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
       }
+    },
+    "reversalClass": {
+      "type": "object",
+      "required": ["n", "reversals", "share_pct", "ci95"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 0 },
+        "reversals": { "type": "integer", "minimum": 0 },
+        "share_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "ci95": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "clusters": { "type": "integer", "minimum": 0 },
+        "period": { "$ref": "#/$defs/periodRange" }
+      },
+      "additionalProperties": false
+    },
+    "q4Oos": {
+      "type": "object",
+      "required": ["train_through", "scored_period", "outcome_period", "improving", "deteriorating",
+                   "within_normal_season", "unusual", "reading_vi", "reading_en"],
+      "properties": {
+        "train_through": { "const": "2024Q4" },
+        "scored_period": { "const": "2025Q4" },
+        "outcome_period": { "const": "2026Q1" },
+        "sample": { "type": "string", "minLength": 1 },
+        "band_level_pct": { "const": 80 },
+        "improving": { "$ref": "#/$defs/reversalClass" },
+        "deteriorating": { "$ref": "#/$defs/reversalClass" },
+        "within_normal_season": { "$ref": "#/$defs/reversalClass" },
+        "unusual": { "$ref": "#/$defs/reversalClass" },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
     },
     "periodRange": {
       "type": ["array", "null"],

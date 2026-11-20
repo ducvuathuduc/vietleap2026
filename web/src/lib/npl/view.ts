@@ -47,6 +47,30 @@ export type BankSeriesPoint = {
 
 export type BankQuarter = { period: string; d_npl_pp: number | null; adjusted_change_pp: number | null }
 
+export type Q4Holdout = {
+  train_through: string
+  scored_period: string
+  outcome_period: string
+  improving: { n: number; reversals: number }
+  within_normal_season: { n: number; reversals: number }
+}
+
+export type DecompositionRow = {
+  bank_code: string
+  period: string
+  npl_pct: number | null
+  d_npl_pp: number | null
+  denominator_pp: number | null
+  numerator_pp: number | null
+  d_g2_pp: number | null
+}
+
+export type PublishedPriceForecast = {
+  series: { month: string; actual_price: number | null; predicted_price: number | null; in_test: boolean }[]
+  mae_price: number | null
+  mae_price_random_walk?: number | null
+}
+
 export type SnapshotBank = {
   code: string
   ticker: string
@@ -91,12 +115,26 @@ export type Snapshot = {
     benchmark: Term
     trend: { down_then_up: { year: number; share_pct: number; n: number }[]; npl_4q_avg_median_pct: number | null; period: string }
   }
+  reversal?: { share_pct: number | null; n: number; reversals: number }
+  decision_rule?: { q4_oos?: Q4Holdout }
+  decomposition?: {
+    rows: DecompositionRow[]
+    by_quarter: { quarter: string; share_falling_pct: number | null }[]
+  }
   series: { median_by_period: { period: string; npl_median_pct: number | null; npl_p25_pct: number | null; npl_p75_pct: number | null; coverage_median_pct: number | null; n_banks: number }[] }
   quarter_effects: QuarterEffect[]
   banks: SnapshotBank[]
   heterogeneity: { pre_period: string; high_banks: string[]; q4_high_npl: Term | null; q4_state: Term | null }
   linkage: { roa_absent: boolean; coverage_q4: Term | null; nim_q4: Term | null; loan_growth_q4: Term | null; roa_q4: Term | null }
   market: {
+    m8?: {
+      basket: PublishedPriceForecast
+      vnindex: PublishedPriceForecast
+      band_table: { band: string; label_vi: string; label_en: string; median_pb: number | null }[]
+      bands: Partial<Record<"spec_i" | "spec_ii" | "quarter_fe_bands_only", {
+        terms: Record<string, { ci95?: (number | null)[] } | null>
+      }>>
+    }
     car_by_day: { group: string; day: number; n: number; mean_car_pct: number | null; ci95: (number | null)[] | null }[]
     regressions: Record<string, { n: number | null; clusters: number | null; period?: string[] | null; terms: Record<string, Term | null>; unavailable_reason?: string | null }>
     events_with_car: number
@@ -154,6 +192,7 @@ export type DecoderInputs = {
   delta_g2_pp?: number | null
   delta_writeoff_pp?: number | null
   coverage_contested?: boolean
+  seasonal_band_available?: boolean
   ratios: { npl_ratio: DecoderRatio; g2_ratio: DecoderRatio; coverage: DecoderRatio; writeoff_ratio: DecoderRatio }
 }
 export type DecoderCell = {
@@ -297,6 +336,9 @@ type PublishedDecoderRow = {
   delta_g2_ratio?: number | null
   delta_coverage?: number | null
   delta_writeoff_ratio?: number | null
+  expected_change_pp?: number | null
+  lo80_pp?: number | null
+  hi80_pp?: number | null
   coverage_contested?: boolean
   coverage_source?: string | null
   loans_vnd_bn?: number | null
@@ -358,6 +400,7 @@ function publishedCell(row: PublishedDecoderRow): DecoderCell | null {
       delta_g2_pp: asPercent(row.delta_g2_ratio),
       delta_writeoff_pp: asPercent(row.delta_writeoff_ratio),
       coverage_contested: row.coverage_contested,
+      seasonal_band_available: row.expected_change_pp != null && row.lo80_pp != null && row.hi80_pp != null,
       ratios: {
         npl_ratio: ratio(row.npl_ratio, FIIN_SOURCE),
         g2_ratio: ratio(row.g2_ratio, notes),
@@ -385,7 +428,7 @@ function publishedCells(bag: PublishedDecoder): DecoderCell[] {
   })
 }
 
-function decoderCells(decoder: Snapshot["decoder"]): DecoderCell[] {
+export function decoderCells(decoder: Snapshot["decoder"]): DecoderCell[] {
   if (!decoder) return []
   if (Array.isArray(decoder)) return decoder
   return publishedCells(decoder)
@@ -818,6 +861,7 @@ export function applyPublishFlag(snapshot: Snapshot, env: string | undefined = p
   return {
     ...snapshot,
     decoder: hiddenDecoder,
+    decomposition: snapshot.decomposition && { by_quarter: snapshot.decomposition.by_quarter, rows: [] },
     meta: { ...snapshot.meta, publish_bank_series: false },
     banks: snapshot.banks.map((bank) => {
       const next = { ...bank }

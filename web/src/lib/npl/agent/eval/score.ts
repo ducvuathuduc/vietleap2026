@@ -1,4 +1,4 @@
-import { collectTruthNumbers, numberCandidates, numbersIn, UNGROUNDED_MARK } from "../../../ratewatch/agent/guards.ts"
+import { collectTruthNumbers, numberCandidates, numbersIn, UNGROUNDED_MARK } from "../../../llm/guards.ts"
 import { guardNplAnswer } from "../answer-policy.ts"
 import { detectLang } from "../lang.ts"
 

@@ -121,7 +121,7 @@ def _quality(panel, raw):
 def _names(silver):
     names = BANK_NAMES.copy()
     for directory in silver.parents:
-        register = directory / "scenarios" / "ratewatch" / "banks.yaml"
+        register = directory / "scenarios" / "npl" / "banks.yaml"
         if register.is_file():
             for record in yaml.safe_load(register.read_bytes())["banks"]:
                 ticker = record.get("ticker")
@@ -258,6 +258,79 @@ def _linkage(m5):
     return linkage
 
 
+def _price_target(block, name):
+    item = (block or {}).get("forecast", {}).get(name) or {}
+    comparison = item.get("diebold_mariano_vs_random_walk") or {}
+    return_errors = item.get("mae_return") or {}
+    price_errors = item.get("mae_price") or {}
+    return {
+        "n": item.get("n"),
+        "period": item.get("period"),
+        "mae_return": return_errors.get("npl_model"),
+        "mae_return_random_walk": return_errors.get("random_walk"),
+        "mae_return_by_model": return_errors,
+        "mae_price": price_errors.get("npl_model"),
+        "mae_price_random_walk": price_errors.get("random_walk"),
+        "mae_price_by_model": price_errors,
+        "direction_hit_rate": item.get("direction_hit_rate"),
+        "dm_p": comparison.get("p"),
+        "diebold_mariano_vs_random_walk": comparison,
+        "npl_mae_below_random_walk": item.get("npl_mae_below_random_walk"),
+        "reading_vi": item.get("reading_vi") or "Chưa có mô hình giá.",
+        "reading_en": item.get("reading_en") or "The price model is unavailable.",
+        "series": item.get("series") or [],
+    }
+
+
+def _price_model_block(block):
+    block = block or {}
+    bands = block.get("bands") or block.get("band_regression") or {}
+    table_reading = block.get("band_table_reading") or {}
+    if not isinstance(table_reading, dict):
+        table_reading = {}
+    basket = _price_target(block, "basket")
+    vnindex = _price_target(block, "vnindex")
+    reading_vi = block.get("reading_vi") or " ".join(
+        item["reading_vi"] for item in (basket, vnindex) if item.get("reading_vi")
+    )
+    reading_en = block.get("reading_en") or " ".join(
+        item["reading_en"] for item in (basket, vnindex) if item.get("reading_en")
+    )
+    return {
+        "basket": basket,
+        "vnindex": vnindex,
+        "band_table": block.get("band_table") or [],
+        "band_table_reading_vi": table_reading.get("reading_vi") or block.get("band_table_reading_vi") or "Chưa có bảng theo dải nợ xấu.",
+        "band_table_reading_en": table_reading.get("reading_en") or block.get("band_table_reading_en") or "The NPL-band table is unavailable.",
+        "bands": {key: bands[key] for key in ("spec_i", "spec_ii", "quarter_fe_bands_only") if key in bands},
+        "threshold": block.get("threshold") or {"k": None, "ci95": None, "reading_vi": "Chưa có ngưỡng.", "reading_en": "No threshold was estimated."},
+        "timing": (block.get("forecast") or {}).get("basket", {}).get("timing") or block.get("timing"),
+        "caveat": block.get("caveat") or block.get("association_only"),
+        "roe": block.get("roe") or block.get("roe_control"),
+        "ceiling": block.get("ceiling") or block.get("ceiling_3pct"),
+        "pb_source": block.get("pb_source"),
+        "reading_vi": reading_vi or "Chưa có mô hình giá.",
+        "reading_en": reading_en or "The price model is unavailable.",
+    }
+
+
+def _decomposition_block(block):
+    if block:
+        return block
+    return {
+        "rows": [],
+        "by_quarter": [],
+        "reading_vi": "Chưa có bảng nhóm nợ FiinQuant, nên chưa tách được phần mẫu số và phần tử số.",
+        "reading_en": "The FiinQuant loan-group table is absent, so the denominator and numerator split is unavailable.",
+        "q4_2025_check": {
+            "artefact": False,
+            "quarantine": [],
+            "reading_vi": "Không có bảng nhóm nợ để kiểm tra quý 4/2025.",
+            "reading_en": "No loan-group table was available to check 2025Q4.",
+        },
+    }
+
+
 def build_snapshot(results, gold, silver):
     silver = Path(silver).resolve()
     models = json.loads(Path(results).read_bytes())
@@ -305,6 +378,7 @@ def build_snapshot(results, gold, silver):
         "market": {key: m6[key] for key in ["car_by_day", "regressions", "deadline_car_by_day", "coverage",
                                            "events_with_car", "eligible_bank_quarters", "period_start", "period_end",
                                            "reading_en"] if key in m6},
+        "decomposition": _decomposition_block(models.get("decomposition")),
         "forecast": {"backtest": m7["backtest"]["by_period"],
                      "mae": {key: m7["backtest"]["mae_pp"][source] for key, source in
                              [("model", "model"), ("last_value", "naive"), ("seasonal_naive", "seasonal_naive")]}},
@@ -342,6 +416,7 @@ def build_snapshot(results, gold, silver):
     })
     if "coverage" in m6:
         payload["market"]["reading_vi"] = m6["reading"]
+    payload["market"]["m8"] = _price_model_block(models.get("M8"))
     for key, model in [("findings", m1), ("context", m1), ("mechanism", m1), ("decision_rule", m7)]:
         if key in model:
             payload[key] = model[key]
