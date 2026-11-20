@@ -1,0 +1,17 @@
+[
+  {
+    "month": "2026-08",
+    "household_deposits_bn": 11434266,
+    "deposit_growth_ytd_pct": 10.63,
+    "organization_deposits_bn": 6337186,
+    "methodology_break": true,
+    "source_id": "https://sbv.gov.vn/vi/t%E1%BB%95ng-ph%C6%B0%C6%A1ng-ti%E1%BB%87n-thanh-to%C3%A1n-v%C3%A0-ti%E1%BB%81n-g%E1%BB%ADi-c%E1%BB%A7a-kh%C3%A1ch-h%C3%A0ng-t%E1%BA%A1i-tctd",
+    "source_url": "https://sbv.gov.vn/vi/t%E1%BB%95ng-ph%C6%B0%C6%A1ng-ti%E1%BB%87n-thanh-to%C3%A1n-v%C3%A0-ti%E1%BB%81n-g%E1%BB%ADi-c%E1%BB%A7a-kh%C3%A1ch-h%C3%A0ng-t%E1%BA%A1i-tctd",
+    "publisher": "NHNN",
+    "licence": "Nguồn công khai",
+    "method": "Fixture",
+    "observed_at": "2026-11-20T12:45:00+07:00",
+    "run_id": "rw-20261120T1230",
+    "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+]

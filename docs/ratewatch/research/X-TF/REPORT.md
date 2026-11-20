@@ -1,0 +1,11 @@
+# X-TF REPORT — DONE, coverage shortfall stated plainly
+- **Banks 24 of 33 probed (23 with ≥6 terms); target ≥28 NOT met.** Missing 10: SCB, NCB, KienlongBank, Saigonbank, PGBank, BVBank, BaoVietBank, GPBank, OceanBank, CBBank — exact response per bank in XTF.md §3 (NCB + GPBank robots.txt = 403 ⇒ skipped).
+- **Rows 319** (`samples/rates_all_banks.csv`): **verified 65 = 20 %**, contested 66 = 21 %, agent_only 188 = 59 %.
+- **TinyFish USD 0.608 of 15**, 38 steps, 5 runs launched / 3 COMPLETED / 2 hung >25 min (NCB, KienlongBank, abandoned) — HDBank 367 s·12 steps·$0.192 · SeABank 188 s·22·$0.352 · SCB 163 s·4·$0.064 → 0 rows.
+- Acceptance run fresh: `parse_agg.py` **exit 0** (245 rows, 22 banks, stamp 20.11.2026) · `grade.py` **exit 0** (`rows=319 banks=24 verified=65 contested=66 agent_only=188`) · CSV sanity **exit 0** (`rows 319 dup 0 bad 0 banks 24 >=6terms 23`).
+- `tf_queue.py 26` and `free_readers.py` ran as background jobs (`tf_queue.log`, `free.log`); I stopped only my own pid 25968.
+- Worked: aggregator table for 22 banks (free, 1 GET, 8 terms × 2 channels) · PDF text for 6 (Sacombank, VietBank, OCB, Eximbank, PVcomBank, BIDV=corporate ⇒ its 9 "contested" are wrong-product) · agent: HDBank and SeABank newly, plus prior same-day agent runs as a free second reader for MB, ACB, Techcombank, VietinBank, MSB, Sacombank.
+- Negative, with responses: **no bank rate page yields numbers in raw HTML**; **TinyFetch markdown gave 0 usable tables** (5 batches, HTTP 200).
+- Daily run for 30 banks: **≈USD 2.5–3.0, 30–35 min**, agent-bound (USD 0.20/bank, ~4 min/bank, 1-in-3 hangs).
+- Risks: (1) the aggregator is the sole first reader for 22 banks — publish only with its per-bank `source_url`; (2) two-agent "verified" is same-kind, weaker than aggregator-vs-PDF; (3) the 10 missing banks need a non-web route before anyone claims "every bank"; (4) the big-4 publish no household PDF, so they stay the weakest part.
+- Compliance: robots.txt read per host first, ≥2.2 s spacing, no captcha/login bypass, key never printed, no repo edits, no git writes, no dependency installed, no process killed except my own runner.

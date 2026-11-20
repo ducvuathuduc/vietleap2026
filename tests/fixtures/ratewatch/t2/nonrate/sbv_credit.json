@@ -1,0 +1,15 @@
+[
+  {
+    "month": "2026-08",
+    "credit_growth_ytd_pct": 10.19,
+    "credit_bn": 20489434,
+    "source_id": "https://sbv.gov.vn/vi/du-no-tin-dung-doi-voi-nen-kt-dttktt",
+    "source_url": "https://sbv.gov.vn/vi/du-no-tin-dung-doi-voi-nen-kt-dttktt",
+    "publisher": "NHNN",
+    "licence": "Nguồn công khai",
+    "method": "Fixture",
+    "observed_at": "2026-11-20T12:45:00+07:00",
+    "run_id": "rw-20261120T1230",
+    "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+]

@@ -1,0 +1,450 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RateWatch VN snapshot",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": { "$ref": "#/$defs/string" },
+        "generated_at": { "$ref": "#/$defs/datetime" },
+        "run_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "banks_total": { "$ref": "#/$defs/count" },
+            "banks_read": { "$ref": "#/$defs/count" },
+            "rows": { "$ref": "#/$defs/count" },
+            "verified": { "$ref": "#/$defs/count" },
+            "single": { "$ref": "#/$defs/count" },
+            "contested": { "$ref": "#/$defs/count" }
+          },
+          "required": ["banks_total", "banks_read", "rows", "verified", "single", "contested"],
+          "additionalProperties": false
+        },
+        "quality": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "$ref": "#/$defs/string" },
+              "name": { "$ref": "#/$defs/string" },
+              "status": {
+                "enum": [
+                  "pass",
+                  "warn",
+                  "fail"
+                ]
+              },
+              "detail": { "$ref": "#/$defs/string" }
+            },
+            "required": ["id", "name", "status", "detail"],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "$ref": "#/$defs/string" },
+              "publisher": { "$ref": "#/$defs/string" },
+              "url": { "$ref": "#/$defs/uri" },
+              "licence": { "$ref": "#/$defs/string" },
+              "method": { "$ref": "#/$defs/string" }
+            },
+            "required": ["id", "publisher", "url", "licence", "method"],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": ["snapshot_id", "generated_at", "run_ids", "coverage", "quality", "sources"],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "ceiling": {
+          "type": "object",
+          "properties": {
+            "pct": { "$ref": "#/$defs/number" },
+            "terms": { "$ref": "#/$defs/string" },
+            "legal_ref": { "$ref": "#/$defs/string" },
+            "valid_from": { "$ref": "#/$defs/date" }
+          },
+          "required": ["pct", "terms", "legal_ref", "valid_from"],
+          "additionalProperties": false
+        },
+        "cap": {
+          "type": "object",
+          "properties": {
+            "vnd": { "$ref": "#/$defs/count" },
+            "legal_ref": { "$ref": "#/$defs/string" },
+            "valid_from": { "$ref": "#/$defs/date" }
+          },
+          "required": ["vnd", "legal_ref", "valid_from"],
+          "additionalProperties": false
+        },
+        "premium": {
+          "type": "object",
+          "properties": {
+            "pct": { "$ref": "#/$defs/number" },
+            "legal_ref": { "$ref": "#/$defs/string" }
+          },
+          "required": ["pct", "legal_ref"],
+          "additionalProperties": false
+        },
+        "insured_coverage": {
+          "type": "object",
+          "properties": {
+            "depositors_pct": { "$ref": "#/$defs/number" },
+            "value_pct": { "$ref": "#/$defs/number" },
+            "basis": { "$ref": "#/$defs/string" },
+            "source": { "$ref": "#/$defs/uri" }
+          },
+          "required": ["depositors_pct", "value_pct", "basis", "source"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ceiling", "cap", "premium", "insured_coverage"],
+      "additionalProperties": false
+    },
+    "banks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": { "$ref": "#/$defs/string" },
+          "name_vi": { "$ref": "#/$defs/string" },
+          "name_en": { "$ref": "#/$defs/string" },
+          "ticker": {
+            "type": "string"
+          },
+          "ownership": { "$ref": "#/$defs/string" },
+          "listed": {
+            "type": "boolean"
+          },
+          "sheet_url": {
+            "anyOf": [
+              { "$ref": "#/$defs/uri" },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sheet_date": {
+            "anyOf": [
+              { "$ref": "#/$defs/date" },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "read_at": {
+            "anyOf": [
+              { "$ref": "#/$defs/datetime" },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "term_months": { "$ref": "#/$defs/count" },
+                "channel": { "$ref": "#/$defs/channel" },
+                "tier": {
+                  "type": "string"
+                },
+                "rate_pct": { "$ref": "#/$defs/rate" },
+                "grade": {
+                  "enum": [
+                    "verified",
+                    "single",
+                    "contested"
+                  ]
+                },
+                "readers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "reader": {
+                        "enum": [
+                          "bank_html",
+                          "bank_pdf",
+                          "aggregator",
+                          "tinyfish"
+                        ]
+                      },
+                      "value": { "$ref": "#/$defs/rate" },
+                      "source_url": { "$ref": "#/$defs/uri" },
+                      "observed_at": { "$ref": "#/$defs/datetime" }
+                    },
+                    "required": ["reader", "value", "source_url", "observed_at"],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": ["term_months", "channel", "tier", "rate_pct", "grade", "readers"],
+              "additionalProperties": false
+            }
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "quarter": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^20[0-9]{2}Q[1-4]$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "metrics": {
+                    "type": "object",
+                    "properties": {
+                      "npl_pct": { "$ref": "#/$defs/nullable_number" },
+                      "npl_change_pp": { "$ref": "#/$defs/nullable_number" },
+                      "npl_amount_growth_pct": { "$ref": "#/$defs/nullable_number" },
+                      "coverage_pct": { "$ref": "#/$defs/nullable_number" },
+                      "ldr_pct": { "$ref": "#/$defs/nullable_number" },
+                      "roa_pct": { "$ref": "#/$defs/nullable_number" },
+                      "nim_pct": { "$ref": "#/$defs/nullable_number" },
+                      "loan_growth_pct": { "$ref": "#/$defs/nullable_number" },
+                      "deposit_growth_pct": { "$ref": "#/$defs/nullable_number" }
+                    },
+                    "required": ["npl_pct", "npl_change_pp", "npl_amount_growth_pct", "coverage_pct", "ldr_pct", "roa_pct", "nim_pct", "loan_growth_pct", "deposit_growth_pct"],
+                    "additionalProperties": false
+                  },
+                  "percentiles": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  },
+                  "flags": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "$ref": "#/$defs/string" },
+                        "text": { "$ref": "#/$defs/string" },
+                        "rule_ref": { "$ref": "#/$defs/string" }
+                      },
+                      "required": ["id", "text", "rule_ref"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "market": {
+                    "type": "object",
+                    "properties": {
+                      "pb": { "$ref": "#/$defs/nullable_number" },
+                      "vol60_pct": { "$ref": "#/$defs/nullable_number" },
+                      "drawdown_pct": { "$ref": "#/$defs/nullable_number" },
+                      "foreign_net_20d_bn": { "$ref": "#/$defs/nullable_number" }
+                    },
+                    "required": ["pb", "vol60_pct", "drawdown_pct", "foreign_net_20d_bn"],
+                    "additionalProperties": false
+                  },
+                  "source": {
+                    "const": "FiinQuant (aggregates)"
+                  }
+                },
+                "required": ["quarter", "metrics", "percentiles", "flags", "market", "source"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["code", "name_vi", "name_en", "ticker", "ownership", "listed", "sheet_url", "sheet_date", "read_at", "rates", "profile"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "market": {
+      "type": "object",
+      "properties": {
+        "ceiling_stats": {
+          "type": "object",
+          "properties": {
+            "quotes_1_5m": { "$ref": "#/$defs/count" },
+            "at_ceiling": { "$ref": "#/$defs/count" },
+            "above": { "$ref": "#/$defs/count" },
+            "jump_5_6_pp_median": { "$ref": "#/$defs/nullable_number" },
+            "n_banks": { "$ref": "#/$defs/count" },
+            "grade_basis": {
+              "enum": [
+                "verified",
+                "single"
+              ]
+            }
+          },
+          "required": ["quotes_1_5m", "at_ceiling", "above", "jump_5_6_pp_median", "n_banks", "grade_basis"],
+          "additionalProperties": false
+        },
+        "interbank": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "$ref": "#/$defs/date" },
+              "tenor": { "$ref": "#/$defs/string" },
+              "rate_pct": { "$ref": "#/$defs/number" }
+            },
+            "required": ["date", "tenor", "rate_pct"],
+            "additionalProperties": false
+          }
+        },
+        "omo": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "$ref": "#/$defs/date" },
+              "volume_bn": { "$ref": "#/$defs/number" },
+              "rate_pct": { "$ref": "#/$defs/number" },
+              "tenor_days": { "$ref": "#/$defs/count" }
+            },
+            "required": ["date", "volume_bn", "rate_pct", "tenor_days"],
+            "additionalProperties": false
+          }
+        },
+        "central_fx": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "$ref": "#/$defs/date" },
+              "vnd_per_usd": { "$ref": "#/$defs/count" }
+            },
+            "required": ["date", "vnd_per_usd"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["ceiling_stats", "interbank", "omo", "central_fx"],
+      "additionalProperties": false
+    },
+    "macro": {
+      "type": "object",
+      "properties": {
+        "cpi_yoy": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "month": { "$ref": "#/$defs/month" },
+              "pct": { "$ref": "#/$defs/number" }
+            },
+            "required": ["month", "pct"],
+            "additionalProperties": false
+          }
+        },
+        "sbv_monthly": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "month": { "$ref": "#/$defs/month" },
+              "household_deposits_bn": { "$ref": "#/$defs/nullable_number" },
+              "credit_growth_ytd_pct": { "$ref": "#/$defs/nullable_number" },
+              "deposit_growth_ytd_pct": { "$ref": "#/$defs/nullable_number" }
+            },
+            "required": ["month", "household_deposits_bn", "credit_growth_ytd_pct", "deposit_growth_ytd_pct"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["cpi_yoy", "sbv_monthly"],
+      "additionalProperties": false
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bank": { "$ref": "#/$defs/string" },
+          "term_months": { "$ref": "#/$defs/count" },
+          "channel": { "$ref": "#/$defs/channel" },
+          "from_pct": { "$ref": "#/$defs/rate" },
+          "to_pct": { "$ref": "#/$defs/rate" },
+          "observed_at": { "$ref": "#/$defs/datetime" }
+        },
+        "required": ["bank", "term_months", "channel", "from_pct", "to_pct", "observed_at"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["meta", "policy", "banks", "market", "macro", "changes"],
+  "additionalProperties": false,
+  "$defs": {
+    "string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "uri": {
+      "type": "string",
+      "format": "uri"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "datetime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "\\+07:00$"
+    },
+    "month": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])$"
+    },
+    "number": {
+      "type": "number"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "channel": {
+      "enum": [
+        "online",
+        "counter"
+      ]
+    },
+    "rate": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 15
+    },
+    "nullable_number": {
+      "anyOf": [
+        { "$ref": "#/$defs/number" },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

@@ -21,6 +21,13 @@ const sectorChildren: NavChild[] = SECTORS.map((sector) => ({
   keywords: sector.keywords,
 }))
 
+export const RATEWATCH_NAV = [
+  { title: "Lãi suất hôm nay", url: "/", keywords: ["lai suat", "tien gui", "hom nay"] },
+  { title: "Bản đồ", url: "/ban-do", keywords: ["ban do", "tinh"] },
+  { title: "Chính sách", url: "/chinh-sach", keywords: ["chinh sach", "tran", "bao hiem"] },
+  { title: "Phương pháp", url: "/phuong-phap", keywords: ["phuong phap", "nguon"] },
+] as const
+
 export const NAV = [
   { title: "Tổng quan", url: "/", keywords: ["overview", "tong quan"] },
   { title: "Chỉ số & ASEAN", url: "/asean", keywords: ["asean", "chi so", "so sanh"] },

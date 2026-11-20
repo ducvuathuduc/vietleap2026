@@ -1,0 +1,21 @@
+banks:
+  - code: VCB
+    name_vi: Ngân hàng TMCP Ngoại thương Việt Nam
+    name_en: Vietcombank
+    ticker: VCB
+    agg_names: []
+  - code: TCB
+    name_vi: Ngân hàng TMCP Kỹ thương Việt Nam
+    name_en: Techcombank
+    ticker: TCB
+    agg_names: []
+  - code: VPB
+    name_vi: Ngân hàng TMCP Việt Nam Thịnh Vượng
+    name_en: Vietnam Prosperity Joint Stock Bank
+    ticker: VPB
+    agg_names: ["VP Bank"]
+  - code: BIDV
+    name_vi: Ngân hàng TMCP Đầu tư và Phát triển Việt Nam
+    name_en: Joint Stock Commercial Bank for Investment and Development of Vietnam
+    ticker: BIDV
+    agg_names: ["BIDV"]

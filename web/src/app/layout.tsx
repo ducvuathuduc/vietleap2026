@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VietLeap Insight",
-  description: "Theo dõi tài chính công, FDI, ngân hàng, thị trường vốn, bất động sản và vị trí của Việt Nam trong ASEAN.",
+  title: "Lãi suất hôm nay",
+  description: "Kỳ hạn, ngân hàng và phần nằm trong hạn mức 350 triệu cho một khoản tiền gửi.",
   robots: { index: true, follow: true },
 };
 
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="font-sans min-h-full flex flex-col">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" forcedTheme="light" enableSystem={false} disableTransitionOnChange>
           <NuqsAdapter>{children}</NuqsAdapter>
           <Toaster />
         </ThemeProvider>

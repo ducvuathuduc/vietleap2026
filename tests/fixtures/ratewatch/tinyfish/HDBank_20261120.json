@@ -1,0 +1,108 @@
+{
+ "bank": "HDBank",
+ "url": "https://hdbank.com.vn/vi/ca-nhan/tiet-kiem/lai-suat",
+ "run_id": "781cb22a-264a-45a3-a7c6-2e6182f5c664",
+ "status": "COMPLETED",
+ "steps": 12,
+ "seconds": 367,
+ "cost_usd": 0.192,
+ "checked_at": "2026-11-20T13:16:55+07:00",
+ "error": null,
+ "result": {
+  "bank": "HDBank",
+  "rates": [
+   {
+    "quote": "3,50",
+    "channel": "counter",
+    "rate_pct": 3.5,
+    "term_months": 1,
+    "product_name": "Tiết kiệm có kỳ hạn thông thường"
+   },
+   {
+    "quote": "4,20",
+    "channel": "online",
+    "rate_pct": 4.2,
+    "term_months": 1,
+    "product_name": "Tiết kiệm Online VNĐ"
+   },
+   {
+    "quote": "3,50",
+    "channel": "counter",
+    "rate_pct": 3.5,
+    "term_months": 2,
+    "product_name": "Tiết kiệm có kỳ hạn thông thường"
+   },
+   {
+    "quote": "4,20",
+    "channel": "online",
+    "rate_pct": 4.2,
+    "term_months": 2,
+    "product_name": "Tiết kiệm Online VNĐ"
+   },
+   {
+    "quote": "3,60",
+    "channel": "counter",
+    "rate_pct": 3.6,
+    "term_months": 3,
+    "product_name": "Tiết kiệm có kỳ hạn thông thường"
+   },
+   {
+    "quote": "4,30",
+    "channel": "online",
+    "rate_pct": 4.3,
+    "term_months": 3,
+    "product_name": "Tiết kiệm Online VNĐ"
+   },
+   {
+    "quote": "4,90",
+    "channel": "counter",
+    "rate_pct": 4.9,
+    "term_months": 6,
+    "product_name": "Tiết kiệm có kỳ hạn thông thường"
+   },
+   {
+    "quote": "5,00",
+    "channel": "online",
+    "rate_pct": 5,
+    "term_months": 6,
+    "product_name": "Tiết kiệm Online VNĐ"
+   },
+   {
+    "quote": "7,20",
+    "channel": "counter",
+    "rate_pct": 7.2,
+    "term_months": 12,
+    "product_name": "Tiết kiệm có kỳ hạn thông thường (LS12 loại 1)"
+   },
+   {
+    "quote": "5,20",
+    "channel": "counter",
+    "rate_pct": 5.2,
+    "term_months": 12,
+    "product_name": "Tiết kiệm có kỳ hạn thông thường (LS12 loại 2)"
+   },
+   {
+    "quote": "5,30",
+    "channel": "online",
+    "rate_pct": 5.3,
+    "term_months": 12,
+    "product_name": "Tiết kiệm Online VNĐ"
+   },
+   {
+    "quote": "4,90",
+    "channel": "counter",
+    "rate_pct": 4.9,
+    "term_months": 24,
+    "product_name": "Tiết kiệm có kỳ hạn thông thường"
+   },
+   {
+    "quote": "5,00",
+    "channel": "online",
+    "rate_pct": 5,
+    "term_months": 24,
+    "product_name": "Tiết kiệm Online VNĐ"
+   }
+  ],
+  "page_effective_date": "2026-10-19"
+ }
+}
