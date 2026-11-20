@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import pytest
 
-from vlkit.npl.ingest import notes_gates, notes_runner, notes_vision
+from vlkit.npl.ingest import notes_gates, notes_links, notes_runner, notes_vision
 from vlkit.npl.ingest.extra_landing import Fetcher, write_silver
 from vlkit.npl.ingest.files import atomic
 
@@ -118,13 +118,18 @@ def test_a_gate_without_its_inputs_is_skipped_not_passed():
 
 
 class FakeVision:
-    """Two models answering the same page with one reading each (the scan path of the runner)."""
+    """The scan path: a locator answer for the thumbnail prompt, one reading per model for the page prompts."""
 
-    def __init__(self, payload_a, payload_b):
+    def __init__(self, payload_a, payload_b, located=(1,)):
         self.payloads = {notes_vision.MODEL_A: payload_a, notes_vision.MODEL_B: payload_b}
+        self.located = list(located)
         self.cost_usd = 0.0
+        self.calls = []
 
-    def read(self, png, prompt, model):
+    def read(self, png, prompt, model, schema=None):
+        self.calls.append(model)
+        if "balance_sheet_pages" in prompt:
+            return {"classification_pages": self.located, "provision_pages": [], "balance_sheet_pages": []}
         return self.payloads[model]
 
 
@@ -135,8 +140,8 @@ def test_harvest_reads_a_text_layer_twice_grades_it_and_derives_quarterly_flows(
         {"bank": "VCB", "period": "2025Q2", "statement_type": "consolidated", "url": "https://x.test/q2.pdf",
          "found_by": "html", "found_at": "now"}])
     fetcher, client = fake_fetcher({"https://x.test/q1.pdf": b"%PDF-q1", "https://x.test/q2.pdf": b"%PDF-q2"})
-    monkeypatch.setattr(notes_runner, "page_texts", lambda content: fixtures(content)[0])
-    monkeypatch.setattr(notes_runner, "page_tables", lambda content: fixtures(content)[1])
+    monkeypatch.setattr(notes_runner, "fast_page_texts", lambda content: fixtures(content)[0])
+    monkeypatch.setattr(notes_runner, "page_tables", lambda content, only=None: fixtures(content)[1])
     frame, gates, stats = notes_runner.harvest(tmp_path, links, fetcher, "notes-test", vision=object(),
                                                vendor={("VCB", "2025Q1"): 1.0, ("VCB", "2025Q2"): 1.0})
     assert stats["fetched"] == 2 and stats["read"] == 2
@@ -153,21 +158,22 @@ def test_harvest_uses_two_vision_reads_when_the_pdf_is_a_scan(tmp_path, monkeypa
     links = pd.DataFrame([{"bank": "VCB", "period": "2025Q2", "statement_type": "consolidated",
                            "url": "https://x.test/scan.pdf", "found_by": "html", "found_at": "now"}])
     fetcher, _ = fake_fetcher({"https://x.test/scan.pdf": b"%PDF-scan"})
-    monkeypatch.setattr(notes_runner, "page_texts", lambda content: [""])
-    monkeypatch.setattr(notes_runner, "page_png", lambda content, page: b"png")
+    monkeypatch.setattr(notes_runner, "fast_page_texts", lambda content: ["", ""])
+    monkeypatch.setattr(notes_runner, "render_strip", lambda content, pages, **kwargs: b"strip")
+    monkeypatch.setattr(notes_runner, "render_pages", lambda content, pages, scale=2.0: {page: b"png" for page in pages})
     vision = FakeVision({"values": {"loans_customer": 1000.0, "group_2_watch": 50.0}},
-                        {"values": {"loans_customer": 1000.0, "group_2_watch": 50.0}})
+                        {"values": {"loans_customer": 1000.0, "group_2_watch": 50.0}}, located=(2,))
     frame, _, stats = notes_runner.harvest(tmp_path, links, fetcher, "notes-test", vision=vision)
     graded = dict(zip(frame["field"], frame["grade"]))
     assert graded["loans_customer"] == "verified" and graded["group_2_watch"] == "verified"
-    assert stats["fetched"] == 1
+    assert stats["fetched"] == 1 and stats["vision_calls"] == 3   # one locator call + two reads
 
 
 def test_a_scan_without_the_vision_reader_reports_the_gap_instead_of_rows(tmp_path, monkeypatch):
     links = pd.DataFrame([{"bank": "VCB", "period": "2025Q2", "statement_type": "consolidated",
                            "url": "https://x.test/scan.pdf", "found_by": "html", "found_at": "now"}])
     fetcher, _ = fake_fetcher({"https://x.test/scan.pdf": b"%PDF-scan"})
-    monkeypatch.setattr(notes_runner, "page_texts", lambda content: [""])
+    monkeypatch.setattr(notes_runner, "fast_page_texts", lambda content: [""])
     frame, gates, stats = notes_runner.harvest(tmp_path, links, fetcher, "notes-test", vision=None,
                                                use_vision=False)
     assert len(frame) == 0 and len(gates) == 0
@@ -177,12 +183,12 @@ def test_a_scan_without_the_vision_reader_reports_the_gap_instead_of_rows(tmp_pa
 def test_run_notes_writes_silver_gates_run_log_and_watermark_then_skips_the_same_bank_quarter(tmp_path, monkeypatch):
     write_silver(tmp_path, notes_runner.LINKS, pd.DataFrame([
         {"bank": "VCB", "period": "2025Q1", "statement_type": "consolidated", "url": "https://x.test/q1.pdf",
-         "found_by": "html", "found_at": "now"},
+         "found_by": "vietstock_static", "found_at": "now", "http_status": 200},
         {"bank": "VCB", "period": "2025Q2", "statement_type": "consolidated", "url": "https://x.test/q2.pdf",
-         "found_by": "html", "found_at": "now"}]))
+         "found_by": "vietstock_static", "found_at": "now", "http_status": 200}]))
     fetcher, client = fake_fetcher({"https://x.test/q1.pdf": b"%PDF-q1", "https://x.test/q2.pdf": b"%PDF-q2"})
-    monkeypatch.setattr(notes_runner, "page_texts", lambda content: fixtures(content)[0])
-    monkeypatch.setattr(notes_runner, "page_tables", lambda content: fixtures(content)[1])
+    monkeypatch.setattr(notes_runner, "fast_page_texts", lambda content: fixtures(content)[0])
+    monkeypatch.setattr(notes_runner, "page_tables", lambda content, only=None: fixtures(content)[1])
     log = notes_runner.run_notes(lake=tmp_path, banks=["VCB"], periods=["2025Q1", "2025Q2"],
                                  fetcher=fetcher, vision=object(), use_vision=False)
     assert log["silver"]["rows"] > 0 and log["silver"]["verified_share"] == 1.0
@@ -229,3 +235,97 @@ def test_coverage_reports_fields_and_verified_share_per_bank_quarter():
         {"bank": "VCB", "period": "2025Q2", "field": "group_2_watch", "grade": "single"}])
     table = notes_runner.coverage(frame)
     assert table.iloc[0].to_dict() == {"bank": "VCB", "period": "2025Q2", "fields": 2, "verified_share": 0.5}
+
+
+def test_vietstock_urls_follow_the_verified_naming_and_keep_the_statement_type():
+    rows = notes_links.vietstock_quarter_urls("VCB", "2026Q3")
+    assert rows[0] == ("https://static2.vietstock.vn/data/HOSE/2026/BCTC/VN/QUY%203/"
+                       "VCB_Baocaotaichinh_Q3_2026_Hopnhat.pdf", "consolidated")
+    assert [statement_type for _, statement_type in rows] == ["consolidated", "separate", "separate"]
+    annual = notes_links.vietstock_annual_urls("VCB", 2025)
+    assert annual[0][0].endswith("/NAM/VCB_Baocaotaichinh_2025_Hopnhat.pdf")
+    assert not annual[0][0].endswith(".pdf.pdf")
+
+
+def test_a_probe_keeps_every_head_and_only_a_pdf_answer_becomes_a_link():
+    asked = []
+
+    def probe(url):
+        asked.append(url)
+        if "Hopnhat" in url and "/HOSE/" in url:
+            return 200, "application/pdf"
+        if "Congtyme" in url:
+            return 200, "application/pdf"
+        return 404, "text/html"
+
+    probes, hits = notes_links.probe_statement(probe, "VCB", "2026Q3", found_at="now")
+    assert len(asked) == 3 and len(probes) == 3                     # consolidated + two separate namings, one exchange
+    assert [row["http_status"] for row in probes] == [200, 200, 404]
+    assert [row["statement_type"] for row in hits] == ["consolidated", "separate"]
+    assert {row["found_by"] for row in probes} == {"vietstock_static"}
+
+
+def test_a_quarter_missing_on_hose_is_looked_for_on_the_other_exchanges():
+    def probe(url):
+        return (200, "application/pdf") if "/UPCOM/" in url else (404, "text/html")
+
+    probes, hits = notes_links.probe_statement(probe, "BAB", "2025Q3", found_at="now")
+    assert len(hits) == 3 and all("/UPCOM/" in row["url"] for row in hits)      # the three UPCOM namings
+    assert len(probes) == 9                                                      # 3 HOSE + 3 HNX 404s, then 3 UPCOM hits
+
+
+def test_discover_writes_the_probe_log_to_silver_and_does_not_reprobe_a_hit(tmp_path):
+    def probe(url):
+        return (200, "application/pdf") if "Hopnhat" in url else (404, "text/html")
+
+    registry, stats = notes_runner.discover(tmp_path, ["VCB"], ["2025Q2"], probe, "notes-test",
+                                            annual_years=(2025,))
+    assert stats["hits"] >= 1 and stats["probes"] >= 3
+    saved = pd.read_csv(tmp_path / "silver/notes_links.csv")
+    assert set(saved["found_by"]) == {"vietstock_static"} and (saved["http_status"] == 404).any()
+    again, stats_again = notes_runner.discover(tmp_path, ["VCB"], ["2025Q2"],
+                                              lambda url: (_ for _ in ()).throw(AssertionError(url)),
+                                              "notes-test-2")
+    assert stats_again["probes"] == 0                       # the 200 consolidated link is already known
+    assert len(again) == len(registry)
+
+
+def test_the_locator_maps_a_thumbnail_grid_to_absolute_pages(tmp_path, monkeypatch):
+    class Vision:
+        cost_usd = 0.0
+
+        def __init__(self):
+            self.calls = 0
+
+        def read(self, png, prompt, model, schema=None):
+            assert schema is not None                   # the locator must pass its own schema
+            self.calls += 1
+            return {"classification_pages": [11, 12, 999], "provision_pages": [13], "balance_sheet_pages": [2]}
+
+    monkeypatch.setattr(notes_runner, "render_strip", lambda content, pages, **kwargs: b"strip")
+    vision = Vision()
+    pages, errors = notes_runner.locate_table_pages(b"pdf", vision, total=20)
+    assert pages == [2, 11, 12, 13]                          # 999 dropped; classification, provision, balance sheet
+    assert errors == {} and vision.calls == 4                # 20 pages / 6 per strip
+
+
+def test_a_fragment_run_writes_rows_to_json_and_leaves_silver_alone(tmp_path, monkeypatch):
+    write_silver(tmp_path, notes_runner.LINKS, pd.DataFrame([
+        {"bank": "VCB", "period": "2025Q2", "statement_type": "consolidated", "url": "https://x.test/q2.pdf",
+         "found_by": "vietstock_static", "found_at": "now", "http_status": 200}]))
+    fetcher, _ = fake_fetcher({"https://x.test/q2.pdf": b"%PDF-q2"})
+    monkeypatch.setattr(notes_runner, "fast_page_texts", lambda content: fixtures(content)[0])
+    monkeypatch.setattr(notes_runner, "page_tables", lambda content, only=None: [])
+    fragment = tmp_path / "out/fragment-vcb.json"
+    log = notes_runner.run_notes(lake=tmp_path, banks=["VCB"], periods=["2025Q2"], fetcher=fetcher,
+                                 vision=object(), use_vision=False, fragment=fragment)
+    payload = json.loads(fragment.read_text(encoding="utf-8"))
+    assert payload["rows"] and payload["stats"]["fetched"] == 1
+    assert not (tmp_path / "silver/notes_bank_quarter.parquet").exists()
+    assert log["fragment"] == str(fragment)
+    frame, gates = notes_runner.merge_fragments([fragment])
+    assert len(frame) == len(payload["rows"]) and set(frame.columns) == set(notes_runner.SILVER_COLUMNS)
+    merge = notes_runner.merge_fragment_dir(tmp_path, fragment.parent, "notes-merge-test")
+    assert merge["datasets"]["notes_merge"]["fragments"] == 1 and merge["silver"]["rows"] == len(frame)
+    silver = pd.read_parquet(tmp_path / "silver/notes_bank_quarter.parquet")
+    assert set(silver["bank"]) == {"VCB"} and silver["field"].nunique() > 0

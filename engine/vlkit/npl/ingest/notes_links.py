@@ -24,7 +24,11 @@ CATALOGUE = {
     "VPB": "https://investor.vpbank.com.vn/vi/bao-cao-tai-chinh",
     "STB": "https://www.sacombank.com.vn/nha-dau-tu/bao-cao-tai-chinh.html",
 }
-COLUMNS = ["bank", "period", "statement_type", "url", "found_by", "found_at"]
+COLUMNS = ["bank", "period", "statement_type", "url", "found_by", "found_at", "http_status"]
+VIETSTOCK = "https://static2.vietstock.vn/data/{exchange}/{year}/BCTC/VN/{folder}/{ticker}_Baocaotaichinh_{label}_{year}_{kind}.pdf"
+EXCHANGES = ("HOSE", "HNX", "UPCOM")          # probe order: the exchange the bank is listed on is usually HOSE
+QUARTER_KINDS = (("consolidated", "Hopnhat"), ("separate", "Congtyme"), ("separate", "Rieng"))
+ANNUAL_KINDS = (("consolidated", "Hopnhat"), ("separate", "Rieng"))
 PDF = re.compile(r'(?:https?://[^\s"\'<>]+|/[^\s"\'<>]+?)\.pdf', re.I)
 YEAR = re.compile(r"(20[12][0-9])")
 QUARTER_WORDS = [(r"quy\s*4|quy\s*iv|q\s*4|ky\s*4", 4), (r"quy\s*3|quy\s*iii|q\s*3|ky\s*3", 3),
@@ -93,11 +97,70 @@ def rows_from_agent(bank, records, found_at=None, found_by="tinyfish"):
     return rows
 
 
+QUARTER_URL = ("https://static2.vietstock.vn/data/{exchange}/{year}/BCTC/VN/QUY%20{quarter}/"
+               "{ticker}_Baocaotaichinh_Q{quarter}_{year}_{kind}.pdf")
+ANNUAL_URL = "https://static2.vietstock.vn/data/{exchange}/{year}/BCTC/VN/NAM/{name}"
+
+
+def vietstock_quarter_urls(ticker, period, exchange="HOSE"):
+    """[(url, statement_type)] for one bank-quarter: consolidated first, then the two separate-statement names."""
+    year, quarter = str(period)[:4], str(period)[-1]
+    return [(QUARTER_URL.format(exchange=exchange, year=year, quarter=quarter, ticker=ticker, kind=kind),
+             statement_type) for statement_type, kind in QUARTER_KINDS]
+
+
+def vietstock_annual_urls(ticker, year, exchange="HOSE"):
+    """[(url, statement_type)] candidates for the audited annual statement: three NAM file namings.
+
+    The folder is known ("NAM"); which naming Vietstock uses is not, so all three are probed and the log keeps
+    the answer (a 404 stays in the probe row, so a later run can drop the namings that never exist).
+    """
+    out = []
+    for statement_type, kind in ANNUAL_KINDS:
+        for name in (f"{ticker}_Baocaotaichinh_{year}_{kind}", f"{ticker}_Baocaotaichinh_NAM_{year}_{kind}",
+                     f"{ticker}_Baocaotaichinh_{year}_NAM_{kind}"):
+            out.append((ANNUAL_URL.format(exchange=exchange, year=year, name=name + ".pdf"), statement_type))
+    return out
+
+
+def probe_statement(probe, ticker, period, found_at=None, exchanges=EXCHANGES, separate=True):
+    """(probes, hits) for one bank-quarter; every HEAD is kept, a miss stays in the log as a 404.
+
+    `probe` is a callable url -> (http_status, content_type). The consolidated statement is looked for first,
+    across the exchanges in order, and the search stops at the first exchange where something answered; the
+    separate-statement names are then probed in that same exchange. A normal bank-quarter costs two HEADs.
+    """
+    probes = []
+    for exchange in exchanges:
+        answered = False
+        for url, statement_type in vietstock_quarter_urls(ticker, period, exchange):
+            status, content_type = probe(url)
+            hit = status == 200 and "pdf" in str(content_type).lower()
+            probes.append({"bank": ticker, "period": period, "statement_type": statement_type, "url": url,
+                           "found_by": "vietstock_static", "found_at": found_at, "http_status": status})
+            if hit:
+                answered = True
+                if statement_type == "consolidated":
+                    continue            # keep probing the two separate namings in the exchange that answered
+                if separate:
+                    continue
+        if answered:
+            break
+    return probes, [row for row in probes if row["http_status"] == 200]
+
+
+def hits_only(frame):
+    """The links that answered 200 (a probe log and a link register are the same table, one column apart)."""
+    if frame is None or not len(frame) or "http_status" not in frame:
+        return frame
+    return frame[frame["http_status"].isna() | (frame["http_status"] == 200)]
+
+
 def prefer_consolidated(rows):
     """One link per (bank, period): the consolidated statement wins, then the earliest found link."""
     if not rows:
         return pd.DataFrame(columns=COLUMNS)
-    frame = pd.DataFrame(rows, columns=COLUMNS)
+    frame = pd.DataFrame(rows).reindex(columns=COLUMNS)
     order = {"consolidated": 0, "unknown": 1, "separate": 2}
     frame["_order"] = frame["statement_type"].map(order).fillna(3)
     frame = frame.sort_values(["bank", "period", "_order", "url"]).drop_duplicates(["bank", "period"], keep="first")

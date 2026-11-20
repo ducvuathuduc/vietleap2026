@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { BankCompareChart, BankLines } from "@/components/npl/charts"
+import { Glossary } from "@/components/npl/glossary"
+import { HowToRead } from "@/components/npl/how-to-read"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { loadSnapshot } from "@/lib/npl/load"
 import { bankModel, formatNumber, langFromQuery, pageHref } from "@/lib/npl/view"
@@ -19,53 +21,76 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { code } = await params
   const query = await searchParams
   const lang = langFromQuery(query.lang)
-  const model = bankModel(loadSnapshot(), code, lang)
+  const model = bankModel(await loadSnapshot(), code, lang)
   if (!model) notFound()
   const vi = lang === "vi"
+  const adjusted = model.adjusted == null
+    ? (vi
+      ? "Bản chụp không có phần thay đổi sau khi trừ nhịp chung của quý."
+      : "This snapshot has no figure for the change after the usual quarter pattern is removed.")
+    : (vi
+      ? (model.latestPeriod
+        ? `Ở ${model.latestPeriod}, phần thay đổi sau khi trừ nhịp chung của quý là ${formatNumber(model.adjusted, lang, 3)} điểm phần trăm.`
+        : `Phần thay đổi sau khi trừ nhịp chung của quý là ${formatNumber(model.adjusted, lang, 3)} điểm phần trăm.`)
+      : (model.latestPeriod
+        ? `In ${model.latestPeriod}, the change after the usual quarter pattern is removed is ${formatNumber(model.adjusted, lang, 3)} percentage points.`
+        : `The change after the usual quarter pattern is removed is ${formatNumber(model.adjusted, lang, 3)} percentage points.`))
   return (
     <>
-      <p className="text-sm text-muted-foreground">
-        {vi ? "Cả nhóm: " : "Panel: "}
-        {model.reminder}
-      </p>
       <h1 className="text-xl font-semibold text-balance">{model.headline}</h1>
+      <p className="text-sm text-muted-foreground">{model.reminder}</p>
       <p className="text-sm text-muted-foreground">
         {model.ownership === "state" ? (vi ? "Nhà nước" : "State") : (vi ? "Tư nhân" : "Private")}
-        {" · "}
+      </p>
+      <p className="text-sm">
         <a className="underline underline-offset-4" href={pageHref("/ngan-hang", lang)}>{vi ? "Về danh sách" : "Back to the list"}</a>
       </p>
+      <Glossary lang={lang} />
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Trung bình theo quý của mã này, chấm là hệ số cả nhóm" : "This bank's quarterly mean, dots are the panel coefficients"}</h2>
         <BankCompareChart rows={model.chart} lang={lang} />
       </section>
-      <section className="grid gap-3 sm:grid-cols-3">
-        <article className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-          <h2 className="text-sm font-medium">{vi ? "Sau hiệu ứng quý" : "After the quarter effect"}</h2>
-          <p className="mt-2 text-lg font-semibold tabular-nums">{model.adjusted == null ? "—" : `${formatNumber(model.adjusted, lang)} ${vi ? "điểm phần trăm" : "pp"}`}</p>
-          <p className="text-sm text-muted-foreground">{model.latestPeriod ?? (vi ? "Chưa có quý gần nhất." : "No latest quarter.")}</p>
-        </article>
-        <article className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-          <h2 className="text-sm font-medium">{vi ? "Dự báo quý kế" : "Next-quarter forecast"}</h2>
-          {model.forecast ? (
-            <>
-              <p className="mt-2 text-lg font-semibold tabular-nums">{formatNumber(model.forecast.npl, lang, 2)}%</p>
-              <p className="text-sm text-muted-foreground">
-                {model.forecast.period}: {formatNumber(model.forecast.lo, lang, 2)}% – {formatNumber(model.forecast.hi, lang, 2)}%
-                {vi ? " (khoảng 80%)" : " (80% band)"}
-              </p>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">{vi ? "Bản chụp không có dự báo quý kế cho mã này." : "This snapshot has no next-quarter forecast for this bank."}</p>
-          )}
-        </article>
-        <article className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-          <h2 className="text-sm font-medium">{vi ? "Sai số kiểm định, cả nhóm" : "Backtest error, panel"}</h2>
-          <p className="mt-2 text-sm">
-            {vi
-              ? `MAE mô hình ${formatNumber(model.mae.model, lang, 2)} điểm phần trăm, mức quý trước ${formatNumber(model.mae.lastValue, lang, 2)}, cùng quý năm trước ${formatNumber(model.mae.seasonalNaive, lang, 2)}.`
-              : `Model MAE ${formatNumber(model.mae.model, lang, 2)} pp, last value ${formatNumber(model.mae.lastValue, lang, 2)}, same quarter last year ${formatNumber(model.mae.seasonalNaive, lang, 2)}.`}
-          </p>
-        </article>
+      {model.lines ? (
+        <section className="flex min-w-0 flex-col gap-2">
+          <h2 className="text-base font-semibold">{vi ? "NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ" : "NPL, coverage, LDR, NIM and loan growth"}</h2>
+          <BankLines lang={lang} rows={model.lines} />
+          <p className="text-sm text-muted-foreground">{model.attribution}</p>
+        </section>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {vi ? "Chuỗi NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ gốc của từng ngân hàng chưa được phép công bố. Trang này chỉ hiện số đã tính." : "Per-bank raw NPL, coverage, LDR, NIM and loan-growth series are not cleared for publication. This page shows derived figures only."}
+        </p>
+      )}
+      <HowToRead
+        label={vi ? "Cách đọc" : "How to read"}
+        sentences={model.lines
+          ? (vi
+            ? ["Cột là thay đổi trung bình của mã này theo quý, chấm là hệ số cả nhóm.", "Đường là NPL, NIM, bao phủ, LDR và tăng trưởng dư nợ của ngân hàng này theo thời gian."]
+            : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The lines are this bank's NPL, NIM, coverage, LDR and loan growth over time."])
+          : (vi
+            ? ["Cột là thay đổi trung bình của mã này theo quý, chấm là hệ số cả nhóm.", "Chuỗi NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ theo quý chưa được đưa ra trang này."]
+            : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The quarterly NPL, coverage, LDR, NIM and loan-growth lines are not on this page."])}
+      />
+      <p>{adjusted}</p>
+      <section className="flex flex-col gap-1">
+        <h2 className="text-base font-semibold">{vi ? "Quý kế" : "Next quarter"}</h2>
+        {model.forecast ? (
+          <>
+            <p>
+              {vi
+                ? `Quý kế ${model.forecast.period}, nợ xấu ${formatNumber(model.forecast.npl, lang, 2)}%, dải từ ${formatNumber(model.forecast.lo, lang, 2)}% đến ${formatNumber(model.forecast.hi, lang, 2)}%.`
+                : `Next quarter ${model.forecast.period}, NPL ${formatNumber(model.forecast.npl, lang, 2)}%, band from ${formatNumber(model.forecast.lo, lang, 2)}% to ${formatNumber(model.forecast.hi, lang, 2)}%.`}
+            </p>
+            <p>{vi ? "Đây là phép tính, không phải lời hứa." : "This is a calculation, not a promise."}</p>
+            <p className="text-sm text-muted-foreground">
+              {vi
+                ? `Sai số mô hình ${formatNumber(model.mae.model, lang, 2)} điểm phần trăm. Sai số nếu lấy quý trước ${formatNumber(model.mae.lastValue, lang, 2)}. Sai số nếu lấy cùng quý năm trước ${formatNumber(model.mae.seasonalNaive, lang, 2)}.`
+                : `Model error ${formatNumber(model.mae.model, lang, 2)} percentage points. Error if you repeat last quarter ${formatNumber(model.mae.lastValue, lang, 2)}. Error if you repeat the same quarter a year earlier ${formatNumber(model.mae.seasonalNaive, lang, 2)}.`}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">{vi ? "Bản chụp không có dự báo quý kế cho mã này." : "This snapshot has no next-quarter forecast for this bank."}</p>
+        )}
       </section>
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Từng cặp năm" : "Each year-pair"}</h2>
@@ -97,24 +122,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         {model.signals.length ? (
           <ul className="flex flex-col gap-1 text-sm">
             {model.signals.map((signal) => (
-              <li key={`${signal.id}-${signal.period}`}>{signal.period} · {signal.text}</li>
+              <li key={`${signal.id}-${signal.period}`}>
+                <span className="tabular-nums">{signal.period}</span> {signal.text}
+              </li>
             ))}
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">{vi ? "Bản chụp không có tín hiệu cho mã này." : "This snapshot has no signal for this bank."}</p>
         )}
       </section>
-      {model.lines ? (
-        <section className="flex min-w-0 flex-col gap-2">
-          <h2 className="text-base font-semibold">{vi ? "NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ" : "NPL, coverage, LDR, NIM and loan growth"}</h2>
-          <BankLines lang={lang} rows={model.lines} />
-          <p className="text-sm text-muted-foreground">{model.attribution}</p>
-        </section>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {vi ? "Chuỗi NPL, bao phủ, LDR, NIM và tăng trưởng dư nợ gốc của từng ngân hàng chưa được phép công bố. Trang này chỉ hiện số đã tính." : "Per-bank raw NPL, coverage, LDR, NIM and loan-growth series are not cleared for publication. This page shows derived figures only."}
-        </p>
-      )}
     </>
   )
 }

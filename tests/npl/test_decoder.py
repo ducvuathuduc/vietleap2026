@@ -21,6 +21,12 @@ def test_decoder_signal_gates_ratios_and_incomplete_periods(silver):
         "2026Q1": [100, None, 6, 12, .4],
         "2026Q2": [100, 4, 7, 14, .4],
     }
+    vcb = panel.bank_code.eq("VCB")
+    for period, values in amounts.items():
+        panel.loc[vcb & panel.period.eq(period), "npl_pct"] = values[2]
+        panel.loc[vcb & panel.period.eq(period), "coverage_pct"] = abs(values[3]) / values[2] * 100
+    for field in ["npl_pct", "coverage_pct"]:
+        panel.loc[vcb, f"d_{field}"] = panel.loc[vcb, field].diff()
     fields = ["customer_loans", "group2_loans", "groups345_loans", "provision_closing", "writeoffs"]
     notes = pd.DataFrame([
         dict(bank="VCB", period=period, field=field, value_vnd_bn=value, basis="consolidated",
@@ -29,8 +35,9 @@ def test_decoder_signal_gates_ratios_and_incomplete_periods(silver):
     ])
     result = build_decoder(panel, seasonal, notes)
     assert result["periods"] == ["2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2", "2026Q3"]
-    assert len(result["rows"]) == 48
-    rows = {row["period"]: row for row in result["rows"] if row["bank_code"] == "VCB"}
+    assert len(result["focus"]) == 48
+    assert len(result["rows"]) == 184
+    rows = {row["period"]: row for row in result["focus"] if row["bank_code"] == "VCB"}
     q2 = rows["2025Q2"]
     assert [signal["id"] for signal in q2["signals"]] == ["S1", "S2", "S3"]
     assert q2["status"] == "review"
@@ -38,12 +45,13 @@ def test_decoder_signal_gates_ratios_and_incomplete_periods(silver):
     assert q2["broad_problem_ratio"] == pytest.approx(.15)
     assert q2["lagged_coverage"] == pytest.approx(2)
     assert q2["coverage"] == pytest.approx(1)
-    assert rows["2025Q3"]["status"] == "CLEAN"
+    assert q2["loans_vnd_bn"] == 100 and q2["writeoff_vnd_bn"] == 3
+    assert q2["coverage_source"] == "notes"
+    assert rows["2025Q3"]["status"] == "clean"
     assert [signal["id"] for signal in rows["2025Q4"]["signals"]] == ["S4"]
     assert rows["2026Q1"]["status_vi"] == "Thiếu dữ liệu"
     assert "delta_g2_ratio" in rows["2026Q1"]["missing_inputs"]
     assert rows["2026Q2"]["status"] == "not_applicable"
-    assert rows["2026Q3"]["status"] == "missing_data"
     assert result["regression"]["notes"]["full"]["n"] > 0
     assert result["regression"]["notes"]["full"]["clusters"] == 1
 
@@ -59,11 +67,20 @@ def test_vendor_reduced_fit_uses_lagged_coverage_and_preserves_missing_fields(si
     assert set(fit["available"]["terms"]) == {"loan_growth", "lagged_coverage"}
     assert all(term["ci95"] and term["wild_p"] is not None for term in fit["available"]["terms"].values())
     assert result["regression"]["notes"]["full"]["n"] == 0
-    rows = result["fiinquant_rows"]
-    assert result["fiinquant_signal_availability"]["S2"]["eligible"] == 0
-    assert result["fiinquant_signal_availability"]["S3"]["eligible"] > 0
+    rows = result["rows"]
+    assert result["signal_availability"]["S2"]["eligible"] == 0
+    assert result["signal_availability"]["S3"]["eligible"] > 0
     assert all(row["writeoff_ratio"] is None and row["broad_problem_ratio"] is None for row in rows)
-    assert all(row["status"] != "CLEAN" for row in rows)
+    assert all(row["status"] != "clean" for row in rows)
+    for row in rows:
+        source = panel.loc[panel.bank_code.eq(row["bank_code"]) & panel.period.eq(row["period"])].iloc[0]
+        assert row["npl_ratio"] == pytest.approx(source.npl_pct / 100)
+        assert row["coverage"] == pytest.approx(source.coverage_pct / 100)
+        assert row["nim"] == pytest.approx(source.nim_pct / 100)
+        assert row["loan_growth"] == pytest.approx(source.loan_growth_yoy_pct / 100)
+        if source.d_npl_pct < 0:
+            assert row["delta_npl_ratio"] == pytest.approx(source.d_npl_pct / 100)
+            assert row["status"] == "missing"
 
 
 def test_statement_regression_recovers_lagged_coverage_with_eight_banks(silver):
@@ -117,7 +134,55 @@ def test_b5_silver_uses_point_stocks_quarterly_flows_and_filing_scope(silver):
     tables = read_silver(silver)
     result = build_decoder(panel, seasonal, tables["notes_bank_quarter"])
     rows = {row["period"]: row for row in result["rows"] if row["bank_code"] == "VCB"}
-    assert rows["2025Q2"]["npl_ratio"] == pytest.approx(.09)
+    assert rows["2025Q2"]["npl_vnd_bn"] == 9
     assert rows["2025Q2"]["writeoff_ratio"] == pytest.approx(.03)
     assert rows["2025Q2"]["npl_formation"] == pytest.approx(.02)
-    assert rows["2025Q3"]["npl_ratio"] is None
+    assert rows["2025Q3"]["npl_vnd_bn"] is None
+    assert rows["2025Q3"]["npl_ratio"] is not None
+
+
+def test_coverage_disagreement_disables_s3_for_both_adjacent_changes():
+    raw = pd.DataFrame({
+        "ticker": ["ABB"] * 3,
+        "period": ["2025Q1", "2025Q2", "2025Q3"],
+        "npl_pct": [4, 3, 2],
+        "coverage_pct": [120, 110, 100],
+    })
+    panel, _ = clean_quarters(raw)
+    _, seasonal = decision_rule(panel)
+    notes = pd.DataFrame([
+        dict(bank="ABB", period="2025Q2", field=field, value_vnd_bn=value, basis="consolidated",
+             grade="verified", page=4, source_url="https://test.com/notes.pdf")
+        for field, value in [("customer_loans", 100), ("group2_loans", 5), ("groups345_loans", 3),
+                             ("provision_closing", 9)]
+    ])
+    result = build_decoder(panel, seasonal, notes)
+    assert result == build_decoder(panel, seasonal, pd.concat([notes, notes]))
+    first, contested, following = result["rows"]
+    assert first["coverage_contested"] is False
+    assert contested["coverage_contested"] is True
+    assert contested["group2_vnd_bn"] == 5
+    assert contested["coverage"] == pytest.approx(1.1)
+    assert contested["coverage_source"] == "fiinquant"
+    assert following["coverage_contested"] is False
+    for row in [contested, following]:
+        assert row["status"] == "missing"
+        assert row["delta_coverage"] is None
+        assert "delta_coverage" in row["missing_inputs"]
+        assert not any(signal["id"] == "S3" for signal in row["signals"])
+
+
+def test_coverage_change_uses_one_comparable_source():
+    raw = pd.DataFrame({"ticker": ["VCB"] * 2, "period": ["2025Q1", "2025Q2"],
+                        "npl_pct": [4, 3], "coverage_pct": [120, 120]})
+    panel, _ = clean_quarters(raw)
+    _, seasonal = decision_rule(panel)
+    notes = pd.DataFrame([
+        dict(bank="VCB", period="2025Q2", field=field, value_vnd_bn=value, basis="consolidated",
+             grade="verified", page=4, source_url="https://test.com/notes.pdf")
+        for field, value in [("groups345_loans", 3), ("provision_closing", 3.5998)]
+    ])
+    _, row = build_decoder(panel, seasonal, notes)["rows"]
+    assert row["coverage_source"] == "notes" and row["coverage_contested"] is False
+    assert row["delta_coverage"] == 0
+    assert row["signals"] == []

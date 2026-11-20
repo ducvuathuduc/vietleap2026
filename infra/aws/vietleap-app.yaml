@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: VietLeap NPL web service and scheduled pipeline.
+
+# Supply the outputs of vietleap-base as parameters with matching names.
+Parameters:
+  ClusterName:
+    Type: String
+  ExecutionRoleArn:
+    Type: String
+  WebTaskRoleArn:
+    Type: String
+  PipelineTaskRoleArn:
+    Type: String
+  InfrastructureRoleArn:
+    Type: String
+  WebRepoUri:
+    Type: String
+  PipelineRepoUri:
+    Type: String
+  LakeBucketName:
+    Type: String
+  AppSecretArn:
+    Type: String
+  VpcSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Public subnets in at least two Availability Zones in the same VPC.
+  WebImageTag:
+    Type: String
+    Default: latest
+  PipelineImageTag:
+    Type: String
+    Default: latest
+
+Resources:
+  WebService:
+    Type: AWS::ECS::ExpressGatewayService
+    Properties:
+      Cluster: !Ref ClusterName
+      ServiceName: vietleap-web
+      Cpu: "512"
+      Memory: "1024"
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      TaskRoleArn: !Ref WebTaskRoleArn
+      InfrastructureRoleArn: !Ref InfrastructureRoleArn
+      HealthCheckPath: /api/health
+      NetworkConfiguration:
+        Subnets: !Ref VpcSubnetIds
+      PrimaryContainer:
+        Image: !Sub "${WebRepoUri}:${WebImageTag}"
+        ContainerPort: 3000
+        AwsLogsConfiguration:
+          LogGroup: /ecs/vietleap-web
+          LogStreamPrefix: ecs
+        Environment:
+          - Name: NPL_SNAPSHOT_S3_URI
+            Value: !Sub "s3://${LakeBucketName}/snapshots/npl/snapshot.json"
+        Secrets:
+          - { Name: OPENAI_API_KEY, ValueFrom: !Sub "${AppSecretArn}:OPENAI_API_KEY::" }
+          - { Name: LANGFUSE_GATEWAY_HOST, ValueFrom: !Sub "${AppSecretArn}:LANGFUSE_GATEWAY_HOST::" }
+          - { Name: LANGFUSE_GATEWAY_KEY, ValueFrom: !Sub "${AppSecretArn}:LANGFUSE_GATEWAY_KEY::" }
+          - { Name: LANGFUSE_PUBLIC_KEY, ValueFrom: !Sub "${AppSecretArn}:LANGFUSE_PUBLIC_KEY::" }
+          - { Name: LANGFUSE_SECRET_KEY, ValueFrom: !Sub "${AppSecretArn}:LANGFUSE_SECRET_KEY::" }
+          - { Name: LANGFUSE_BASE_URL, ValueFrom: !Sub "${AppSecretArn}:LANGFUSE_BASE_URL::" }
+          - { Name: GROQ_API_KEY, ValueFrom: !Sub "${AppSecretArn}:GROQ_API_KEY::" }
+
+  PipelineTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: vietleap-pipeline
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "1024"
+      Memory: "2048"
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      TaskRoleArn: !Ref PipelineTaskRoleArn
+      ContainerDefinitions:
+        - Name: pipeline
+          Image: !Sub "${PipelineRepoUri}:${PipelineImageTag}"
+          Essential: true
+          Environment:
+            - { Name: LAKE_BUCKET, Value: !Ref LakeBucketName }
+          Secrets:
+            - { Name: FIINQUANT_USERNAME, ValueFrom: !Sub "${AppSecretArn}:FIINQUANT_USERNAME::" }
+            - { Name: FIINQUANT_PASSWORD, ValueFrom: !Sub "${AppSecretArn}:FIINQUANT_PASSWORD::" }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/vietleap-pipeline
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: pipeline
+
+  PipelineScheduleGroup:
+    Type: AWS::Scheduler::ScheduleGroup
+    Properties:
+      Name: vietleap-npl
+
+  SchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: scheduler.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+                aws:SourceArn: !GetAtt PipelineScheduleGroup.Arn
+      Policies:
+        - PolicyName: run-pipeline
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ecs:RunTask
+                Resource: !Ref PipelineTaskDefinition
+                Condition:
+                  ArnEquals:
+                    ecs:cluster: !Sub "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}"
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: [!Ref ExecutionRoleArn, !Ref PipelineTaskRoleArn]
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: ecs-tasks.amazonaws.com
+
+  PipelineSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: vietleap-npl-pipeline
+      GroupName: !Ref PipelineScheduleGroup
+      ScheduleExpression: "cron(0 6,18 * * ? *)"
+      ScheduleExpressionTimezone: Asia/Saigon
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Target:
+        Arn: !Sub "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}"
+        RoleArn: !GetAtt SchedulerRole.Arn
+        EcsParameters:
+          LaunchType: FARGATE
+          TaskDefinitionArn: !Ref PipelineTaskDefinition
+          NetworkConfiguration:
+            AwsvpcConfiguration:
+              Subnets: !Ref VpcSubnetIds
+              AssignPublicIp: ENABLED
+
+Outputs:
+  WebServiceArn:
+    Value: !GetAtt WebService.ServiceArn
+  WebEndpoint:
+    Value: !GetAtt WebService.Endpoint
+  PipelineTaskDefinitionArn:
+    Value: !Ref PipelineTaskDefinition

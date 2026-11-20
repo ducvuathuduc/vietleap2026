@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from .model import SILVER, derive_credit_quality
+from .model import AMOUNTS, SILVER, derive_credit_quality
 from .real_context import statement_amounts
 from .real_models import _fit
 from .regression import REGRESSORS
@@ -13,9 +13,10 @@ from .snapshot_metrics import json_safe
 NOTES_BANKS = ("VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "STB")
 KEYS = ["bank_code", "period"]
 RATIOS = ["npl_ratio", "g2_ratio", "coverage", "writeoff_ratio", "npl_formation", "broad_problem_ratio", "loan_growth"]
-VENDOR_LEVEL_FIELDS = (*RATIOS, "lagged_coverage")
+VENDOR_LEVEL_FIELDS = ("npl_ratio", "coverage", "loan_growth", "nim", "lagged_coverage")
 CHANGES = ["delta_npl_ratio", "delta_g2_ratio", "delta_coverage", "delta_writeoff_ratio"]
 SEASON = ["expected_change_pp", "lo80_pp", "hi80_pp"]
+COVERAGE_TOLERANCE = .0001  # One basis point of coverage, in fraction units.
 SIGNALS = {
     "S1": ("Rủi ro có thể dồn sang nhóm 2", "Risk may be moving into group 2"),
     "S2": ("Giảm nhờ xóa nợ", "Fall driven by write-offs"),
@@ -23,9 +24,9 @@ SIGNALS = {
     "S4": ("Nhịp mùa vụ cuối năm", "Usual year-end movement"),
 }
 STATUS = {
-    "CLEAN": ("Cải thiện có cơ sở", "Improvement supported by the data"),
+    "clean": ("Cải thiện có cơ sở", "Improvement supported by the data"),
     "review": ("Cờ vàng cần xem xét", "Yellow flag to review"),
-    "missing_data": ("Thiếu dữ liệu", "Missing data"),
+    "missing": ("Thiếu dữ liệu", "Missing data"),
     "not_applicable": ("Tỷ lệ nợ xấu không giảm", "NPL ratio did not fall"),
 }
 
@@ -39,6 +40,7 @@ def _vendor_ratios(panel):
     data["delta_coverage"] = data["d_coverage_pct"] / 100
     data["lagged_coverage"] = data.groupby("bank_code")["coverage"].shift().where(consecutive)
     data["loan_growth"] = data["loan_growth_yoy_pct"] / 100
+    data["nim"] = data["nim_pct"] / 100
     for field in ["g2_ratio", "writeoff_ratio", "npl_formation"]:
         if field not in data:
             data[field] = np.nan
@@ -47,14 +49,14 @@ def _vendor_ratios(panel):
         if delta not in data:
             data[delta] = data.groupby("bank_code")[field].diff().where(consecutive)
     data["broad_problem_ratio"] = data["npl_ratio"] + data["g2_ratio"]
-    return data[[*KEYS, *RATIOS, *CHANGES, "lagged_coverage"]]
+    return data[[*KEYS, *RATIOS, *CHANGES, "lagged_coverage", "nim"]]
 
 
 def _notes_ratios(notes):
     amounts, _ = statement_amounts(notes)
     fields = {"customer_loans": "loans_vnd_bn", "group2_loans": "group2_vnd_bn", "groups345_loans": "npl_vnd_bn",
               "provision_balance": "provision_vnd_bn", "writeoffs": "writeoff_vnd_bn"}
-    amounts = amounts.loc[amounts.bank_code.isin(NOTES_BANKS), [*KEYS, *fields]].rename(columns=fields)
+    amounts = amounts[[*KEYS, *fields]].rename(columns=fields)
     # A statement with contradictory totals cannot support the component ratios.
     problem = amounts[["npl_vnd_bn", "group2_vnd_bn"]].fillna(0).sum(axis=1)
     invalid = problem.gt(amounts["loans_vnd_bn"]) & ~np.isclose(
@@ -63,7 +65,7 @@ def _notes_ratios(notes):
     amounts["basis"] = "consolidated"
     amounts["writeoff_basis"] = "quarter"
     credit = derive_credit_quality(amounts.reindex(columns=SILVER))
-    return credit[[*KEYS, *RATIOS, *CHANGES, "lagged_coverage"]]
+    return credit[[*KEYS, *AMOUNTS, *RATIOS, *CHANGES, "lagged_coverage"]]
 
 
 def _assessment(row):
@@ -72,7 +74,7 @@ def _assessment(row):
     signals = []
     if pd.isna(decline):
         missing.append("delta_npl_ratio")
-        status = "missing_data"
+        status = "missing"
     elif decline >= -1e-12:
         status = "not_applicable"
     else:
@@ -93,7 +95,12 @@ def _assessment(row):
                 surprise = 100 * decline - row.expected_change_pp
                 if row.lo80_pp - 1e-10 <= surprise <= row.hi80_pp + 1e-10:
                     signals.append("S4")
-        status = "missing_data" if missing else ("review" if signals else "CLEAN")
+        if {"delta_g2_ratio", "delta_writeoff_ratio"}.intersection(missing):
+            status = "missing"
+        elif signals:
+            status = "review"
+        else:
+            status = "missing" if missing else "clean"
     vi, en = STATUS[status]
     return {"status": status, "status_vi": vi, "status_en": en, "missing_inputs": missing,
             "signals": [{"id": rule, "text_vi": SIGNALS[rule][0], "text_en": SIGNALS[rule][1]} for rule in signals]}
@@ -114,37 +121,58 @@ def _decoder_fit(data, *, grid_n, vendor):
         "growth_measure": "year_over_year" if vendor else "quarter_over_quarter",
         "reading_vi": ("Dữ liệu FiinQuant dùng tăng trưởng dư nợ cùng kỳ năm trước; khi thiếu cả trường, "
                        "mô hình rút gọn chỉ dùng các biến có dữ liệu." if vendor else
-                       "Mẫu tối đa tám ngân hàng dùng tăng trưởng dư nợ theo quý; hệ số có thể gợi ý chiều liên hệ."),
+                       "Mẫu ghi chú dùng tăng trưởng dư nợ theo quý; hệ số có thể gợi ý chiều liên hệ."),
         "reading_en": ("FiinQuant uses year-over-year loan growth; the reduced model uses the regressors with data "
                        "when entire fields are absent." if vendor else
-                       "The sample covers up to eight banks and uses quarter-over-quarter loan growth; coefficients can suggest a direction."),
+                       "The notes sample uses quarter-over-quarter loan growth; coefficients can suggest a direction."),
         "does_not_show_vi": ("Bao phủ quý trước và biến động NPL cùng dùng mức NPL quý trước, nên hệ số chỉ mô tả liên hệ."
-                             if vendor else "Mẫu tối đa tám ngân hàng chỉ gợi ý chiều liên hệ, với độ bất định lớn về độ lớn."),
+                             if vendor else "Mẫu ghi chú nhỏ chỉ gợi ý chiều liên hệ; độ lớn của tác động còn bất định."),
         "does_not_show_en": ("Lagged coverage and the NPL change both use prior-quarter NPL, so the coefficient describes an association."
-                             if vendor else "With up to eight banks, estimates suggest a direction and leave the effect size uncertain."),
+                             if vendor else "The small notes sample supports directional interpretation; the effect size remains uncertain."),
     }
 
 
 def build_decoder(panel, seasonal, notes):
-    """Export six quarters of decoder rows and fit each source on its complete cases."""
+    """Build the vendor history and attach statement inputs by bank and quarter."""
     vendor = _vendor_ratios(panel)
     statements = _notes_ratios(notes)
     start, end = panel.period.min(), panel.period.max()
     periods = pd.period_range(end=end, periods=6, freq="Q").astype(str).tolist()
     banks = sorted(vendor.bank_code.unique())
     history = pd.period_range(start, end, freq="Q").astype(str).tolist()
+    statements = statements.loc[statements.bank_code.isin(banks) & statements.period.le(end)]
 
-    def rows(data, cohort, quarters):
-        grid = pd.MultiIndex.from_product([cohort, quarters], names=KEYS).to_frame(index=False)
-        board = grid.merge(data, on=KEYS, how="left", validate="one_to_one").merge(
-            seasonal[[*KEYS, *SEASON]], on=KEYS, how="left", validate="one_to_one")
-        return [{**row._asdict(), **_assessment(row)} for row in board.itertuples(index=False)]
+    note_fields = ["g2_ratio", "delta_g2_ratio", "writeoff_ratio", "delta_writeoff_ratio",
+                   "npl_formation", "broad_problem_ratio"]
+    grid = pd.MultiIndex.from_product([banks, history], names=KEYS).to_frame(index=False)
+    board = grid.merge(vendor.drop(columns=note_fields), on=KEYS, how="left", validate="one_to_one")
+    board = board.merge(
+        statements[[*KEYS, *AMOUNTS, *note_fields, "coverage", "delta_coverage"]]
+        .rename(columns={"coverage": "notes_coverage", "delta_coverage": "notes_delta_coverage"}),
+        on=KEYS, how="left", validate="one_to_one",
+    ).merge(seasonal[[*KEYS, *SEASON]], on=KEYS, how="left", validate="one_to_one")
 
-    vendor_rows = rows(vendor, banks, sorted(set(history) | set(periods)))
+    both = board["coverage"].notna() & board["notes_coverage"].notna()
+    agrees = np.isclose(board["coverage"], board["notes_coverage"], rtol=0, atol=COVERAGE_TOLERANCE + 1e-12)
+    board["coverage_contested"] = both & ~agrees
+    board["coverage_source"] = np.select(
+        [agrees, board["coverage"].notna()], ["notes", "fiinquant"], default=None,
+    )
+    # Use one source for both endpoints to avoid flags caused by a source switch.
+    previous_agrees = board["coverage_source"].eq("notes").groupby(board["bank_code"]).shift(fill_value=False)
+    coverage_change = board["delta_coverage"].mask(agrees & previous_agrees, board.pop("notes_delta_coverage"))
+    board["coverage"] = board["coverage"].mask(agrees, board.pop("notes_coverage"))
+    previous_contested = board.groupby("bank_code")["coverage_contested"].shift(fill_value=False)
+    board["delta_coverage"] = coverage_change.where(~board["coverage_contested"] & ~previous_contested)
+    rows = [{**row._asdict(), **_assessment(row)} for row in board.itertuples(index=False)]
+    focus_index = pd.MultiIndex.from_product([NOTES_BANKS, periods], names=KEYS)
+    focus_board = board.set_index(KEYS).reindex(focus_index).reset_index()
+    focus_board["coverage_contested"] = focus_board["coverage_contested"].eq(True)
+    focus = [{**row._asdict(), **_assessment(row)} for row in focus_board.itertuples(index=False)]
     availability = {}
     for rule, field in [("S1", "delta_g2_ratio"), ("S2", "delta_writeoff_ratio"),
                         ("S3", "delta_coverage"), ("S4", "seasonal_band")]:
-        eligible = [row for row in vendor_rows if pd.notna(row["delta_npl_ratio"])
+        eligible = [row for row in rows if pd.notna(row["delta_npl_ratio"])
                     and row["delta_npl_ratio"] < -1e-12 and (rule != "S4" or row["period"].endswith("Q4"))]
         available = sum(field not in row["missing_inputs"] for row in eligible)
         availability[rule] = {"eligible": available, "missing": [field] if not available else [],
@@ -152,9 +180,8 @@ def build_decoder(panel, seasonal, notes):
     return json_safe({
         "title_vi": "Sau tỷ lệ nợ xấu: Chất lượng tín dụng của các ngân hàng Việt Nam có thực sự cải thiện?",
         "title_en": "Behind the NPL Ratio: Is Credit Quality in Vietnamese Banks Really Improving?",
-        "periods": periods, "banks": list(NOTES_BANKS), "rows": rows(statements, NOTES_BANKS, periods),
-        "fiinquant_rows": [row for row in vendor_rows if row["period"] in periods],
-        "fiinquant_signal_availability": availability,
+        "periods": periods, "banks": list(NOTES_BANKS), "rows": rows, "focus": focus,
+        "signal_availability": availability,
         "regression": {
             "outcome": "delta_npl_ratio", "regressors": REGRESSORS,
             "estimator": "bank fixed effects OLS; bank-clustered SE; restricted wild cluster bootstrap",

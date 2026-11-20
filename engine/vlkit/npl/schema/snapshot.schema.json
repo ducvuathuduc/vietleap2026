@@ -686,8 +686,9 @@
     },
     "decoder": {
       "type": "object",
-      "required": ["title_vi", "title_en", "periods", "banks", "rows", "fiinquant_rows", "regression", "reading_vi", "reading_en",
+      "required": ["title_vi", "title_en", "periods", "banks", "rows", "regression", "reading_vi", "reading_en",
                    "does_not_show_vi", "does_not_show_en"],
+      "anyOf": [{ "required": ["focus"] }, { "required": ["fiinquant_rows"] }],
       "properties": {
         "title_vi": { "type": "string", "minLength": 1 },
         "title_en": { "type": "string", "minLength": 1 },
@@ -700,6 +701,10 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "rows": {
+          "type": "array", "minItems": 1,
+          "items": { "$ref": "#/$defs/decoderRow" }
+        },
+        "focus": {
           "type": "array", "minItems": 48, "maxItems": 48,
           "items": { "$ref": "#/$defs/decoderRow" }
         },
@@ -764,7 +769,7 @@
       "properties": {
         "bank_code": { "type": "string", "minLength": 1 },
         "period": { "$ref": "#/$defs/period" },
-        "status": { "enum": ["CLEAN", "review", "missing_data", "not_applicable"] },
+        "status": { "enum": ["clean", "missing", "review", "not_applicable", "CLEAN", "missing_data"] },
         "status_vi": { "type": "string", "minLength": 1 },
         "status_en": { "type": "string", "minLength": 1 },
         "signals": {
@@ -784,9 +789,22 @@
         "coverage": { "type": ["number", "null"] },
         "writeoff_ratio": { "type": ["number", "null"] },
         "npl_formation": { "type": ["number", "null"] },
-        "broad_problem_ratio": { "type": ["number", "null"] }
+        "broad_problem_ratio": { "type": ["number", "null"] },
+        "loan_growth": { "type": ["number", "null"] },
+        "nim": { "type": ["number", "null"] },
+        "delta_npl_ratio": { "type": ["number", "null"] },
+        "delta_g2_ratio": { "type": ["number", "null"] },
+        "delta_writeoff_ratio": { "type": ["number", "null"] },
+        "delta_coverage": { "type": ["number", "null"] },
+        "coverage_contested": { "type": "boolean" },
+        "coverage_source": { "enum": ["fiinquant", "notes", null] },
+        "loans_vnd_bn": { "type": ["number", "null"] },
+        "group2_vnd_bn": { "type": ["number", "null"] },
+        "npl_vnd_bn": { "type": ["number", "null"] },
+        "provision_vnd_bn": { "type": ["number", "null"] },
+        "writeoff_vnd_bn": { "type": ["number", "null"] }
       },
-      "if": { "properties": { "status": { "const": "CLEAN" } } },
+      "if": { "properties": { "status": { "enum": ["clean", "CLEAN"] } } },
       "then": { "properties": { "signals": { "maxItems": 0 }, "missing_inputs": { "maxItems": 0 } } }
     },
     "decoderFit": {

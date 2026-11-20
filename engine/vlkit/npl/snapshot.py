@@ -342,9 +342,10 @@ def build_snapshot(results, gold, silver):
     if "decoder" in models:
         decoder = models["decoder"]
         if not publish:
-            decoder = {**decoder, "fiinquant_rows": [
-                {**row, **dict.fromkeys(VENDOR_LEVEL_FIELDS)} for row in decoder["fiinquant_rows"]
-            ]}
+            fields = dict.fromkeys(VENDOR_LEVEL_FIELDS)
+            decoder = {**decoder}
+            for key in ("rows", "focus") if "focus" in decoder else ("fiinquant_rows",):
+                decoder[key] = [{**row, **fields} for row in decoder[key]]
         payload["decoder"] = decoder
     snapshot_hash = sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False).encode("utf-8"))
     payload["meta"]["snapshot_id"] = f"npl-{latest['period']}-{snapshot_hash.hexdigest()[:12]}"

@@ -117,7 +117,7 @@ export type Snapshot = {
   robustness: {
     leave_one_bank_out: { min: number | null; max: number | null }
     drop_2021_2022: Term | null
-    state_vs_private: { state: Term; private: Term }
+    state_vs_private: { state: Term | null; private: Term | null }
     state_vs_private_effects: { state: QuarterEffect[]; private: QuarterEffect[] }
     drop_effects: QuarterEffect[]
     median_regression: Term | null
@@ -138,7 +138,7 @@ export type Snapshot = {
   limitations: { vi: string; en: string }[]
   legal: { ref: string; text_vi: string; text_en: string }[]
   ai_use: { vi: string; en: string }[]
-  decoder?: DecoderCell[]
+  decoder?: DecoderCell[] | PublishedDecoder
 }
 
 export type DecoderStatus = "clean" | "g2" | "writeoff" | "coverage" | "seasonal" | "missing" | "no_fall"
@@ -151,6 +151,9 @@ export type DecoderInputs = {
   provision: number | null
   writeoff: number | null
   d_coverage_pp: number | null
+  delta_g2_pp?: number | null
+  delta_writeoff_pp?: number | null
+  coverage_contested?: boolean
   ratios: { npl_ratio: DecoderRatio; g2_ratio: DecoderRatio; coverage: DecoderRatio; writeoff_ratio: DecoderRatio }
 }
 export type DecoderCell = {
@@ -271,7 +274,142 @@ export function buildFiinQuantDecoder(
   return cells
 }
 
+type PublishedDecoder = {
+  rows?: PublishedDecoderRow[]
+  focus?: PublishedDecoderRow[]
+  fiinquant_rows?: PublishedDecoderRow[]
+  reading_vi?: string
+  reading_en?: string
+}
+
+type PublishedDecoderRow = {
+  bank_code?: string
+  bank?: string
+  period?: string
+  npl_ratio?: number | null
+  g2_ratio?: number | null
+  coverage?: number | null
+  loan_growth?: number | null
+  nim?: number | null
+  lagged_coverage?: number | null
+  writeoff_ratio?: number | null
+  delta_npl_ratio?: number | null
+  delta_g2_ratio?: number | null
+  delta_coverage?: number | null
+  delta_writeoff_ratio?: number | null
+  coverage_contested?: boolean
+  coverage_source?: string | null
+  loans_vnd_bn?: number | null
+  group2_vnd_bn?: number | null
+  npl_vnd_bn?: number | null
+  provision_vnd_bn?: number | null
+  writeoff_vnd_bn?: number | null
+  status?: string
+  signals?: { id?: string; text_vi?: string; text_en?: string }[]
+}
+
+function asPercent(value: number | null | undefined): number | null {
+  return value == null ? null : round4(value * 100)
+}
+
+function publishedScore(row: PublishedDecoderRow): number {
+  return (row.delta_npl_ratio != null ? 2 : 0) + (row.npl_ratio != null ? 1 : 0) + ((row.signals?.length ?? 0) > 0 ? 2 : 0)
+}
+
+function publishedStatus(row: PublishedDecoderRow): DecoderStatus {
+  if (row.status === "missing") return "missing"
+  const ids = (row.signals ?? []).map((signal) => signal.id)
+  if (ids.includes("S3")) return "coverage"
+  if (ids.includes("S1")) return "g2"
+  if (ids.includes("S2")) return "writeoff"
+  if (ids.includes("S4")) return "seasonal"
+  if (row.status === "clean") return "clean"
+  if (row.status === "not_applicable" || row.status === "no_fall") return "no_fall"
+  if (row.delta_npl_ratio != null && row.delta_npl_ratio >= 0) return "no_fall"
+  return "missing"
+}
+
+function publishedCell(row: PublishedDecoderRow): DecoderCell | null {
+  const bank = row.bank_code ?? row.bank
+  if (!bank || !row.period) return null
+  const signals = (row.signals ?? []).flatMap<DecoderSignal>((signal) => {
+    if (signal.id !== "S1" && signal.id !== "S2" && signal.id !== "S3" && signal.id !== "S4") return []
+    return [{ id: signal.id, text_vi: signal.text_vi ?? "", text_en: signal.text_en ?? "" }]
+  })
+  const notes = "Thuyết minh BCTC / Financial statement notes"
+  const ratio = (value: number | null | undefined, source: string): DecoderRatio => ({
+    value: asPercent(value),
+    source: value == null ? null : source,
+    page: null,
+  })
+  return {
+    bank,
+    period: row.period,
+    d_npl_pp: asPercent(row.delta_npl_ratio),
+    signals,
+    status: publishedStatus(row),
+    inputs: {
+      loans: row.loans_vnd_bn ?? null,
+      group2: row.group2_vnd_bn ?? null,
+      npl: row.npl_vnd_bn ?? null,
+      provision: row.provision_vnd_bn ?? null,
+      writeoff: row.writeoff_vnd_bn ?? null,
+      d_coverage_pp: asPercent(row.delta_coverage),
+      delta_g2_pp: asPercent(row.delta_g2_ratio),
+      delta_writeoff_pp: asPercent(row.delta_writeoff_ratio),
+      coverage_contested: row.coverage_contested,
+      ratios: {
+        npl_ratio: ratio(row.npl_ratio, FIIN_SOURCE),
+        g2_ratio: ratio(row.g2_ratio, notes),
+        coverage: ratio(row.coverage, row.coverage_source === "notes" ? notes : FIIN_SOURCE),
+        writeoff_ratio: ratio(row.writeoff_ratio, notes),
+      },
+    },
+  }
+}
+
+function publishedCells(bag: PublishedDecoder): DecoderCell[] {
+  const merged = new Map<string, PublishedDecoderRow>()
+  for (const list of [bag.rows, bag.focus, bag.fiinquant_rows]) {
+    for (const row of list ?? []) {
+      const bank = row.bank_code ?? row.bank
+      if (!bank || !row.period) continue
+      const key = `${bank}|${row.period}`
+      const previous = merged.get(key)
+      if (!previous || publishedScore(row) > publishedScore(previous)) merged.set(key, row)
+    }
+  }
+  return [...merged.values()].flatMap((row) => {
+    const cell = publishedCell(row)
+    return cell ? [cell] : []
+  })
+}
+
+function decoderCells(decoder: Snapshot["decoder"]): DecoderCell[] {
+  if (!decoder) return []
+  if (Array.isArray(decoder)) return decoder
+  return publishedCells(decoder)
+}
+
 function decoderReading(cell: DecoderCell, lang: Lang): string {
+  if (cell.status === "missing" && (cell.signals.length || cell.inputs.coverage_contested)) {
+    const available = cell.signals.map((signal) => (lang === "vi" ? signal.text_vi : signal.text_en))
+    if (cell.inputs.coverage_contested) available.push(lang === "vi" ? "Hai nguồn cho tỷ lệ bao phủ khác nhau" : "The two sources disagree on coverage")
+    return `${BADGE_SENTENCE.missing[lang]} ${available.join(". ")}.`
+  }
+  const dG2 = cell.inputs.delta_g2_pp
+  const dWriteoff = cell.inputs.delta_writeoff_pp
+  if (cell.d_npl_pp != null && cell.d_npl_pp < 0 && ((dG2 != null && dG2 > 0) || (dWriteoff != null && dWriteoff > 0))) {
+    const fall = formatNumber(Math.abs(cell.d_npl_pp), lang, 2)
+    const contrary = dG2 != null && dG2 > 0
+      ? (lang === "vi" ? `nợ nhóm 2 tăng ${formatNumber(dG2, lang, 2)} điểm %` : `group-2 loans rose ${formatNumber(dG2, lang, 2)} pp`)
+      : (lang === "vi" ? `xóa nợ tăng ${formatNumber(dWriteoff ?? 0, lang, 2)} điểm %` : `write-offs rose ${formatNumber(dWriteoff ?? 0, lang, 2)} pp`)
+    const page = cell.inputs.ratios.g2_ratio.page ?? cell.inputs.ratios.writeoff_ratio.page
+    const where = page == null ? "" : (lang === "vi" ? `, cần xem thuyết minh trang ${page}` : `, see note page ${page}`)
+    return lang === "vi"
+      ? `NPL giảm ${fall} điểm %, nhưng ${contrary}: cờ vàng${where}.`
+      : `NPL fell ${fall} pp, but ${contrary}: yellow flag${where}.`
+  }
   const both = cell.signals.some((signal) => signal.id === "S3") && cell.signals.some((signal) => signal.id === "S4")
   if (both) {
     return lang === "vi"
@@ -288,7 +426,8 @@ function decoderReading(cell: DecoderCell, lang: Lang): string {
 }
 
 export function decoderModel(snapshot: Snapshot, lang: Lang, scope: "preview" | "all" = "preview") {
-  const cells = snapshot.decoder ?? []
+  const cells = decoderCells(snapshot.decoder)
+  const publication = Array.isArray(snapshot.decoder) ? undefined : snapshot.decoder
   const allPeriods = [...new Set(cells.map((cell) => cell.period))].sort()
   const periods = scope === "all" ? allPeriods : allPeriods.slice(-6)
   const grouped = new Map<string, Map<string, DecoderCell>>()
@@ -304,9 +443,9 @@ export function decoderModel(snapshot: Snapshot, lang: Lang, scope: "preview" | 
   ]
   return {
     title: lang === "vi" ? "NPL giảm quý này có cơ sở không?" : "Is this quarter's NPL decline supported?",
-    note: lang === "vi"
+    note: publication?.[lang === "vi" ? "reading_vi" : "reading_en"] ?? (lang === "vi"
       ? "Bản này chỉ có tín hiệu FiinQuant: bao phủ giảm và nhịp quý 4. Nhóm 2 và xóa nợ chưa có, nên một quý giảm mà không vướng hai cờ đó vẫn là thiếu dữ liệu."
-      : "This file only has the FiinQuant flags: lower coverage and the usual Q4 move. Group 2 and write-offs are absent, so a decline without those two flags stays missing data.",
+      : "This file only has the FiinQuant flags: lower coverage and the usual Q4 move. Group 2 and write-offs are absent, so a decline without those two flags stays missing data."),
     disclaimer: DECODER_DISCLAIMER[lang],
     attribution: SERIES_ATTRIBUTION,
     moreLabel: scope === "preview" ? (lang === "vi" ? "Xem tất cả ngân hàng" : "See every bank") : null,
@@ -464,9 +603,12 @@ export function overviewModel(snapshot: Snapshot, lang: Lang, selection: Selecti
     effects = snapshot.robustness.drop_effects
     sample = "drop_2021_2022"
   } else if (selection.ownership === "state" || selection.ownership === "private") {
-    benchmark = snapshot.robustness.state_vs_private[selection.ownership]
-    effects = snapshot.robustness.state_vs_private_effects[selection.ownership]
-    sample = selection.ownership
+    const group = snapshot.robustness.state_vs_private[selection.ownership]
+    if (group) {
+      benchmark = group
+      effects = snapshot.robustness.state_vs_private_effects[selection.ownership]
+      sample = selection.ownership
+    }
   }
   const span = interval(benchmark.ci95)
   const wild = benchmark.p_wild_bootstrap
@@ -586,9 +728,25 @@ export function bankRows(snapshot: Snapshot, ownership: Ownership) {
 }
 
 export function applyPublishFlag(snapshot: Snapshot, env: string | undefined = process.env.NPL_PUBLISH_BANK_SERIES): Snapshot {
-  if (env !== "0") return snapshot
+  if (env !== "0" && snapshot.meta.publish_bank_series) return snapshot
+  const hideLevels = (row: PublishedDecoderRow): PublishedDecoderRow => ({
+    ...row, npl_ratio: null, coverage: null, loan_growth: null, nim: null, lagged_coverage: null,
+  })
+  const hiddenRatio = { value: null, source: null, page: null }
+  const { decoder } = snapshot
+  const hiddenDecoder = Array.isArray(decoder)
+    ? decoder.map((cell) => ({ ...cell, inputs: {
+        ...cell.inputs, ratios: { ...cell.inputs.ratios, npl_ratio: hiddenRatio, coverage: hiddenRatio },
+      } }))
+    : decoder && {
+        ...decoder,
+        rows: decoder.rows?.map(hideLevels),
+        focus: decoder.focus?.map(hideLevels),
+        fiinquant_rows: decoder.fiinquant_rows?.map(hideLevels),
+      }
   return {
     ...snapshot,
+    decoder: hiddenDecoder,
     meta: { ...snapshot.meta, publish_bank_series: false },
     banks: snapshot.banks.map((bank) => {
       const next = { ...bank }
@@ -720,7 +878,7 @@ export function methodModel(snapshot: Snapshot, lang: Lang) {
     edaSummary: vi ? snapshot.meta.eda.summary_vi : snapshot.meta.eda.summary_en,
     stages: [
       { title: vi ? "Thu thập" : "Ingestion", body: sourceLines },
-      { title: vi ? "Làm sạch" : "Cleaning", body: vi ? `${snapshot.meta.cleaning.length} bước trong nhật ký. Giá trị thiếu được giữ. Chênh lệch chỉ tính hai quý liên tiếp.` : `${snapshot.meta.cleaning.length} steps in the log. Missing values are kept. Changes use consecutive quarters only.` },
+      { title: vi ? "Làm sạch" : "Cleaning", body: vi ? "Giá trị thiếu được giữ. Chênh lệch chỉ tính hai quý liên tiếp." : "Missing values are kept. Changes use consecutive quarters only." },
       { title: vi ? "Mô hình" : "Models", body: vi ? "M1 đến M7. Mỗi thẻ ghi thiết kế, cỡ mẫu, câu đọc và điều thẻ không cho thấy." : "M1 to M7. Each card states the design, the sample size, the reading, and what the card does not show." },
       {
         title: vi ? "Phục vụ" : "Serving",

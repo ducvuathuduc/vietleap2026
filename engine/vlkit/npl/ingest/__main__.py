@@ -27,16 +27,33 @@ def main(argv=None):
     parser.add_argument("--no-notes-vision", action="store_true", help="text layer only: never call the vision reader")
     parser.add_argument("--notes-links-only", action="store_true", help="discover and save the statement PDF links only")
     parser.add_argument("--notes-agent", action="store_true", help="use the TinyFish agent on JS-only investor pages")
+    parser.add_argument("--notes-discover", action="store_true", help="probe the Vietstock static PDF naming and save the links")
+    parser.add_argument("--notes-separate", action="store_true", help="also probe the separate (cong ty me / rieng) statements")
+    parser.add_argument("--notes-workers", type=int, default=1, help="bank-quarters read in parallel (default 1)")
+    parser.add_argument("--notes-budget", type=float, default=40.0, help="OpenAI vision budget in USD for this run")
+    parser.add_argument("--notes-fragment", type=Path, help="write harvested rows to this JSON instead of silver")
+    parser.add_argument("--notes-merge", type=Path, help="merge every fragment JSON in this folder into silver")
+    parser.add_argument("--notes-annual", help="comma-separated years to probe the audited annual (NAM) statements")
     parser.add_argument("--out", type=Path, default=ROOT / "out/npl/eda")
     args = parser.parse_args(argv)
+    if args.notes and args.notes_merge:
+        from .notes_runner import merge_fragment_dir
+        from .files import now
+
+        merge = merge_fragment_dir(args.lake, args.notes_merge, "notes-merge-" + now().strftime("%Y%m%dT%H%M%S"))
+        print(json.dumps(merge, ensure_ascii=False, indent=2, default=str))
+        return 0 if merge["datasets"]["notes_merge"]["fragments"] else 1
     if args.notes:
         from .notes_runner import LARGE, notes_periods, run_notes, tinyfish_agent
 
         banks = [code.strip().upper() for code in args.notes_banks.split(",")] if args.notes_banks \
             else list(LARGE)
+        years = tuple(int(year) for year in args.notes_annual.split(",")) if args.notes_annual else ()
         notes = run_notes(lake=args.lake, banks=banks, periods=notes_periods(args.notes_periods, args.lake),
                           use_vision=not args.no_notes_vision, refresh=args.notes_refresh,
-                          links_only=args.notes_links_only, today=args.as_of,
+                          links_only=args.notes_links_only, today=args.as_of, discover_only=args.notes_discover,
+                          separate=args.notes_separate, annual_years=years, workers=args.notes_workers,
+                          budget_usd=args.notes_budget, fragment=args.notes_fragment,
                           agent=tinyfish_agent if args.notes_agent else None)
         print(json.dumps(notes, ensure_ascii=False, indent=2))
         return 0 if notes["datasets"] or notes.get("links", {}).get("rows") else 1

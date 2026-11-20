@@ -13,6 +13,7 @@ from hashlib import sha1
 import json
 import os
 from pathlib import Path
+import re
 
 import httpx
 import jsonschema
@@ -22,6 +23,7 @@ from .notes_contract import FIELDS
 BASE_URL = "https://api.openai.com/v1"
 MODEL_A = os.getenv("NOTES_VISION_MODEL_A", "gpt-6-luna")
 MODEL_B = os.getenv("NOTES_VISION_MODEL_B", "gpt-6-sol")
+MODEL_LOCATE = os.getenv("NOTES_VISION_MODEL_LOCATE", "gpt-5-mini")   # cheap page finder, not a reader
 CACHE = Path(__file__).resolve().parents[4] / "data" / "cache" / "notes_vision"
 PRICE_IN_USD_PER_MTOK = float(os.getenv("NOTES_VISION_PRICE_IN", "1.25"))
 PRICE_OUT_USD_PER_MTOK = float(os.getenv("NOTES_VISION_PRICE_OUT", "10.0"))
@@ -66,6 +68,49 @@ thousand separators. In "values" convert the CURRENT period amount of each match
 appears twice (notes and balance sheet), keep both in "lines" and put the notes figure in "values", saying so in
 note. Never estimate or interpolate.
 """
+
+
+LOCATE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "classification_pages": {"type": "array", "items": {"type": ["integer", "string"]}},
+        "provision_pages": {"type": "array", "items": {"type": ["integer", "string"]}},
+        "balance_sheet_pages": {"type": "array", "items": {"type": ["integer", "string"]}},
+        "note": {"type": "string"},
+    },
+    "required": ["classification_pages", "provision_pages"],
+}
+LOCATE_PROMPT = """This image is a grid of pages from a Vietnamese bank financial statement, each page stamped
+with its page number (p12, p13, ...) in red at the top-left corner. Reading order is left to right, top to bottom.
+Answer with STRICT JSON only:
+{"classification_pages": [<page numbers>], "provision_pages": [<page numbers>], "balance_sheet_pages": [<page numbers>], "note": "..."}
+classification_pages = every page that shows the loan classification by credit quality group, i.e. a table with rows
+"No du tieu chuan" (or "Nợ đủ tiêu chuẩn"), "No can chu y", "No duoi tieu chuan", "No nghi ngo", "No co kha nang mat von"
+(possibly titled "Phan loai du no theo nhom" / "Phan tich chat luong no vay").
+provision_pages = every page that shows the loan-loss provision movement, i.e. rows "So du dau ky", "So trich lap trong
+ky" (or "Trich lap du phong"), "So su dung trong ky" / "Da su dung de xu ly rui ro", "So du cuoi ky" for
+"Du phong rui ro cho vay khach hang".
+balance_sheet_pages = the page of the balance sheet (Bang can doi ke toan) that carries the asset line
+"Cho vay khach hang" with its amount, and, when visible on the same page, "Du phong rui ro cho vay khach hang".
+Use the stamped page numbers, never positions in the grid. Empty arrays when a table is not in this grid. Do not guess.
+"""
+
+
+def pages_from_locate(payload, allowed=None):
+    """(classification, provision, balance-sheet) page sets, filtered to pages that exist in the document."""
+    ok = set(allowed) if allowed is not None else None
+
+    def clean(key):
+        found = set()
+        for value in (payload or {}).get(key) or []:
+            digits = re.search(r"\d+", str(value))       # "p40", "page 40" and 40 all mean page 40
+            if digits is None:
+                continue
+            page = int(digits.group())
+            if page > 0 and (ok is None or page in ok):
+                found.add(page)
+        return found
+    return clean("classification_pages"), clean("provision_pages"), clean("balance_sheet_pages")
 
 
 class VisionError(RuntimeError):
@@ -161,8 +206,12 @@ class VisionReader:
     def available(self):
         return bool(self.key)
 
-    def read(self, png, prompt, model):
-        """Parsed JSON payload for one page image, or raise VisionError (never silently return numbers)."""
+    def read(self, png, prompt, model, schema=None):
+        """Parsed JSON payload for one page image, or raise VisionError (never silently return numbers).
+
+        `schema` is the shape this prompt must answer with: the extraction schema by default, the locator schema
+        for the page finder. A reply that does not match it is a refusal, and nothing is cached or spent on it.
+        """
         key = digest(png, prompt, model)
         path = self.cache / f"{key}.json"
         if path.exists():
@@ -188,7 +237,7 @@ class VisionReader:
         if parsed is None:
             raise VisionError("reply is not JSON")
         try:
-            jsonschema.validate(parsed, SCHEMA)
+            jsonschema.validate(parsed, schema or SCHEMA)
         except jsonschema.ValidationError as exc:
             raise VisionError(f"reply does not match the schema: {exc.message}") from None
         usage = payload.get("usage") or {}

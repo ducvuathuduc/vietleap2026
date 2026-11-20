@@ -52,7 +52,6 @@ export function DataTable({ rows, raw, lang }: { rows: DataRow[]; raw: boolean; 
               <TableHead key={column.key}>
                 <button type="button" className="min-h-11 underline-offset-4 hover:underline" onClick={() => choose(column.key)}>
                   {lang === "vi" ? column.vi : column.en}
-                  {key === column.key ? (dir === 1 ? " ↑" : " ↓") : ""}
                 </button>
               </TableHead>
             ))}

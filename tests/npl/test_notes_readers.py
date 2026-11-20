@@ -104,6 +104,12 @@ def test_vision_json_is_parsed_from_a_fence_and_transcribed_lines_are_scaled():
     assert notes_vision.parse_json("no json here") is None
 
 
+def test_page_numbers_survive_the_way_a_model_writes_them():
+    payload = {"classification_pages": ["p12", "page 13", 14, "n/a"],
+               "provision_pages": ["15"], "balance_sheet_pages": ["p2"]}
+    assert notes_vision.pages_from_locate(payload, allowed=range(1, 20)) == ({12, 13, 14}, {15}, {2})
+
+
 def test_vision_values_only_accept_known_fields():
     payload = {"values": {"group_2_watch": 80.0, "made_up_field": 1.0, "loans_customer": None,
                           "provision_charge": "12.5"}}

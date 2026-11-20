@@ -315,6 +315,9 @@ def _findings(models):
         en.append(f"In {span}, the {source[1]} regression gave a lagged-coverage slope of "
                   f"{_term_text(decoder_fit, 'lagged_coverage', english=True, digits=4)}, so use the current change in coverage "
                   "for flagging and read the lagged estimate as an association.")
+        if decoder_fit is notes_fit:
+            vi[-1] += " Mẫu ghi chú chỉ gợi ý chiều liên hệ."
+            en[-1] += " The notes sample supports directional interpretation."
     if q4["terms"].get("Q4", {}).get("ci95"):
         span = "–".join(q4["period"])
         vi.append(f"Trong {span}, hệ số thay đổi NPL Quý 4 so với Quý 1 là {_term_text(q4, 'Q4')} điểm phần trăm, "
@@ -490,11 +493,12 @@ def run_real(silver, out):
     events = events.merge(decision_data, on=["bank_code", "period"], validate="one_to_one")
     m1["dashboard"] = dashboard_metrics(main.assign(adjusted_d_npl_pct=decisions["adjusted_change_pp"]))
     signals = {bank: [] for bank in m1["dashboard"]["banks"]}
-    for row in decoder["fiinquant_rows"]:
-        signals[row["bank_code"]].extend({**signal, "period": row["period"]} for signal in row["signals"])
+    for row in decoder["rows"]:
+        if row["period"] in decoder["periods"]:
+            signals[row["bank_code"]].extend({**signal, "period": row["period"]} for signal in row["signals"])
     for bank, card in m1["dashboard"]["banks"].items():
         card["signals"] = signals[bank]
-    m1["dashboard"]["signal_availability"] = decoder["fiinquant_signal_availability"]
+    m1["dashboard"]["signal_availability"] = decoder["signal_availability"]
     m1["mechanism"] = mechanism(tables.get("notes_bank_quarter"), tables.get("case_tcb"))
     m1["context"] = policy_context(main, tables.get("wdi_bank"), tables.get("legal_register"))
     panel["seasonally_adjusted_npl_pct"] = adjusted["seasonally_adjusted_npl_pct"]

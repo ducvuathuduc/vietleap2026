@@ -1,0 +1,112 @@
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { test, type TestContext } from "node:test"
+
+import { S3Client } from "@aws-sdk/client-s3"
+
+import seed from "../../../seed/npl/snapshot.json" with { type: "json" }
+
+import { readSnapshot } from "./snapshot-source.ts"
+import schema from "./snapshot.schema.json" with { type: "json" }
+import { applyPublishFlag, bankModel, decoderModel, methodModel, overviewModel, publicCsv } from "./view.ts"
+
+function setSource(t: TestContext, uri?: string) {
+  const saved = process.env.NPL_SNAPSHOT_S3_URI
+  if (uri) process.env.NPL_SNAPSHOT_S3_URI = uri
+  else delete process.env.NPL_SNAPSHOT_S3_URI
+  t.after(() => {
+    if (saved === undefined) delete process.env.NPL_SNAPSHOT_S3_URI
+    else process.env.NPL_SNAPSHOT_S3_URI = saved
+  })
+}
+
+test("the web schema matches the pipeline contract", () => {
+  const contract = new URL("../../../../engine/vlkit/npl/schema/snapshot.schema.json", import.meta.url)
+  assert.deepEqual(schema, JSON.parse(readFileSync(contract, "utf8")))
+})
+
+test("loads and adapts the bundled snapshot when S3 is unconfigured", async (t) => {
+  setSource(t)
+  const send = t.mock.method(S3Client.prototype, "send")
+  const snapshot = await readSnapshot()
+
+  assert.equal(snapshot.meta.snapshot_id, seed.meta.snapshot_id)
+  assert.equal(overviewModel(snapshot, "en").benchmark.coef, seed.kpis.benchmark.q4_coef_pp)
+  assert.ok(bankModel(snapshot, "VCB", "en")?.pairs.length)
+  assert.equal(methodModel(snapshot, "en").edaSummary, seed.method.find((entry) => entry.id === "M1")?.reading_en)
+  assert.match(publicCsv(snapshot), /VCB/)
+  assert.equal(decoderModel(snapshot, "en", "all").rows.length, 27)
+  assert.equal(send.mock.callCount(), 0)
+})
+
+test("the published decoder keeps its missing status and any available coverage signal", async (t) => {
+  setSource(t, "s3://vietleap-test/snapshots/npl/partial-notes.json")
+  const object = structuredClone(seed)
+  const row = object.decoder.rows.find((row) => row.bank_code === "VCB" && row.period === "2025Q2")!
+  Object.assign(row, {
+    status: "missing", coverage_contested: false, group2_vnd_bn: 123,
+    signals: [{ id: "S3", text_vi: "Đệm dự phòng mỏng đi", text_en: "Provision buffer thinner" }],
+  })
+  t.mock.method(S3Client.prototype, "send", async () => ({
+    Body: { transformToString: async () => JSON.stringify(object) },
+  }))
+  const table = decoderModel(await readSnapshot(), "en", "all")
+  const cell = table.rows.find((row) => row.bank === "VCB")?.cells.find((cell) => cell?.period === "2025Q2")
+  assert.equal(cell?.status, "missing")
+  assert.equal(cell?.dNpl, -0.03)
+  assert.deepEqual(cell?.signals, ["Provision buffer thinner"])
+  assert.match(cell?.reading ?? "", /Provision buffer thinner/)
+  assert.equal(cell?.inputs.group2, 123)
+})
+
+test("runtime publish flag redacts vendor level fields and keeps the decoder's derived changes", async (t) => {
+  setSource(t)
+  const publicSnapshot = await readSnapshot()
+  const privateSnapshot = applyPublishFlag(publicSnapshot, "0")
+
+  assert.ok(publicSnapshot.banks.every((bank) => bank.series?.length))
+  assert.ok(privateSnapshot.banks.every((bank) => !bank.series))
+  const { decoder } = privateSnapshot
+  assert.ok(decoder && !Array.isArray(decoder))
+  const row = decoder.rows?.find((item) => item.bank_code === "VCB" && item.period === "2025Q2")
+  assert.ok(row)
+  assert.deepEqual([row.npl_ratio, row.coverage, row.loan_growth, row.nim, row.lagged_coverage], Array(5).fill(null))
+  assert.ok((row.delta_npl_ratio ?? 0) < 0)
+})
+
+test("reads S3 with the configured bucket and key, deduplicates requests and expires cache after ten minutes", async (t) => {
+  setSource(t, "s3://vietleap-test/snapshots/npl/snapshot.json")
+  let now = 1000
+  t.mock.method(Date, "now", () => now)
+  const object = { ...seed, meta: { ...seed.meta, snapshot_id: "cloud-test" } }
+  const send = t.mock.method(S3Client.prototype, "send", async () => ({
+    Body: { transformToString: async () => JSON.stringify(object) },
+  }))
+  const [first, second] = await Promise.all([readSnapshot(), readSnapshot()])
+  assert.equal(first.meta.snapshot_id, "cloud-test")
+  assert.equal(first, second)
+  assert.equal(send.mock.callCount(), 1)
+  assert.deepEqual(send.mock.calls[0].arguments[0].input, {
+    Bucket: "vietleap-test",
+    Key: "snapshots/npl/snapshot.json",
+  })
+
+  now += 599_999
+  assert.equal(await readSnapshot(), first)
+  now += 1
+  assert.equal((await readSnapshot()).meta.snapshot_id, "cloud-test")
+  assert.equal(send.mock.callCount(), 2)
+})
+
+test("rejects an invalid S3 snapshot and retries the same key after correction", async (t) => {
+  setSource(t, "s3://vietleap-test/snapshots/npl/corrected.json")
+  let object: unknown = { ...seed, banks: [{ ...seed.banks[0], code: false }] }
+  const send = t.mock.method(S3Client.prototype, "send", async () => ({
+    Body: { transformToString: async () => JSON.stringify(object) },
+  }))
+
+  await assert.rejects(readSnapshot(), /snapshot schema/)
+  object = seed
+  assert.equal((await readSnapshot()).meta.snapshot_id, seed.meta.snapshot_id)
+  assert.equal(send.mock.callCount(), 2)
+})

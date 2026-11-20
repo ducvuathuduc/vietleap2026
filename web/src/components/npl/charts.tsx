@@ -136,7 +136,7 @@ export function DrillChart({
     <ChartContainer config={drillConfig} className="aspect-auto h-[34rem] w-full min-w-0" initialDimension={{ width: 640, height: 544 }}>
       <BarChart data={rows} layout="vertical" margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid horizontal={false} />
-        <XAxis type="number" tickLine={false} axisLine={false} />
+        <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={axisTick(lang)} />
         <YAxis type="category" dataKey="code" width={44} tickLine={false} axisLine={false} />
         <ReferenceLine x={0} stroke="var(--muted-foreground)" />
         <ChartTooltip content={<Tip lang={lang} />} />
@@ -203,7 +203,7 @@ export function BankLines({ rows, lang }: { rows: BankLineRow[]; lang: Lang }) {
         <ComposedChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="period" tickLine={false} axisLine={false} interval="preserveStartEnd" tick={{ fontSize: 11 }} />
-          <YAxis width={40} tickLine={false} axisLine={false} />
+          <YAxis width={44} tickLine={false} axisLine={false} tickFormatter={axisTick(lang)} />
           <ChartTooltip content={<Tip lang={lang} digits={2} />} />
           <Line dataKey="npl" name="NPL" stroke="var(--color-npl)" dot={false} strokeWidth={2} connectNulls={false} />
           <Line dataKey="nim" name="NIM" stroke="var(--color-nim)" dot={false} strokeWidth={2} connectNulls={false} />
@@ -273,6 +273,33 @@ export function MarketChart({
         <Line dataKey="all" name={lang === "vi" ? "Tất cả" : "All"} stroke="var(--color-all)" strokeWidth={2} dot={false} />
         <Line dataKey="q4" name="Q4" stroke="var(--color-q4)" strokeWidth={2} dot={false} />
       </ComposedChart>
+    </ChartContainer>
+  )
+}
+
+const forecastConfig = {
+  npl: { label: "NPL", color: "var(--chart-1)" },
+} satisfies ChartConfig
+
+export function ForecastBand({
+  point,
+  lang,
+}: {
+  point: { period: string; npl: number; lo: number; hi: number }
+  lang: Lang
+}) {
+  const data = [{ period: point.period, npl: point.npl, error: [point.npl - point.lo, point.hi - point.npl] }]
+  return (
+    <ChartContainer config={forecastConfig} className="aspect-auto h-40 w-full min-w-0" initialDimension={{ width: 320, height: 160 }}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="period" tickLine={false} axisLine={false} />
+        <YAxis width={44} tickLine={false} axisLine={false} tickFormatter={axisTick(lang)} />
+        <ChartTooltip content={<Tip lang={lang} digits={2} />} />
+        <Bar dataKey="npl" name="NPL" fill="var(--color-npl)" radius={4}>
+          <ErrorBar dataKey="error" width={6} stroke="var(--foreground)" />
+        </Bar>
+      </BarChart>
     </ChartContainer>
   )
 }

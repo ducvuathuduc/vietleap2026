@@ -1,12 +1,8 @@
-import decoderFile from "../../../seed/npl/decoder.fixture.json"
-import fixture from "../../../seed/npl/snapshot.fixture.json"
+import { readSnapshot } from "./snapshot-source.ts"
+import { applyPublishFlag, type Snapshot } from "./view.ts"
 
-import { applyPublishFlag, type DecoderCell, type Snapshot } from "./view.ts"
-
-export function loadSnapshot(): Snapshot {
-  const snapshot = applyPublishFlag(fixture as Snapshot)
-  if (snapshot.decoder?.length) return snapshot
-  return { ...snapshot, decoder: (decoderFile as { decoder: DecoderCell[] }).decoder }
+export async function loadSnapshot(): Promise<Snapshot> {
+  return applyPublishFlag(await readSnapshot())
 }
 
 export function bankByCode(snapshot: Snapshot, code: string) {

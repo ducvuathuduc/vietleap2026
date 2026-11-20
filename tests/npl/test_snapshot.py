@@ -49,7 +49,8 @@ def test_public_snapshot_matches_schema_and_results(snapshot_inputs, monkeypatch
     assert 1 <= len(payload["findings"]) <= 6
     assert payload["findings"] == results["M1"]["findings"]
     assert payload["decoder"] == results["decoder"]
-    assert len(payload["decoder"]["rows"]) == 48
+    assert len(payload["decoder"]["rows"]) == 184
+    assert len(payload["decoder"]["focus"]) == 48
     assert payload["market"]["coverage"]["actual_date_n"] == 0
     assert payload["decision_rule"]["q4_backtest"]
     assert payload["banks"][0]["latest"]["decision"]["status"] in {
@@ -80,9 +81,10 @@ def test_only_zero_disables_publication_and_older_results_are_supported(snapshot
     hidden = build_snapshot(results_path, gold, silver)
     assert hidden["meta"]["publish_bank_series"] is False
     assert all("series" not in bank for bank in hidden["banks"])
-    assert all(row["npl_ratio"] is None and row["coverage"] is None and row["lagged_coverage"] is None
-               for row in hidden["decoder"]["fiinquant_rows"])
-    assert any(row["delta_npl_ratio"] is not None for row in hidden["decoder"]["fiinquant_rows"])
+    for collection in ("rows", "focus"):
+        assert all(row["npl_ratio"] is None and row["coverage"] is None and row["lagged_coverage"] is None
+                   and row["nim"] is None and row["loan_growth"] is None for row in hidden["decoder"][collection])
+        assert any(row["delta_npl_ratio"] is not None for row in hidden["decoder"][collection])
 
     monkeypatch.setenv("NPL_PUBLISH_BANK_SERIES", "true")
     published = build_snapshot(results_path, gold, silver)

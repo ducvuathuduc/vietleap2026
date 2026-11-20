@@ -135,7 +135,8 @@ def test_real_cli_publishes_models_and_gold(silver):
     results = json.loads((out / "results.json").read_text(encoding="utf-8"))
     assert set(results) == {f"M{i}" for i in range(1, 8)} | {"decoder"}
     assert all(results[f"M{i}"]["reading"] and results[f"M{i}"]["what_this_does_not_show"] for i in range(1, 8))
-    assert len(results["decoder"]["rows"]) == 48
+    assert len(results["decoder"]["rows"]) == 184
+    assert len(results["decoder"]["focus"]) == 48
     assert results["decoder"]["regression"]["fiinquant"]["available"]["n"] == 176
     assert sum(row["n"] for row in results["M3"]["by_year"]) == 40
     assert results["M6"]["regressions"]["reported_or_deadline"]["n"] > 100

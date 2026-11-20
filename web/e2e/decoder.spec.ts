@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { withLang, type Lang } from "./helpers"
+import { withLang } from "./helpers"
 
 const DISCLAIMER = {
   vi: "Tool chỉ nêu cờ cần xem xét, không kết luận ngân hàng che giấu nợ xấu",
@@ -35,7 +35,7 @@ for (const lang of ["vi", "en"] as const) {
     await expect(ratioItems).toHaveCount(4)
     await expect(ratioItems.first()).toContainText(vi ? "Nguồn:" : "Source:")
 
-    await expect(dialog).toContainText(DISCLAIMER[vi])
+    await expect(dialog).toContainText(DISCLAIMER[lang])
 
     // Escape closes the side panel.
     await page.keyboard.press("Escape")

@@ -437,6 +437,36 @@ test("the decoder flags a coverage decline and a usual Q4 move, and never calls 
   assert.equal(table.moreLabel, "Xem tất cả ngân hàng")
 })
 
+test("a published decoder object supplies ratios, flags and the plain reading", () => {
+  const publication = {
+    rows: [{ bank_code: "VCB", period: "2021Q1", npl_ratio: null, delta_npl_ratio: null, status: "missing_data", signals: [] }],
+    focus: [{
+      bank_code: "VCB",
+      period: "2025Q2",
+      npl_ratio: 0.01,
+      coverage: 2.1384,
+      loan_growth: 0.1406,
+      delta_npl_ratio: -0.0003,
+      delta_coverage: -0.0227,
+      delta_g2_ratio: 0.003,
+      status: "missing_data",
+      signals: [{ id: "S3", text_vi: "Đệm dự phòng mỏng đi", text_en: "Provision buffer thinner" }],
+    }],
+    fiinquant_rows: [{ bank_code: "ABB", period: "2025Q4", npl_ratio: 0.02, delta_npl_ratio: -0.001, status: "not_applicable", signals: [] }],
+  }
+  const preview = decoderModel({ decoder: publication } as unknown as Snapshot, "vi")
+  assert.deepEqual(preview.rows.map((row) => row.bank), ["VCB"])
+  const cell = preview.rows[0]?.cells.find((item) => item?.period === "2025Q2")
+  assert.equal(cell?.dNpl, -0.03)
+  assert.equal(cell?.status, "coverage")
+  assert.equal(cell?.inputs.ratios.npl_ratio.value, 1)
+  assert.match(cell?.reading ?? "", /NPL giảm 0,03 điểm %/)
+  assert.match(cell?.reading ?? "", /nợ nhóm 2 tăng 0,30 điểm %/)
+  const full = decoderModel({ decoder: publication } as unknown as Snapshot, "vi", "all")
+  assert.equal(full.periods[0], "2021Q1")
+  assert.equal(full.rows.some((row) => row.bank === "ABB"), true)
+})
+
 test("the page shell clips horizontal overflow", () => {
   assert.match(PAGE_SHELL, /overflow-x-hidden/)
   const layout = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/layout.tsx"), "utf8")
@@ -444,8 +474,18 @@ test("the page shell clips horizontal overflow", () => {
   const table = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../components/npl/data-table.tsx"), "utf8")
   assert.match(table, /overflow-x-auto/)
   const overview = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/page.tsx"), "utf8")
+  assert.match(overview, /Tỷ lệ nợ xấu giảm chưa chứng minh tín dụng tốt hơn/)
+  assert.match(overview, /Vì sao cần kiểm tra/)
   assert.match(overview, /DecoderTable/)
-  assert.match(overview, /Bằng chứng thống kê/)
-  assert.match(overview, /Kiểm tra độ vững/)
+  assert.match(overview, /Glossary/)
   assert.match(overview, /Cách đọc/)
+  assert.doesNotMatch(overview, /→/)
+  assert.doesNotMatch(overview, / · /)
+  assert.doesNotMatch(overview, /Kiểm tra độ vững/)
+  assert.doesNotMatch(overview, /KeyNumbers/)
+  const method = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../app/(npl)/phuong-phap/page.tsx"), "utf8")
+  assert.match(method, /Kiểm tra độ vững/)
+  assert.match(method, /QuarterChart/)
+  assert.doesNotMatch(method, /→/)
+  assert.doesNotMatch(method, /get_ratios/)
 })
