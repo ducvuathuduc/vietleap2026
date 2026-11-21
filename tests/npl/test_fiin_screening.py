@@ -139,6 +139,23 @@ def test_the_audit_reports_the_share_of_overlapping_values_that_match():
     assert audit["by_field"]["loans_customer"]["rate"] == 1.0
 
 
+def test_the_audit_headline_is_the_comparable_match_and_keeps_every_overlap():
+    def row(field, value, grade="single", scope="consolidated", reader="fiinquant_screening"):
+        return {"bank": "VCB", "period": "2025Q2", "field": field, "basis": "point", "value_vnd_bn": value,
+                "page": 1, "source_url": "https://x.test/a.pdf", "statement_type": scope, "unit": "bn",
+                "reader": reader, "grade": grade, "raw_sha256": "s"}
+    screening = pd.DataFrame([
+        row("loans_customer", 1000.0), row("group_2_watch", 10.0), row("group_5_loss", 5.0),
+    ])
+    pdf = pd.DataFrame([
+        row("loans_customer", 1000.5), row("group_2_watch", 20.0),
+        row("group_5_loss", 5.0, grade="contested"),
+    ])
+    audit, _ = screen.audit(screening, pdf)
+    assert audit["headline"] == {"matched": 1, "comparable": 2, "rate": 0.5}
+    assert audit["all_rows"] == {"matched": 2, "rows": 3, "rate": 2 / 3}
+
+
 def test_run_screening_writes_gated_silver_and_quarantines_the_bank_that_fails(tmp_path):
     write_silver(tmp_path, "bank_quarter.parquet", pd.DataFrame([
         {"ticker": "VCB", "period": "2025Q1", "npl": 0.05}, {"ticker": "TCB", "period": "2025Q1", "npl": 0.05}]))

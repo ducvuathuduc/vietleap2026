@@ -1,11 +1,13 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import { BankCompareChart, BankLines } from "@/components/npl/charts"
+import { AdjustedNplChart, BankCompareChart, BankLines } from "@/components/npl/charts"
+import { BankScorecard } from "@/components/npl/bank-scorecard"
 import { Glossary } from "@/components/npl/glossary"
 import { HowToRead } from "@/components/npl/how-to-read"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { loadSnapshot } from "@/lib/npl/load"
+import { latestScorecard } from "@/lib/npl/research-view"
 import { bankModel, formatNumber, langFromQuery, pageHref } from "@/lib/npl/view"
 
 export const instant = false
@@ -21,33 +23,34 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { code } = await params
   const query = await searchParams
   const lang = langFromQuery(query.lang)
-  const model = bankModel(await loadSnapshot(), code, lang)
+  const study = await loadSnapshot()
+  const model = bankModel(study, code, lang)
   if (!model) notFound()
   const vi = lang === "vi"
-  const adjusted = model.adjusted == null
-    ? (vi
-      ? "Bản số liệu không có phần thay đổi sau khi trừ nhịp chung của quý."
-      : "These figures do not include the change after the usual quarter pattern is removed.")
-    : (vi
-      ? (model.latestPeriod
-        ? `Ở ${model.latestPeriod}, phần thay đổi sau khi trừ nhịp chung của quý là ${formatNumber(model.adjusted, lang, 3)} điểm phần trăm.`
-        : `Phần thay đổi sau khi trừ nhịp chung của quý là ${formatNumber(model.adjusted, lang, 3)} điểm phần trăm.`)
-      : (model.latestPeriod
-        ? `In ${model.latestPeriod}, the change after the usual quarter pattern is removed is ${formatNumber(model.adjusted, lang, 3)} percentage points.`
-        : `The change after the usual quarter pattern is removed is ${formatNumber(model.adjusted, lang, 3)} percentage points.`))
+  const bank = code.toUpperCase()
+  const adjustedRows = study.context?.seasonal_adjustment?.series.filter((row) => row.bank_code === bank) ?? []
   return (
     <>
-      <h1 className="text-xl font-semibold text-balance">{model.headline}</h1>
-      <p className="text-sm text-muted-foreground">{model.reminder}</p>
-      <p className="text-sm text-muted-foreground">
-        {model.ownership === "state" ? (vi ? "Nhà nước" : "State") : (vi ? "Tư nhân" : "Private")}
-      </p>
-      <p className="text-sm">
-        <a className="underline underline-offset-4" href={pageHref("/ngan-hang", lang)}>{vi ? "Về danh sách" : "Back to the list"}</a>
-      </p>
+      <header className="grid gap-1.5">
+        <h1 className="text-2xl font-semibold text-balance">{model.name === bank ? bank : `${model.name} (${bank})`}</h1>
+        <p className="text-sm text-muted-foreground">
+          {model.ownership === "state" ? (vi ? "Nhà nước" : "State") : (vi ? "Tư nhân" : "Private")}
+        </p>
+        <a className="text-sm underline underline-offset-4" href={pageHref("/ngan-hang", lang)}>{vi ? "Về danh sách" : "Back to the list"}</a>
+      </header>
+      <BankScorecard result={latestScorecard(study, bank)} lang={lang} />
+      <section className="flex min-w-0 flex-col gap-2" aria-labelledby="adjusted-npl-title">
+        <h2 className="text-lg font-semibold" id="adjusted-npl-title">
+          {vi ? "Tỷ lệ nợ xấu sau điều chỉnh mùa vụ" : "Seasonally adjusted NPL"}
+        </h2>
+        {adjustedRows.some((row) => row.adjusted_npl_pct != null)
+          ? <AdjustedNplChart rows={adjustedRows} lang={lang} />
+          : <p className="text-sm text-muted-foreground">{vi ? "Chưa đủ lịch sử để điều chỉnh cho ngân hàng này." : "There is not enough history to adjust this bank’s ratio."}</p>}
+      </section>
       <Glossary lang={lang} />
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Trung bình theo quý của ngân hàng này, chấm là hệ số cả nhóm" : "This bank's quarterly mean, dots are the panel coefficients"}</h2>
+        <p className="text-sm text-muted-foreground">{model.headline}</p>
         <BankCompareChart rows={model.chart} lang={lang} />
         <HowToRead
           label={vi ? "Cách đọc" : "How to read"}
@@ -75,7 +78,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             : ["The bars are this bank's average change by quarter, and the dots are the panel coefficients.", "The quarterly NPL, coverage, LDR, NIM and loan-growth lines are not on this page."]}
         />
       )}
-      <p>{adjusted}</p>
       <section className="flex flex-col gap-1">
         <h2 className="text-base font-semibold">{vi ? "Quý kế" : "Next quarter"}</h2>
         {model.forecast ? (

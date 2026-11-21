@@ -56,8 +56,35 @@ test("the Group 2 answer shows one sortable table and opens the matching waterfa
   await expect(answer).not.toContainText(/\btool\b|\bfocus\b|\b[a-z]+_[a-z]+\b|Đầu vào & nguồn/i)
   await table.getByRole("link", { name: "BVB", exact: true }).click()
   await expect(page).toHaveURL(/[?&]bank=BVB&year=2025#q4-breakdown$/)
-  await expect(page.getByRole("combobox", { name: "Ngân hàng" }).locator('[data-slot="select-value"]')).toHaveText("BVB")
-  await expect(page.getByRole("combobox", { name: "Năm" }).locator('[data-slot="select-value"]')).toHaveText("2025")
+  const breakdown = page.getByRole("region", { name: "Mổ xẻ một lần NPL giảm" })
+  await expect(breakdown.getByRole("combobox", { name: "Ngân hàng" }).locator('[data-slot="select-value"]')).toHaveText("BVB")
+  await expect(breakdown.getByRole("combobox", { name: "Năm" }).locator('[data-slot="select-value"]')).toHaveText("2025")
+})
+
+test("the rank-gap question shows a single table with the published ranks", async ({ page }) => {
+  await page.goto("/")
+  await page.getByRole("button", { name: title, exact: true }).click()
+  const panel = page.getByRole("dialog", { name: title })
+  await panel.getByRole("textbox", { name: "Câu hỏi về dữ liệu" }).fill("Ngân hàng nào NPL đẹp nhưng chất lượng tổng thể kém?")
+  await panel.getByRole("button", { name: "Gửi", exact: true }).click()
+  const answer = panel.getByRole("article")
+  const table = answer.getByRole("table", { name: "Chênh lệch thứ hạng tín dụng" })
+  await expect(table.getByRole("row", { name: "BID 8 14" })).toBeVisible()
+  await expect(answer.getByRole("table")).toHaveCount(1)
+  await expect(answer.getByRole("figure")).toHaveCount(1)
+})
+
+test("the English early-warning answer compares three models in one table", async ({ page }) => {
+  await page.goto("/phuong-phap?lang=en")
+  await page.getByRole("button", { name: "Ask the data", exact: true }).click()
+  const panel = page.getByRole("dialog", { name: "Ask the data" })
+  await panel.getByRole("button", { name: "Does Group 2 improve early warning?" }).click()
+  const answer = panel.getByRole("article")
+  await expect(answer).toContainText("shows no clear improvement over NPL alone")
+  const table = answer.getByRole("table", { name: "Early warning comparison" })
+  await expect(table.getByRole("rowheader")).toHaveText(["NPL only", "Add Group 2", "Full indicators"])
+  await expect(answer.getByRole("table")).toHaveCount(1)
+  await expect(answer.getByRole("link", { name: "See on the page" })).toHaveAttribute("href", "/phuong-phap?lang=en#early-warning")
 })
 
 test("home metadata follows the new title and subtitle in both languages", async ({ page }) => {
@@ -67,7 +94,7 @@ test("home metadata follows the new title and subtitle in both languages", async
   await page.goto("/?lang=en")
   await expect(page).toHaveTitle("Beyond the NPL Ratio")
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /A credit quality assessment framework, 27 listed banks, 2021–2026/)
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bad-debt ratios usually look better in Q4")
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("When the reported NPL ratio falls, what else should we check before concluding that credit quality has improved?")
 })
 
 test("an unknown English bank keeps its 404 and offers a localized way back", async ({ page }) => {

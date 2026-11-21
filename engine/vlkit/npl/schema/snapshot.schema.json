@@ -769,7 +769,9 @@
           }
         }
       }
-    }
+    },
+    "scorecard": { "$ref": "#/$defs/scorecard" },
+    "pdf_audit": { "$ref": "#/$defs/pdfAudit" }
   },
   "additionalProperties": false,
   "if": {
@@ -903,6 +905,53 @@
       },
       "additionalProperties": true
     },
+    "scorecard": {
+      "type": "object",
+      "required": ["indicators", "by_quarter", "rank_gaps", "disagreement", "sensitivity",
+                   "reading_vi", "reading_en", "what_this_does_not_show_vi", "what_this_does_not_show_en"],
+      "properties": {
+        "indicators": { "type": "array" },
+        "rows": { "type": "array" },
+        "by_quarter": { "type": "array" },
+        "rank_gaps": { "type": "object" },
+        "disagreement": { "type": "object" },
+        "sensitivity": { "type": "object" },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 },
+        "what_this_does_not_show_vi": { "type": "string", "minLength": 1 },
+        "what_this_does_not_show_en": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "pdfAudit": {
+      "type": "object",
+      "required": ["headline", "all_rows", "reading_vi", "reading_en"],
+      "properties": {
+        "headline": {
+          "type": "object",
+          "required": ["matched", "comparable", "rate"],
+          "properties": {
+            "matched": { "type": "integer", "minimum": 0 },
+            "comparable": { "type": "integer", "minimum": 0 },
+            "rate": { "type": ["number", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "all_rows": {
+          "type": "object",
+          "required": ["matched", "rows", "rate"],
+          "properties": {
+            "matched": { "type": "integer", "minimum": 0 },
+            "rows": { "type": "integer", "minimum": 0 },
+            "rate": { "type": ["number", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "decoderRow": {
       "type": "object",
       "required": ["bank_code", "period", "status", "status_vi", "status_en", "signals", "missing_inputs",
@@ -946,7 +995,15 @@
         "writeoff_vnd_bn": { "type": ["number", "null"] }
       },
       "if": { "properties": { "status": { "enum": ["clean", "CLEAN"] } } },
-      "then": { "properties": { "signals": { "maxItems": 0 }, "missing_inputs": { "maxItems": 0 } } }
+      "then": {
+        "properties": {
+          "signals": {
+            "maxItems": 1,
+            "items": { "properties": { "id": { "const": "S4" } } }
+          },
+          "missing_inputs": { "maxItems": 0 }
+        }
+      }
     },
     "decoderFit": {
       "type": "object",
@@ -956,7 +1013,23 @@
         "grid_n": { "type": ["integer", "null"], "minimum": 0 },
         "panel_period": { "$ref": "#/$defs/periodRange" },
         "full": { "$ref": "#/$defs/regression" },
+        "without_writeoff": { "anyOf": [{ "$ref": "#/$defs/regression" }, { "type": "null" }] },
         "available": { "anyOf": [{ "$ref": "#/$defs/regression" }, { "type": "null" }] },
+        "sample_banks": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["full", "without_writeoff", "available"],
+              "additionalProperties": false,
+              "properties": {
+                "full": { "type": "array", "items": { "type": "string" } },
+                "without_writeoff": { "type": "array", "items": { "type": "string" } },
+                "available": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          ]
+        },
         "unavailable_fields": { "type": "array", "items": { "type": "string" } },
         "n_by_field": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
       }

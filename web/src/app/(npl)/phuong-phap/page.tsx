@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 
 import { QuarterChart } from "@/components/npl/charts"
+import { EconometricModels } from "@/components/npl/econometric-models"
 import { HowToRead } from "@/components/npl/how-to-read"
 import { buttonVariants } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { loadSnapshot } from "@/lib/npl/load"
 import {
   formatNumber,
@@ -38,11 +38,6 @@ function readLabel(lang: Lang): string {
   return lang === "vi" ? "Cách đọc" : "How to read"
 }
 
-function blocked(value: string): boolean {
-  const folded = value.toLowerCase()
-  return folded.includes("get" + "_ratios") || folded.includes("consol" + "idated")
-}
-
 function sourceTitle(name: string, vi: boolean): string {
   const text = name.toLowerCase()
   if (text.includes("fiin")) {
@@ -75,22 +70,14 @@ function sourceTitle(name: string, vi: boolean): string {
 }
 
 function sourceSentence(
-  source: { name: string; method: string; retrieved_at: string; rows: number },
+  source: { name: string; retrieved_at: string; rows: number },
   lang: Lang,
 ): string {
   const vi = lang === "vi"
   const title = sourceTitle(source.name, vi)
   const rows = formatNumber(source.rows, lang, 0)
   const when = formatStamp(source.retrieved_at)
-  const how = blocked(source.method)
-    ? ""
-    : source.method === "api"
-      ? vi ? "qua API" : "via the API"
-      : source.method === "file"
-        ? vi ? "từ tệp" : "from a file"
-        : vi ? `bằng ${source.method}` : `via ${source.method}`
-  if (vi) return how ? `${title}. ${rows} dòng, lấy lúc ${when}, ${how}.` : `${title}. ${rows} dòng, lấy lúc ${when}.`
-  return how ? `${title}. ${rows} rows, retrieved ${when}, ${how}.` : `${title}. ${rows} rows, retrieved ${when}.`
+  return vi ? `${title}. ${rows} dòng, lấy lúc ${when}.` : `${title}. ${rows} rows, retrieved ${when}.`
 }
 
 export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
@@ -99,14 +86,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
   const ownership = ownershipOf(one(query.own))
   const dropEarly = one(query.drop) === "1"
   const snapshot = await loadSnapshot()
-  const baseline = overviewModel(snapshot, lang)
   const selected = overviewModel(snapshot, lang, { ownership, dropEarly })
   const model = methodModel(snapshot, lang)
+  const audit = snapshot.pdf_audit?.headline
   const vi = lang === "vi"
   return (
     <>
-      <h1 className="text-xl font-semibold text-balance">{baseline.plainHeadline}</h1>
-      <p className="text-sm text-muted-foreground">{baseline.evidenceLine} {selected.decision}</p>
+      <div className="grid gap-2">
+        <h1 className="text-2xl font-semibold text-balance">{vi ? "Cách kiểm tra bằng chứng" : "How to test the evidence"}</h1>
+        <p className="text-sm text-muted-foreground">
+          {vi ? "So sánh các quý trong cùng ngân hàng, kiểm tra khả năng dự báo ở các quý giữ lại và ước tính biến động sau khi bỏ nhịp mùa vụ."
+            : "Compare quarters within the same bank, test the forecasts on held-out quarters, and estimate how NPL moves after seasonal adjustment."}
+        </p>
+      </div>
+      <EconometricModels snapshot={snapshot} lang={lang} />
       <section className="flex min-w-0 flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Kiểm tra độ vững" : "Robustness check"}</h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -141,6 +134,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
           </p>
         ) : null}
         <QuarterChart bars={selected.bars} lang={lang} />
+        <p className="text-sm text-muted-foreground">{selected.decision}</p>
         <HowToRead
           label={readLabel(lang)}
           sentences={vi
@@ -149,9 +143,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
         />
       </section>
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold">{vi ? "Các mô hình, nói bằng lời" : "Models, in words"}</h2>
+        <h2 className="text-base font-semibold">{vi ? "Các phân tích bổ sung" : "Supporting analyses"}</h2>
         <ul className="flex flex-col gap-3 text-sm">
-          {model.models.map((item) => (
+          {model.models.filter((item) => item.id !== "M6").map((item) => (
             <li key={item.id} className="flex flex-col gap-1">
               <p className="font-medium">{item.name}</p>
               <p>{item.reading}</p>
@@ -159,32 +153,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
             </li>
           ))}
         </ul>
-      </section>
-      <section className="flex min-w-0 flex-col gap-2">
-        <h2 className="text-base font-semibold">{vi ? "Mô hình dữ liệu" : "Data model"}</h2>
-        <div className="w-full min-w-0 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{vi ? "Bảng" : "Table"}</TableHead>
-                <TableHead>{vi ? "Khóa" : "Keys"}</TableHead>
-                <TableHead>{vi ? "Một dòng là" : "One row is"}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {model.schema.map((table) => (
-                <TableRow key={table.table}>
-                  <TableCell>{table.table}</TableCell>
-                  <TableCell>{table.keys}</TableCell>
-                  <TableCell>{table.grain}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <p className="text-sm">
+          <a className="underline underline-offset-4" href={pageHref("/thi-truong", lang)}>
+            {vi ? "Xem phân tích phản ứng thị trường" : "See the market reaction analysis"}
+          </a>
+        </p>
       </section>
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold">{vi ? "Nguồn" : "Sources"}</h2>
+        {audit && audit.comparable > 0 && <p className="text-sm">
+          {vi
+            ? `Đối chiếu báo cáo gốc: ${audit.matched}/${audit.comparable} dòng có thể so sánh khớp với số liệu trích xuất.`
+            : `Original filing cross-check: ${audit.matched} of ${audit.comparable} comparable rows matched the extracted figures.`}
+        </p>}
         <ul className="flex flex-col gap-2 text-sm">
           {snapshot.meta.sources.map((source) => (
             <li key={source.id}>{sourceSentence(source, lang)}</li>

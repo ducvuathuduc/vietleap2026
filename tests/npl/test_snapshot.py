@@ -60,6 +60,9 @@ def test_public_snapshot_matches_schema_and_results(snapshot_inputs, monkeypatch
     assert baseline_review["tests"]["joint_quarters"]["wild_p"] is not None
     assert payload["seasonal_review"]["ownership_subgroups"] == results["M2"]["by_ownership"]
     assert payload["multiple_testing"] == results["multiple_testing"]
+    assert payload["context"]["early_warning"] == results["M9"]
+    assert payload["context"]["seasonal_adjustment"] == results["M10"]
+    assert len(payload["context"]["seasonal_adjustment"]["latest"]) == payload["meta"]["n_banks"]
     assert payload["banks"][0]["latest"]["decision"]["status"] in {
         "within_normal_season", "improving", "deteriorating", "unavailable",
     }
@@ -87,6 +90,8 @@ def test_only_zero_disables_publication_and_older_results_are_supported(snapshot
     monkeypatch.setenv("NPL_PUBLISH_BANK_SERIES", "0")
     hidden = build_snapshot(results_path, gold, silver)
     assert hidden["meta"]["publish_bank_series"] is False
+    private_adjustment = hidden["context"]["seasonal_adjustment"]
+    assert private_adjustment["series"] == private_adjustment["latest"] == private_adjustment["q4_declines"] == []
     assert all("series" not in bank for bank in hidden["banks"])
     for collection in ("rows", "focus"):
         assert all(row["npl_ratio"] is None and row["coverage"] is None and row["lagged_coverage"] is None

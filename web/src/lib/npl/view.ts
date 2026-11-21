@@ -1,3 +1,5 @@
+import type { MentorRegression, PdfAudit, ResearchContext, Scorecard } from "./research-types.ts"
+
 export const PAGE_SHELL = "min-h-full overflow-x-hidden bg-background text-foreground"
 export const SERIES_ATTRIBUTION = "Nguồn: FiinQuant (FiinGroup)"
 export const LARGE_BANKS = ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "STB"] as const
@@ -62,6 +64,7 @@ export type Q4Holdout = {
   outcome_period: string
   improving: { n: number; reversals: number }
   within_normal_season: { n: number; reversals: number }
+  q1_rise_baseline?: Q1RiseRate
 }
 
 export type DecompositionRow = {
@@ -70,6 +73,7 @@ export type DecompositionRow = {
   npl_pct: number | null
   d_npl_pp: number | null
   denominator_pp: number | null
+  loan_growth_qoq_pct?: number | null
   numerator_pp: number | null
   d_g2_pp: number | null
   writeoff_pct_loans?: number | null
@@ -132,7 +136,10 @@ export type Snapshot = {
     q4_fell: Q1RiseRate
     q4_not_fell: Q1RiseRate
   } }
-  decision_rule?: { q4_oos?: Q4Holdout }
+  decision_rule?: { q4_oos?: Q4Holdout; q1_rise_baseline?: Q1RiseRate }
+  scorecard?: Scorecard
+  context?: ResearchContext
+  pdf_audit?: PdfAudit
   decomposition?: {
     rows: DecompositionRow[]
     by_quarter: {
@@ -344,9 +351,10 @@ type PublishedDecoder = {
   fiinquant_rows?: PublishedDecoderRow[]
   reading_vi?: string
   reading_en?: string
+  regression?: { fiinquant?: MentorRegression }
 }
 
-type PublishedDecoderRow = {
+export type PublishedDecoderRow = {
   bank_code?: string
   bank?: string
   period?: string
@@ -361,6 +369,9 @@ type PublishedDecoderRow = {
   delta_g2_ratio?: number | null
   delta_coverage?: number | null
   delta_writeoff_ratio?: number | null
+  delta_provisions_to_loans?: number | null
+  provisions_to_loans?: number | null
+  writeoff_quarter_flow?: boolean
   expected_change_pp?: number | null
   lo80_pp?: number | null
   hi80_pp?: number | null
@@ -373,6 +384,7 @@ type PublishedDecoderRow = {
   writeoff_vnd_bn?: number | null
   status?: string
   signals?: { id?: string; text_vi?: string; text_en?: string }[]
+  layers?: { data_quality: string; accounting: string[]; context: string[] }
 }
 
 function asPercent(value: number | null | undefined): number | null {
@@ -385,11 +397,11 @@ function publishedScore(row: PublishedDecoderRow): number {
 
 function publishedStatus(row: PublishedDecoderRow): DecoderStatus {
   if (row.status === "missing") return "missing"
-  const ids = (row.signals ?? []).map((signal) => signal.id)
+  const ids = row.layers?.accounting ?? (row.signals ?? []).map((signal) => signal.id)
   if (ids.includes("S3")) return "coverage"
   if (ids.includes("S1")) return "g2"
   if (ids.includes("S2")) return "writeoff"
-  if (ids.includes("S4")) return "seasonal"
+  if (!row.layers && ids.includes("S4")) return "seasonal"
   if (row.status === "clean") return "clean"
   if (row.status === "not_applicable" || row.status === "no_fall") return "no_fall"
   if (row.delta_npl_ratio != null && row.delta_npl_ratio >= 0) return "no_fall"
@@ -870,6 +882,7 @@ export function applyPublishFlag(snapshot: Snapshot, env: string | undefined = p
   if (env !== "0" && snapshot.meta.publish_bank_series) return snapshot
   const hideLevels = (row: PublishedDecoderRow): PublishedDecoderRow => ({
     ...row, npl_ratio: null, coverage: null, loan_growth: null, nim: null, lagged_coverage: null,
+    provisions_to_loans: null,
   })
   const hiddenRatio = { value: null, source: null, page: null }
   const { decoder } = snapshot
@@ -887,6 +900,13 @@ export function applyPublishFlag(snapshot: Snapshot, env: string | undefined = p
     ...snapshot,
     decoder: hiddenDecoder,
     decomposition: snapshot.decomposition && { by_quarter: snapshot.decomposition.by_quarter, rows: [] },
+    scorecard: snapshot.scorecard && { ...snapshot.scorecard, rows: [], rank_gaps: {} },
+    context: snapshot.context && {
+      ...snapshot.context,
+      seasonal_adjustment: snapshot.context.seasonal_adjustment && {
+        ...snapshot.context.seasonal_adjustment, series: [], latest: [], q4_declines: [],
+      },
+    },
     meta: { ...snapshot.meta, publish_bank_series: false },
     banks: snapshot.banks.map((bank) => {
       const next = { ...bank }

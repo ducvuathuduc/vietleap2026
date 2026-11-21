@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NPL snapshot credit models within context",
+  "type": "object",
+  "properties": {
+    "early_warning": {
+      "allOf": [
+        { "$ref": "#/$defs/reading" },
+        {
+          "type": "object",
+          "required": ["outcome_horizons", "event_threshold_pp", "train_through", "predictors", "vif",
+                       "standardized_coefficients", "backtests", "lead_lag", "bootstrap_seed"],
+          "properties": {
+            "outcome_horizons": { "const": { "change_h1": 1, "change_h2": 2, "change_h4": 4, "rise_in_four": 4 } },
+            "event_threshold_pp": { "const": 0.5 },
+            "train_through": { "$ref": "#/$defs/period" },
+            "predictors": { "type": "object", "required": ["npl_only", "npl_group2", "full"] },
+            "vif": {
+              "type": "object",
+              "required": ["npl_only", "npl_group2", "full"],
+              "additionalProperties": false,
+              "properties": {
+                "npl_only": { "type": ["number", "null"], "minimum": 1 },
+                "npl_group2": { "type": ["number", "null"], "minimum": 1 },
+                "full": { "type": ["number", "null"], "minimum": 1 }
+              }
+            },
+            "standardized_coefficients": {
+              "type": "object",
+              "required": ["change_h1", "change_h2", "change_h4", "rise_in_four"],
+              "additionalProperties": {
+                "type": "object",
+                "required": ["bank_fe", "bank_year_fe", "predictor_sd", "n"],
+                "properties": {
+                  "bank_fe": { "$ref": "#/$defs/regression" },
+                  "bank_year_fe": { "$ref": "#/$defs/regression" },
+                  "predictor_sd": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } },
+                  "n": { "$ref": "#/$defs/count" }
+                }
+              }
+            },
+            "backtests": {
+              "type": "object",
+              "required": ["change_h1", "change_h2", "change_h4", "rise_in_four"],
+              "additionalProperties": {
+                "type": "object",
+                "required": ["n_train", "n_test", "last_training_label", "fits", "gains_vs_npl"],
+                "properties": {
+                  "n_train": { "$ref": "#/$defs/count" },
+                  "n_test": { "$ref": "#/$defs/count" },
+                  "test_events": { "$ref": "#/$defs/count" },
+                  "last_training_label": { "anyOf": [{ "$ref": "#/$defs/period" }, { "type": "null" }] },
+                  "fits": { "type": "object", "additionalProperties": { "$ref": "#/$defs/metricSet" } },
+                  "gains_vs_npl": { "type": "object", "additionalProperties": { "$ref": "#/$defs/metricSet" } },
+                  "full_vs_group2": { "$ref": "#/$defs/metricSet" }
+                }
+              }
+            },
+            "lead_lag": {
+              "allOf": [
+                { "$ref": "#/$defs/reading" },
+                {
+                  "type": "object",
+                  "required": ["profile"],
+                  "properties": {
+                    "profile": {
+                      "type": "array", "minItems": 4, "maxItems": 4,
+                      "items": { "$ref": "#/$defs/regression" }
+                    }
+                  }
+                }
+              ]
+            },
+            "bootstrap_seed": { "type": "integer" }
+          }
+        }
+      ]
+    },
+    "seasonal_adjustment": {
+      "allOf": [
+        { "$ref": "#/$defs/reading" },
+        {
+          "type": "object",
+          "required": ["series", "q4_declines", "latest", "counts", "minimum_observations_per_quarter"],
+          "properties": {
+            "series": { "type": "array", "items": { "$ref": "#/$defs/seasonalRow" } },
+            "latest": { "type": "array", "items": { "$ref": "#/$defs/seasonalRow" } },
+            "q4_declines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["bank_code", "period", "reported_change_pp", "adjusted_change_pp", "seasonal_only"],
+                "properties": {
+                  "bank_code": { "type": "string", "minLength": 1 },
+                  "period": { "type": "string", "pattern": "^\\d{4}Q4$" },
+                  "reported_change_pp": { "type": "number", "exclusiveMaximum": 0 },
+                  "adjusted_change_pp": { "$ref": "#/$defs/nullableNumber" },
+                  "seasonal_only": { "type": ["boolean", "null"] }
+                }
+              }
+            },
+            "counts": {
+              "type": "object",
+              "required": ["reported", "adjustable", "seasonal_only", "seasonal_only_pct"],
+              "properties": {
+                "reported": { "$ref": "#/$defs/count" },
+                "adjustable": { "$ref": "#/$defs/count" },
+                "seasonal_only": { "$ref": "#/$defs/count" },
+                "seasonal_only_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 }
+              }
+            },
+            "minimum_observations_per_quarter": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "period": { "type": "string", "pattern": "^\\d{4}Q[1-4]$" },
+    "count": { "type": "integer", "minimum": 0 },
+    "nullableNumber": { "type": ["number", "null"] },
+    "probability": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "interval": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+    "reading": {
+      "type": "object",
+      "required": ["reading_vi", "reading_en", "what_this_does_not_show"],
+      "properties": {
+        "reading_vi": { "type": "string", "minLength": 1 },
+        "reading_en": { "type": "string", "minLength": 1 },
+        "what_this_does_not_show": {
+          "type": "object",
+          "required": ["vi", "en"],
+          "properties": {
+            "vi": { "type": "string", "minLength": 1 },
+            "en": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "regression": {
+      "type": "object",
+      "required": ["n", "clusters", "terms"],
+      "properties": {
+        "n": { "$ref": "#/$defs/count" },
+        "clusters": { "$ref": "#/$defs/count" },
+        "horizon": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "terms": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["coefficient", "ci95", "p", "wild_p"],
+            "properties": {
+              "coefficient": { "type": "number" },
+              "ci95": { "$ref": "#/$defs/interval" },
+              "p": { "$ref": "#/$defs/probability" },
+              "wild_p": { "$ref": "#/$defs/probability" }
+            }
+          }
+        }
+      }
+    },
+    "metricSet": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["estimate", "ci95", "bootstrap_draws"],
+        "properties": {
+          "estimate": { "$ref": "#/$defs/nullableNumber" },
+          "ci95": { "$ref": "#/$defs/interval" },
+          "bootstrap_draws": { "$ref": "#/$defs/count" }
+        }
+      }
+    },
+    "seasonalRow": {
+      "type": "object",
+      "required": ["bank_code", "period", "reported_npl_pct", "adjusted_npl_pct", "adjusted_change_pp",
+                   "trend_npl_pct", "trend_slope_pp_per_quarter", "fit_through", "train_n"],
+      "properties": {
+        "bank_code": { "type": "string", "minLength": 1 },
+        "period": { "$ref": "#/$defs/period" },
+        "reported_npl_pct": { "$ref": "#/$defs/nullableNumber" },
+        "adjusted_npl_pct": { "$ref": "#/$defs/nullableNumber" },
+        "adjusted_change_pp": { "$ref": "#/$defs/nullableNumber" },
+        "trend_npl_pct": { "$ref": "#/$defs/nullableNumber" },
+        "trend_slope_pp_per_quarter": { "$ref": "#/$defs/nullableNumber" },
+        "fit_through": { "anyOf": [{ "$ref": "#/$defs/period" }, { "type": "null" }] },
+        "train_n": { "$ref": "#/$defs/count" }
+      }
+    }
+  }
+}

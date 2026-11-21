@@ -78,6 +78,15 @@ def test_legal_register_covers_the_named_circulars():
     refs = {row["ref"] for row in extra_legal.REGISTER}
     assert {"11/2021/TT-NHNN", "01/2020/TT-NHNN", "14/2021/TT-NHNN",
             "02/2023/TT-NHNN", "06/2024/TT-NHNN", "Luật 32/2024/QH15"} <= refs
+    assert "Luật 74/2025/QH15" not in refs
+    by_ref = {row["ref"]: row for row in extra_legal.REGISTER}
+    assert by_ref["02/2013/TT-NHNN"]["effective_to"] == "2021-10-01"
+    assert by_ref["11/2021/TT-NHNN"]["effective_to"] == "2024-07-01"
+    assert by_ref["31/2024/TT-NHNN"]["effective_from"] == "2024-07-01"
+    assert by_ref["37/2025/TT-NHNN"]["effective_from"] == "2025-12-15"
+    assert by_ref["Nghị định 86/2024/NĐ-CP"]["effective_from"] == "2024-07-11"
+    assert by_ref["Luật 96/2025/QH15"]["effective_from"] == "2025-10-15"
+    assert by_ref["Luật 96/2025/QH15"]["url"].startswith("https://congbao.chinhphu.vn/")
 
 
 def test_disclosure_feed_keeps_only_quarterly_statements_of_listed_banks():

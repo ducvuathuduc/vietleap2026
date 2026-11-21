@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs"
 import { test, type TestContext } from "node:test"
 
 import { S3Client } from "@aws-sdk/client-s3"
+import Ajv2020 from "ajv/dist/2020.js"
+import addFormats from "ajv-formats"
 
 import seed from "../../../seed/npl/snapshot.json" with { type: "json" }
 
@@ -25,6 +27,17 @@ test("the web schema matches the pipeline contract", () => {
   assert.deepEqual(schema, JSON.parse(readFileSync(contract, "utf8")))
 })
 
+test("the schema accepts a publication without the research additions", () => {
+  const legacy = structuredClone(seed)
+  for (const key of ["scorecard", "pdf_audit"]) Reflect.deleteProperty(legacy, key)
+  for (const key of ["early_warning", "seasonal_adjustment"]) Reflect.deleteProperty(legacy.context, key)
+  for (const fit of Object.values(legacy.decoder.regression).filter((value) => typeof value === "object" && !Array.isArray(value))) {
+    for (const key of ["without_writeoff", "sample_banks"]) Reflect.deleteProperty(fit, key)
+  }
+  const validate = addFormats(new Ajv2020({ strict: false })).compile(schema)
+  assert.equal(validate(legacy), true, JSON.stringify(validate.errors))
+})
+
 test("loads and adapts the bundled snapshot when S3 is unconfigured", async (t) => {
   setSource(t)
   const send = t.mock.method(S3Client.prototype, "send")
@@ -36,6 +49,8 @@ test("loads and adapts the bundled snapshot when S3 is unconfigured", async (t) 
   assert.equal(methodModel(snapshot, "en").edaSummary, seed.method.find((entry) => entry.id === "M1")?.reading_en)
   assert.match(publicCsv(snapshot), /VCB/)
   assert.equal(decoderModel(snapshot, "en", "all").rows.length, 27)
+  assert.equal(Array.isArray(snapshot.decoder) ? undefined : snapshot.decoder?.regression?.fiinquant?.without_writeoff?.n,
+    seed.decoder.regression.fiinquant.without_writeoff.n)
   assert.equal(send.mock.callCount(), 0)
 })
 
@@ -133,7 +148,7 @@ test("fallback retains an explicit S3 restriction on bank series", async (t) => 
   assert.ok(snapshot.banks.every((bank) => !bank.series))
 })
 
-for (const section of ["decomposition", "market", "decision_rule"]) {
+for (const section of ["decomposition", "market", "decision_rule", "scorecard", "context"]) {
   test(`serves the seed if a newer S3 snapshot lacks ${section}`, async (t) => {
     setSource(t, `s3://vietleap-test/snapshots/npl/no-${section}.json`)
     const object = structuredClone(seed)
@@ -151,6 +166,20 @@ for (const section of ["decomposition", "market", "decision_rule"]) {
     assert.match(String(warn.mock.calls[0].arguments[0]), /incomplete/)
   })
 }
+
+test("serves the seed if S3 only has the legacy regressions", async (t) => {
+  setSource(t, "s3://vietleap-test/snapshots/npl/legacy-regression.json")
+  const object = structuredClone(seed)
+  object.meta.snapshot_id = "legacy-regression"
+  Reflect.deleteProperty(object.decoder.regression.fiinquant, "without_writeoff")
+  const warn = t.mock.method(console, "warn", () => {})
+  t.mock.method(S3Client.prototype, "send", async () => ({
+    Body: { transformToString: async () => JSON.stringify(object) },
+  }))
+  assert.equal((await readSnapshot()).meta.snapshot_id, seed.meta.snapshot_id)
+  assert.equal(warn.mock.callCount(), 1)
+  assert.match(String(warn.mock.calls[0].arguments[0]), /incomplete/)
+})
 
 test("rejects an invalid S3 snapshot and retries the same key after correction", async (t) => {
   setSource(t, "s3://vietleap-test/snapshots/npl/corrected.json")

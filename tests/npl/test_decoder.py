@@ -15,7 +15,7 @@ def test_decoder_signal_gates_ratios_and_incomplete_periods(silver):
     amounts = {
         "2024Q4": [100, 4, 11, 22, 1],
         "2025Q1": [100, 5, 10, 20, 1],
-        "2025Q2": [100, 6, 9, -9, 3],
+        "2025Q2": [100, 6, 9, 9, 3],
         "2025Q3": [100, 5, 8, 16, 1],
         "2025Q4": [100, 4, 7, 14, .5],
         "2026Q1": [100, None, 6, 12, .4],
@@ -49,6 +49,10 @@ def test_decoder_signal_gates_ratios_and_incomplete_periods(silver):
     assert q2["coverage_source"] == "notes"
     assert rows["2025Q3"]["status"] == "clean"
     assert [signal["id"] for signal in rows["2025Q4"]["signals"]] == ["S4"]
+    assert rows["2025Q4"]["status"] == "clean"
+    assert rows["2025Q4"]["layers"]["accounting"] == []
+    assert rows["2025Q4"]["layers"]["data_quality"] == "đủ"
+    assert "S4" in rows["2025Q4"]["layers"]["context"]
     assert rows["2026Q1"]["status_vi"] == "Thiếu dữ liệu"
     assert "delta_g2_ratio" in rows["2026Q1"]["missing_inputs"]
     assert rows["2026Q2"]["status"] == "not_applicable"
@@ -206,6 +210,7 @@ def test_coverage_disagreement_disables_s3_for_both_adjacent_changes():
     assert contested["coverage"] == pytest.approx(1.1)
     assert contested["coverage_source"] == "fiinquant"
     assert following["coverage_contested"] is False
+    assert contested["layers"]["data_quality"] == "cách ly"
     for row in [contested, following]:
         assert row["status"] == "missing"
         assert row["delta_coverage"] is None
@@ -227,3 +232,97 @@ def test_coverage_change_uses_one_comparable_source():
     assert row["coverage_source"] == "notes" and row["coverage_contested"] is False
     assert row["delta_coverage"] == 0
     assert row["signals"] == []
+
+
+def test_coverage_decline_without_a_thinner_provision_ratio_is_not_s3():
+    raw = pd.DataFrame({"ticker": ["VCB"] * 3, "period": ["2024Q4", "2025Q1", "2025Q2"],
+                        "npl_pct": [5, 4, 3], "coverage_pct": [200, 200, 100]})
+    panel, _ = clean_quarters(raw)
+    _, seasonal = decision_rule(panel)
+    notes = pd.DataFrame([
+        dict(bank="VCB", period=period, field=field, value_vnd_bn=value, basis="consolidated",
+             grade="verified", page=4, source_url="https://test.com/notes.pdf")
+        for period, loans, group2, provision, writeoff in [
+            ("2024Q4", 100, 4, 8, 1), ("2025Q1", 100, 4, 8, 1), ("2025Q2", 100, 6, 10, 1),
+        ]
+        for field, value in [("customer_loans", loans), ("group2_loans", group2),
+                             ("provision_closing", provision), ("writeoffs", writeoff)]
+    ])
+    row = build_decoder(panel, seasonal, notes)["rows"][-1]
+    assert row["delta_coverage"] < 0
+    assert "S3" not in {signal["id"] for signal in row["signals"]}
+    assert row["status"] == "review"
+    assert [signal["id"] for signal in row["signals"]] == ["S1"]
+
+
+def test_a_ytd_provision_flow_does_not_raise_s2():
+    periods = ["2025Q1", "2025Q2"]
+    panel, _ = clean_quarters(pd.DataFrame({"ticker": ["VCB"] * 2, "period": periods,
+        "npl_pct": [5., 4.], "coverage_pct": [100., 100.]}))
+    _, seasonal = decision_rule(panel)
+    screening = pd.DataFrame([
+        dict(bank="VCB", period=period, field=field, value_vnd_bn=value, basis="fiinquant_screening",
+             flow_basis="ytd" if field == "provision_used_writeoff" else "point",
+             statement_type="consolidated", grade="single", page=None, source_url="https://test.com/screening")
+        for period, used in [("2025Q1", 1.), ("2025Q2", 4.)]
+        for field, value in [("loans_customer", 100.), ("group_2_watch", 4.), ("provision_used_writeoff", used)]
+    ])
+    latest = build_decoder(panel, seasonal, None, screening)["rows"][-1]
+    assert "S2" not in {signal["id"] for signal in latest["signals"]}
+
+
+def test_fiinquant_ols_uses_screening_group2_and_quarterly_writeoffs_only():
+    banks = ["VCB", "BID", "CTG"]
+    periods = ["2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2"]
+    paths = {
+        "VCB": {"npl": [2.0, 2.4, 2.1, 2.8, 2.2], "coverage": [80, 100, 90, 120, 95],
+                "growth": [8, 14, 6, 18, 9], "loans": [100, 108, 104, 130, 121],
+                "group2": [4.0, 5.5, 5.0, 7.2, 6.1], "used": [1.0, 1.4, 0.8, 2.1, 1.1]},
+        "BID": {"npl": [2.2, 2.0, 2.6, 2.3, 2.9], "coverage": [70, 75, 110, 85, 130],
+                "growth": [11, 7, 16, 8, 13], "loans": [140, 150, 148, 170, 160],
+                "group2": [6.0, 5.2, 8.1, 7.0, 9.4], "used": [1.2, 0.7, 1.8, 1.0, 2.4]},
+        "CTG": {"npl": [3.0, 2.7, 3.2, 2.5, 2.9], "coverage": [90, 88, 140, 100, 110],
+                "growth": [9, 15, 8, 12, 6], "loans": [90, 96, 110, 105, 120],
+                "group2": [3.5, 4.8, 4.1, 6.0, 5.2], "used": [2.0, 2.2, 2.5, 2.1, 2.8]},
+    }
+    panel, _ = clean_quarters(pd.DataFrame([
+        {"ticker": bank, "period": period, "npl_pct": paths[bank]["npl"][t],
+         "coverage_pct": paths[bank]["coverage"][t], "loan_growth_yoy_pct": paths[bank]["growth"][t],
+         "nim_pct": 3}
+        for bank in banks for t, period in enumerate(periods)
+    ]))
+    _, seasonal = decision_rule(panel)
+    screening, notes = [], []
+    for bank in banks:
+        for t, period in enumerate(periods):
+            loans, group2, used = paths[bank]["loans"][t], paths[bank]["group2"][t], paths[bank]["used"][t]
+            for field, value, flow in [
+                ("loans_customer", loans, "point"),
+                ("group_2_watch", group2, "point"),
+                ("provision_used_writeoff", used, "quarterly" if bank != "CTG" else "ytd"),
+            ]:
+                screening.append(dict(
+                    bank=bank, period=period, field=field, value_vnd_bn=value,
+                    basis="fiinquant_screening", flow_basis=flow, statement_type="consolidated",
+                    grade="single", page=None, source_url="https://test.com/screening"))
+            notes.append(dict(
+                bank=bank, period=period, field="writeoffs", value_vnd_bn=9, basis="consolidated",
+                grade="verified", page=3, source_url="https://test.com/notes.pdf"))
+    result = build_decoder(panel, seasonal, pd.DataFrame(notes), pd.DataFrame(screening))
+    fit = result["regression"]["fiinquant"]
+    assert fit["n_by_field"]["writeoff_ratio"] == 8
+    assert fit["n_by_field"]["delta_g2_ratio"] == 12
+    assert fit["full"]["n"] == 8 and fit["full"]["clusters"] == 2
+    assert set(fit["full"]["terms"]) == {"writeoff_ratio", "delta_g2_ratio", "loan_growth", "lagged_coverage"}
+    assert fit["without_writeoff"]["n"] == 12
+    assert set(fit["without_writeoff"]["terms"]) == {"delta_g2_ratio", "loan_growth", "lagged_coverage"}
+    assert set(fit["available"]["terms"]) == {"loan_growth", "lagged_coverage"}
+    assert fit["available"]["n"] == 12
+    assert fit["sample_banks"]["full"] == ["BID", "VCB"]
+    assert "CTG" in fit["sample_banks"]["without_writeoff"]
+    ctg = next(row for row in result["rows"] if row["bank_code"] == "CTG" and row["period"] == "2025Q2")
+    assert ctg["writeoff_ratio"] is not None
+    for text in (fit["reading_vi"], fit["reading_en"]):
+        assert "n=8" in text and "2024Q3" in text and "BID" in text and "CTG" in text
+    for term in fit["full"]["terms"].values():
+        assert term["wild_p"] is not None and np.isfinite(term["coefficient"])

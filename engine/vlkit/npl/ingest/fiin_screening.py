@@ -297,7 +297,11 @@ def audit(screening, pdf, tolerance=.005):
                                      "value_vnd_bn": "pdf_vnd_bn"})
         sample = sample.reindex(columns=[*keys, "pdf_vnd_bn", "pdf_grade", "pdf_scope"])
         sample.loc[sample.field.eq("provision_opening"), "basis"] = "point"
-        overlap = screening[[*keys, "value_vnd_bn"]].rename(columns={"value_vnd_bn": "screening_vnd_bn"}).merge(
+        screen = screening
+        if "flow_basis" in screening:
+            # The silver basis column is the source label. flow_basis is point, quarterly or ytd.
+            screen = screening.assign(basis=screening["flow_basis"])
+        overlap = screen[[*keys, "value_vnd_bn"]].rename(columns={"value_vnd_bn": "screening_vnd_bn"}).merge(
             sample, on=keys)
         overlap["comparable"] = overlap.pdf_grade.isin(["single", "verified"]) & overlap.pdf_scope.eq("consolidated")
         scale = overlap[["screening_vnd_bn", "pdf_vnd_bn"]].abs().max(axis=1)
@@ -306,9 +310,15 @@ def audit(screening, pdf, tolerance=.005):
     counts = vetted.groupby("field")["match"].agg(pairs="size", match="sum")
     by_field = {field: {"pairs": int(block.pairs), "match": int(block.match), "rate": block.match / block.pairs}
                 for field, block in counts.iterrows()}
-    matches = int(vetted["match"].sum())
-    return {"overlaps": len(overlap), "pairs": len(vetted), "match": matches,
+    matches = int(vetted["match"].sum()) if len(vetted) else 0
+    all_rows_n = len(overlap)
+    all_matched = int(overlap["match"].sum()) if all_rows_n else 0
+    return {"overlaps": all_rows_n, "pairs": len(vetted), "match": matches,
             "rate": matches / len(vetted) if len(vetted) else None,
+            "headline": {"matched": matches, "comparable": len(vetted),
+                         "rate": matches / len(vetted) if len(vetted) else None},
+            "all_rows": {"matched": all_matched, "rows": all_rows_n,
+                         "rate": all_matched / all_rows_n if all_rows_n else None},
             "by_field": by_field}, overlap[columns]
 
 

@@ -20,7 +20,7 @@ COVERAGE_TOLERANCE = .0001  # One basis point of coverage, in fraction units.
 SIGNALS = {
     "S1": ("Rủi ro có thể dồn sang nhóm 2", "Risk may be moving into group 2"),
     "S2": ("Tỷ lệ xóa nợ hoặc dự phòng sử dụng tăng", "Write-offs or provisions used rose relative to loans"),
-    "S3": ("Đệm dự phòng mỏng đi", "Provision buffer thinner"),
+    "S3": ("Đệm dự phòng và dự phòng trên dư nợ cùng mỏng đi", "Coverage and provisions relative to loans both fell"),
     "S4": ("Nhịp mùa vụ cuối năm", "Usual year-end movement"),
 }
 STATUS = {
@@ -81,60 +81,132 @@ def _notes_ratios(notes, screening=None):
 def _assessment(row):
     decline = row.delta_npl_ratio
     missing = []
-    signals = []
+    accounting = []
+    context = []
+    if pd.notna(getattr(row, "loan_growth", np.nan)):
+        context.append("loan_growth")
+    if bool(getattr(row, "legal_regime", False)):
+        context.append("legal_regime")
     if pd.isna(decline):
         missing.append("delta_npl_ratio")
         status = "missing"
     elif decline >= -1e-12:
         status = "not_applicable"
     else:
+        provision_down = getattr(row, "delta_provisions_to_loans", np.nan)
         checks = [
             ("S1", "delta_g2_ratio", row.delta_g2_ratio, row.delta_g2_ratio > 1e-12),
-            ("S2", "delta_writeoff_ratio", row.delta_writeoff_ratio, row.delta_writeoff_ratio > 1e-12),
-            ("S3", "delta_coverage", row.delta_coverage, row.delta_coverage < -1e-12),
+            ("S2", "delta_writeoff_ratio", row.delta_writeoff_ratio,
+             row.delta_writeoff_ratio > 1e-12 and bool(getattr(row, "writeoff_quarter_flow", False))),
+            ("S3", "delta_coverage", row.delta_coverage,
+             row.delta_coverage < -1e-12 and pd.notna(provision_down) and provision_down < -1e-12),
         ]
         for rule, field, value, fired in checks:
             if pd.isna(value):
                 missing.append(field)
             elif fired:
-                signals.append(rule)
+                accounting.append(rule)
         if row.period.endswith("Q4"):
             if any(pd.isna(getattr(row, field)) for field in SEASON):
                 missing.append("seasonal_band")
             else:
                 surprise = 100 * decline - row.expected_change_pp
                 if row.lo80_pp - 1e-10 <= surprise <= row.hi80_pp + 1e-10:
-                    signals.append("S4")
+                    context.append("S4")
         if {"delta_g2_ratio", "delta_writeoff_ratio"}.intersection(missing):
             status = "missing"
-        elif signals:
+        elif accounting:
             status = "review"
         else:
             status = "missing" if missing else "clean"
+    if bool(getattr(row, "coverage_contested", False)):
+        quality = "cách ly"
+    elif missing:
+        quality = "thiếu"
+    else:
+        quality = "đủ"
+    shown = [*accounting, *(["S4"] if "S4" in context else [])]
     vi, en = STATUS[status]
     return {"status": status, "status_vi": vi, "status_en": en, "missing_inputs": missing,
-            "signals": [{"id": rule, "text_vi": SIGNALS[rule][0], "text_en": SIGNALS[rule][1]} for rule in signals]}
+            "layers": {"data_quality": quality, "accounting": accounting, "context": context},
+            "signals": [{"id": rule, "text_vi": SIGNALS[rule][0], "text_en": SIGNALS[rule][1]} for rule in shown]}
+
+
+SCREEN_FIELDS = ["g2_ratio", "delta_g2_ratio", "writeoff_ratio", "delta_writeoff_ratio"]
+WITHOUT_WRITEOFF = ["delta_g2_ratio", "loan_growth", "lagged_coverage"]
+REDUCED = ["loan_growth", "lagged_coverage"]
+
+
+def _with_screening(vendor, screening):
+    """Replace the empty note fields with FiinQuant group 2 and quarterly write-offs."""
+    if screening is None or screening.empty:
+        return vendor
+    ratios = _notes_ratios(None, screening)
+    if ratios.empty:
+        return vendor
+    extra = ratios[[*KEYS, *SCREEN_FIELDS]].drop_duplicates(KEYS)
+    return vendor.drop(columns=SCREEN_FIELDS).merge(extra, on=KEYS, how="left")
+
+
+def _sample_banks(data, terms):
+    used = data.dropna(subset=["delta_npl_ratio", *terms])
+    return sorted(used.bank_code.astype(str).unique())
+
+
+def _sample_sentence(label_vi, label_en, fit, banks):
+    if not fit or not fit.get("n"):
+        return (f"{label_vi}: không có quan sát đủ trường.", f"{label_en}: no complete observations.")
+    span = "–".join(fit["period"]) if fit.get("period") else ""
+    names = ", ".join(banks)
+    return (f"{label_vi}: n={fit['n']}, kỳ {span}, ngân hàng {names}.",
+            f"{label_en}: n={fit['n']}, period {span}, banks {names}.")
 
 
 def _decoder_fit(data, *, grid_n, vendor):
     outcome = "delta_npl_ratio"
     complete = _fit(data, outcome, REGRESSORS, bank=True, bootstrap=True)[0]
     absent = [field for field in REGRESSORS if not data[field].notna().any()]
-    terms = [field for field in REGRESSORS if field not in absent]
-    available = (_fit(data, outcome, terms, bank=True, bootstrap=True)[0]
-                 if vendor and absent and terms else None)
+    if vendor:
+        without = _fit(data, outcome, WITHOUT_WRITEOFF, bank=True, bootstrap=True)[0]
+        available = _fit(data, outcome, REDUCED, bank=True, bootstrap=True)[0]
+        sample_banks = {
+            "full": _sample_banks(data, REGRESSORS),
+            "without_writeoff": _sample_banks(data, WITHOUT_WRITEOFF),
+            "available": _sample_banks(data, REDUCED),
+        }
+        parts = [
+            _sample_sentence("Mẫu (a), đủ biến kể cả tỷ lệ xóa nợ theo quý",
+                             "(a) full sample, including the quarterly write-off ratio",
+                             complete, sample_banks["full"]),
+            _sample_sentence("Mẫu (b), không gồm xóa nợ", "(b) without write-off",
+                             without, sample_banks["without_writeoff"]),
+            _sample_sentence("Mẫu (c), tăng trưởng dư nợ và bao phủ trễ",
+                             "(c) loan growth and lagged coverage",
+                             available, sample_banks["available"]),
+        ]
+        reading_vi = " ".join(part[0] for part in parts)
+        reading_en = " ".join(part[1] for part in parts)
+        if not data["writeoff_ratio"].notna().any() and not data["delta_g2_ratio"].notna().any():
+            reading_vi = "Mô hình rút gọn do thiếu dữ liệu nhóm 2 và xóa nợ. " + reading_vi
+            reading_en = "Reduced model because Group 2 and write-off data are missing. " + reading_en
+        reading_vi += " Tăng trưởng dư nợ là cùng kỳ năm trước."
+        reading_en += " Loan growth is year over year."
+    else:
+        terms = [field for field in REGRESSORS if field not in absent]
+        without = None
+        available = (_fit(data, outcome, terms, bank=True, bootstrap=True)[0] if absent and terms else None)
+        sample_banks = None
+        reading_vi = "Mẫu ghi chú dùng tăng trưởng dư nợ theo quý; hệ số có thể gợi ý chiều liên hệ."
+        reading_en = "The notes sample uses quarter-over-quarter loan growth; coefficients can suggest a direction."
     return {
         "n_panel": len(data), "grid_n": grid_n,
         "panel_period": [data.period.min(), data.period.max()] if len(data) else None,
-        "full": complete, "available": available, "unavailable_fields": absent,
+        "full": complete, "without_writeoff": without, "available": available,
+        "sample_banks": sample_banks, "unavailable_fields": absent,
         "n_by_field": {column: int(data[column].count()) for column in [outcome, *REGRESSORS]},
         "growth_measure": "year_over_year" if vendor else "quarter_over_quarter",
-        "reading_vi": ("Dữ liệu FiinQuant dùng tăng trưởng dư nợ cùng kỳ năm trước; khi thiếu cả trường, "
-                       "mô hình rút gọn chỉ dùng các biến có dữ liệu." if vendor else
-                       "Mẫu ghi chú dùng tăng trưởng dư nợ theo quý; hệ số có thể gợi ý chiều liên hệ."),
-        "reading_en": ("FiinQuant uses year-over-year loan growth; the reduced model uses the regressors with data "
-                       "when entire fields are absent." if vendor else
-                       "The notes sample uses quarter-over-quarter loan growth; coefficients can suggest a direction."),
+        "reading_vi": reading_vi,
+        "reading_en": reading_en,
         "does_not_show_vi": ("Bao phủ quý trước và biến động NPL cùng dùng mức NPL quý trước, nên hệ số chỉ mô tả liên hệ."
                              if vendor else "Mẫu ghi chú nhỏ chỉ gợi ý chiều liên hệ; độ lớn của tác động còn bất định."),
         "does_not_show_en": ("Lagged coverage and the NPL change both use prior-quarter NPL, so the coefficient describes an association."
@@ -142,7 +214,7 @@ def _decoder_fit(data, *, grid_n, vendor):
     }
 
 
-def build_decoder(panel, seasonal, notes, screening=None):
+def build_decoder(panel, seasonal, notes, screening=None, *, regimes=None):
     """Attach screening inputs first, using the audited PDFs for missing fields."""
     vendor = _vendor_ratios(panel)
     pdf = _notes_ratios(notes)
@@ -179,6 +251,15 @@ def build_decoder(panel, seasonal, notes, screening=None):
     board["coverage"] = board["coverage"].mask(agrees, board.pop("notes_coverage"))
     previous_contested = board.groupby("bank_code")["coverage_contested"].shift(fill_value=False)
     board["delta_coverage"] = coverage_change.where(~board["coverage_contested"] & ~previous_contested)
+    loans = board["loans_vnd_bn"].replace(0, np.nan) if "loans_vnd_bn" in board else np.nan
+    board["provisions_to_loans"] = board["provision_vnd_bn"] / loans if "provision_vnd_bn" in board else np.nan
+    consecutive = board.groupby("bank_code").period.transform(
+        lambda series: pd.Series(pd.PeriodIndex(series.astype(str), freq="Q").asi8, index=series.index).diff().eq(1))
+    board["delta_provisions_to_loans"] = board.groupby("bank_code").provisions_to_loans.diff().where(consecutive)
+    # Amounts that reach this table are already quarter flows: screening keeps flow_basis quarterly,
+    # and the notes path keeps verified quarterly or consolidated write-offs. A YTD flow never arrives.
+    board["writeoff_quarter_flow"] = board["writeoff_vnd_bn"].notna() if "writeoff_vnd_bn" in board else False
+    board["legal_regime"] = board.period.isin(set(regimes or ()))
     rows = [{**row._asdict(), **_assessment(row)} for row in board.itertuples(index=False)]
     focus_index = pd.MultiIndex.from_product([NOTES_BANKS, periods], names=KEYS)
     focus_board = board.set_index(KEYS).reindex(focus_index).reset_index()
@@ -200,13 +281,13 @@ def build_decoder(panel, seasonal, notes, screening=None):
         "regression": {
             "outcome": "delta_npl_ratio", "regressors": REGRESSORS,
             "estimator": "bank fixed effects OLS; bank-clustered SE; restricted wild cluster bootstrap",
-            "fiinquant": _decoder_fit(vendor, grid_n=len(banks) * len(history), vendor=True),
+            "fiinquant": _decoder_fit(_with_screening(vendor, screening), grid_n=len(banks) * len(history), vendor=True),
             "notes": _decoder_fit(pdf, grid_n=None, vendor=False),
         },
-        "reading_vi": ("Đọc cờ vàng khi tỷ lệ nợ xấu giảm và đọc trạng thái Thiếu dữ liệu cùng các cờ đã xác định. "
-                       "S4 dùng dải mùa vụ M7 ước lượng từ dữ liệu FiinQuant."),
-        "reading_en": ("Review yellow flags when the NPL ratio falls and read Missing data alongside any flags the data support. "
-                       "S4 uses the M7 seasonal band estimated from FiinQuant."),
+        "reading_vi": ("Trạng thái cần xem xét chỉ bật khi có tín hiệu kế toán S1, S2 hoặc S3. "
+                       "S4, tăng trưởng dư nợ và chế độ pháp lý là bối cảnh. S4 dùng dải mùa vụ M7."),
+        "reading_en": ("The review status turns on only for accounting signals S1, S2 or S3. "
+                       "S4, loan growth and the legal regime are context. S4 uses the M7 seasonal band."),
         "does_not_show_vi": "Cờ vàng đặt ưu tiên rà soát; bằng chứng cần thêm về chất lượng tín dụng và nguyên nhân.",
         "does_not_show_en": "Yellow flags prioritize review; determining credit quality and its causes requires more evidence.",
     })

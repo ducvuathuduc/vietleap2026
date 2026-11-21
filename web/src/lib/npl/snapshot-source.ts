@@ -5,16 +5,25 @@ import addFormats from "ajv-formats"
 import seed from "../../../seed/npl/snapshot.json" with { type: "json" }
 
 import schema from "./snapshot.schema.json" with { type: "json" }
-import { nextPeriod, type QuarterEffect, type Snapshot, type SnapshotBank, type Term } from "./view.ts"
+import type { MentorRegression, PanelFit } from "./research-types.ts"
+import { nextPeriod, type PublishedDecoderRow, type QuarterEffect, type Snapshot, type SnapshotBank, type Term } from "./view.ts"
 
-type WireCoefficient = { coefficient: number; ci95: (number | null)[]; p: number | null; wild_p?: number | null }
-type WireRegression = { n: number; clusters?: number; terms: Record<string, WireCoefficient>; period?: string[]; unavailable_reason?: string }
-type WireDecoderRow = { bank_code: string; period: string; delta_npl_ratio?: number | null; expected_change_pp?: number | null }
-type WireSnapshot = Omit<typeof seed, "banks" | "decoder" | "robustness" | "market" | "decomposition" | "decision_rule"> & {
+type WireRegression = PanelFit
+type WireDecoderRow = PublishedDecoderRow & { bank_code: string; period: string }
+type WireSnapshot = Omit<typeof seed, "banks" | "decoder" | "robustness" | "market" | "decomposition" | "decision_rule" | "context" | "scorecard" | "pdf_audit"> & {
   banks: Omit<SnapshotBank, "quarters" | "quarter_means" | "pairs">[]
-  decoder?: { rows: WireDecoderRow[]; fiinquant_rows?: WireDecoderRow[]; reading_vi?: string; reading_en?: string }
+  decoder?: {
+    rows: WireDecoderRow[]
+    fiinquant_rows?: WireDecoderRow[]
+    reading_vi?: string
+    reading_en?: string
+    regression?: { fiinquant?: MentorRegression }
+  }
   decomposition?: Snapshot["decomposition"]
   decision_rule?: Snapshot["decision_rule"]
+  context?: Snapshot["context"]
+  scorecard?: Snapshot["scorecard"]
+  pdf_audit?: Snapshot["pdf_audit"]
   robustness: {
     leave_one_bank_out: Snapshot["robustness"]["leave_one_bank_out"]
     drop_2021_2022: WireRegression
@@ -187,10 +196,17 @@ function hasPageData(snapshot: Partial<WireSnapshot>): boolean {
     quarters.some((row) => row?.quarter === quarter && typeof row.share_falling_pct === "number"),
   )
   const price = snapshot.market?.m8
+  const mentor = snapshot.decoder?.regression?.fiinquant
+  const publishBankSeries = snapshot.meta?.publish_bank_series !== false
+  const seasonal = snapshot.context?.seasonal_adjustment
+  const warning = snapshot.context?.early_warning
+  const researchReady = Boolean(snapshot.scorecard?.indicators && snapshot.scorecard.disagreement && snapshot.pdf_audit?.headline &&
+    warning?.backtests?.rise_in_four?.fits && seasonal?.counts && mentor?.without_writeoff !== undefined &&
+    (!publishBankSeries || (hasRows(snapshot.scorecard.rows) && hasRows(seasonal.series))))
   return hasQuarterShares &&
-    (snapshot.meta?.publish_bank_series === false || hasRows(decomposition?.rows)) &&
+    (!publishBankSeries || hasRows(decomposition?.rows)) &&
     hasRows(price?.basket?.series) && hasRows(price?.vnindex?.series) && hasRows(price?.band_table) &&
-    Boolean(snapshot.decision_rule?.q4_oos && snapshot.reversal?.baselines) && hasRows(snapshot.decoder?.rows)
+    Boolean(snapshot.decision_rule?.q4_oos && snapshot.reversal?.baselines) && hasRows(snapshot.decoder?.rows) && researchReady
 }
 
 async function fetchSnapshot(uri: string): Promise<Selection> {

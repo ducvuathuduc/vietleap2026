@@ -118,9 +118,32 @@ function Bars({ rows, unit, lang }: {
 type StudyResult = { [K in keyof SnapshotAnswers]: { name: K; output: SnapshotAnswers[K] } }[keyof SnapshotAnswers]
 
 function readStudy(tool: ListedTool): StudyResult | null {
-  if (!["screen_declines", "q4_drivers", "q1_rebound", "quarter_breakdown", "coverage_effect"].includes(tool.name)) return null
+  if (!["screen_declines", "q4_drivers", "q1_rebound", "quarter_breakdown", "coverage_effect", "rank_gap", "early_warning"].includes(tool.name)) return null
   if (!tool.output || typeof tool.output !== "object" || !("citations" in tool.output)) return null
   return { name: tool.name, output: tool.output } as StudyResult
+}
+
+function ComparisonTable({ label, headings, rows }: {
+  label: string
+  headings: string[]
+  rows: { name: string; href?: string; values: string[] }[]
+}) {
+  if (!rows.length) return null
+  return (
+    <table aria-label={label} className="w-full border-collapse text-left text-xs">
+      <thead className="bg-muted/60">
+        <tr>{headings.map((heading) => <th key={heading} scope="col" className="px-2 py-1.5 font-medium">{heading}</th>)}</tr>
+      </thead>
+      <tbody>{rows.map(({ name, href, values }) => (
+        <tr key={name} className="border-t">
+          <th scope="row" className="px-2 py-1.5 font-medium">
+            {href ? <a href={href} className="underline underline-offset-2">{name}</a> : name}
+          </th>
+          {values.map((value, index) => <td key={headings[index + 1]} className="px-2 py-1.5 tabular-nums">{value}</td>)}
+        </tr>
+      ))}</tbody>
+    </table>
+  )
 }
 
 function studyBody(result: StudyResult, lang: Lang): { body: ReactNode; href?: string } {
@@ -128,6 +151,32 @@ function studyBody(result: StudyResult, lang: Lang): { body: ReactNode; href?: s
   switch (result.name) {
     case "screen_declines":
       return { body: <BanksTable rows={result.output.rows} period={result.output.data_period} lang={lang} /> }
+    case "rank_gap":
+      return { body: <ComparisonTable
+        label={vi ? "Chênh lệch thứ hạng tín dụng" : "Credit-quality rank gaps"}
+        headings={vi ? ["Ngân hàng", "Hạng nợ xấu", "Hạng tổng hợp"] : ["Bank", "NPL rank", "Composite rank"]}
+        rows={result.output.rows.map((row) => ({
+          name: row.bank_code,
+          href: bankLink(row.bank_code, row.period, false, lang),
+          values: [String(row.npl_place), String(row.composite_place)],
+        }))}
+      /> }
+    case "early_warning": {
+      const labels = [
+        ["npl_only", vi ? "Chỉ tỷ lệ nợ xấu" : "NPL only"],
+        ["npl_group2", vi ? "Thêm nợ nhóm 2" : "Add Group 2"],
+        ["full", vi ? "Đầy đủ chỉ báo" : "Full indicators"],
+      ] as const
+      const rows = labels.flatMap(([key, name]) => {
+        const auc = result.output.fits?.[key]?.auc?.estimate
+        return auc == null ? [] : [{ name, values: [formatValue(auc, lang, "", 3)] }]
+      })
+      return {
+        body: <ComparisonTable label={vi ? "Kiểm tra cảnh báo sớm" : "Early warning comparison"}
+          headings={[vi ? "Chỉ báo dùng để dự báo" : "Indicators used", "AUC"]} rows={rows} />,
+        href: pageHref("/phuong-phap", lang) + "#early-warning",
+      }
+    }
     case "q4_drivers": {
       const { loan_growth_part_pp, bad_debt_part_pp } = result.output
       const rows = [
@@ -143,7 +192,7 @@ function studyBody(result: StudyResult, lang: Lang): { body: ReactNode; href?: s
         { label: vi ? "Sau mọi quý 4" : "After any Q4", value: rates.any_q4.share_pct },
         { label: vi ? "Sau quý 4 giảm" : "After Q4 fell", value: rates.q4_fell.share_pct },
         { label: vi ? "Sau quý 4 không giảm" : "After Q4 did not fall", value: rates.q4_not_fell.share_pct },
-      ]} />, href: pageHref("/", lang) + "#npl-steps" }
+      ]} />, href: pageHref("/phuong-phap", lang) + "#seasonal-models" }
     }
     case "quarter_breakdown": {
       const { bank, data_period, change_pp, q3_pct, q4_pct, q1_pct, loan_growth_part_pp, bad_debt_part_pp } = result.output

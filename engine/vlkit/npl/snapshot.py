@@ -19,6 +19,7 @@ from .snapshot_metrics import dashboard_metrics, json_safe
 
 
 SCHEMA_PATH = Path(__file__).with_name("schema") / "snapshot.schema.json"
+CREDIT_MODELS_SCHEMA_PATH = SCHEMA_PATH.with_name("credit-models.schema.json")
 LOCAL_TIME = ZoneInfo("Asia/Ho_Chi_Minh")
 FIIN = "https://docs.fiinquant.vn"
 RATIO_SOURCE = FIIN + "/ham-va-cong-thuc/3.-phan-tich-co-ban-and-dinh-gia/3.2.-ham-chi-so-bao-cao-tai-chinh"
@@ -420,6 +421,16 @@ def build_snapshot(results, gold, silver):
     for key, model in [("findings", m1), ("context", m1), ("mechanism", m1), ("decision_rule", m7)]:
         if key in model:
             payload[key] = model[key]
+    if "M9" in models or "M10" in models:
+        context = payload.setdefault("context", {})
+        if "M9" in models:
+            context["early_warning"] = models["M9"]
+        if "M10" in models:
+            adjustment = {**models["M10"]}
+            if not publish:
+                adjustment.update(series=[], q4_declines=[], latest=[])
+            context["seasonal_adjustment"] = adjustment
+        Draft202012Validator(json.loads(CREDIT_MODELS_SCHEMA_PATH.read_bytes())).validate(context)
     if "summary" in m3:
         payload["reversal"] = {**m3["summary"]}
         if "baselines" in m3:
@@ -439,6 +450,8 @@ def build_snapshot(results, gold, silver):
             for key in ("rows", "focus") if "focus" in decoder else ("fiinquant_rows",):
                 decoder[key] = [{**row, **fields} for row in decoder[key]]
         payload["decoder"] = decoder
+    payload["scorecard"] = models.get("scorecard")
+    payload["pdf_audit"] = models.get("pdf_audit")
     snapshot_hash = sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False).encode("utf-8"))
     payload["meta"]["snapshot_id"] = f"npl-{latest['period']}-{snapshot_hash.hexdigest()[:12]}"
     payload["meta"]["generated_at"] = datetime.now(LOCAL_TIME).isoformat(timespec="seconds")

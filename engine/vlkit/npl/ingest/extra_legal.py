@@ -15,15 +15,16 @@ LOOKUP = "https://congbao.chinhphu.vn/tim-kiem.htm?keyword={ref}"
 COLUMNS = ["ref", "title", "effective_from", "effective_to", "what_changes", "url", "retrieved_at"]
 
 REGISTER = [
-    {"ref": "02/2013/TT-NHNN", "effective_from": "2013-03-01", "effective_to": None,
+    {"ref": "02/2013/TT-NHNN", "effective_from": "2013-03-01", "effective_to": "2021-10-01",
      "title": "Thông tư 02/2013/TT-NHNN quy định về phân loại tài sản có, mức trích, phương pháp trích lập dự phòng "
               "rủi ro và việc sử dụng dự phòng để xử lý rủi ro trong hoạt động của TCTD",
-     "what_changes": "Khung gốc: phân loại nợ 5 nhóm, mức trích lập 0/5/20/50/100% và thứ tự dùng dự phòng để "
-                     "xử lý rủi ro (nợ xấu = nhóm 3-5). Vẫn là văn bản nền đang áp dụng (đã sửa bởi 09/2014, 11/2021)."},
-    {"ref": "11/2021/TT-NHNN", "effective_from": "2021-10-01", "effective_to": None,
-     "title": "Thông tư 11/2021/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư 02/2013/TT-NHNN",
-     "what_changes": "Siết phân loại nợ đối với nợ cơ cấu lại và nợ bán cho VAMC; bỏ cơ chế giữ nguyên nhóm nợ "
-                     "chung, yêu cầu trích lập bổ sung đối với nợ đã cơ cấu theo Thông tư 01/2020 và 03/2020."},
+     "what_changes": "Khung phân loại nợ 5 nhóm trước đây. Điều 26 Thông tư 11/2021/TT-NHNN làm thông tư này hết "
+                     "hiệu lực kể từ 01/10/2021, nên đây không còn là khung phân loại sau 01/07/2024."},
+    {"ref": "11/2021/TT-NHNN", "effective_from": "2021-10-01", "effective_to": "2024-07-01",
+     "title": "Thông tư 11/2021/TT-NHNN quy định về phân loại tài sản có, mức trích, phương pháp trích lập dự phòng "
+              "rủi ro và việc sử dụng dự phòng để xử lý rủi ro trong hoạt động của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài",
+     "what_changes": "Thay Thông tư 02/2013 và 09/2014 từ 01/10/2021. Điều 16 Thông tư 31/2024/TT-NHNN làm thông tư "
+                     "này hết hiệu lực từ 01/07/2024, trừ kỳ phân loại tháng 7/2024 cho số dư cuối ngày 30/06/2024."},
     {"ref": "01/2020/TT-NHNN", "effective_from": "2020-03-13", "effective_to": "2020-05-17",
      "title": "Thông tư 01/2020/TT-NHNN quy định về việc cơ cấu lại thời hạn trả nợ, miễn, giảm lãi, phí, giữ nguyên "
               "nhóm nợ nhằm hỗ trợ khách hàng chịu ảnh hưởng bởi dịch Covid-19",
@@ -64,17 +65,37 @@ REGISTER = [
      "title": "Nghị quyết 42/2017/QH14 về thí điểm xử lý nợ xấu của các tổ chức tín dụng",
      "what_changes": "Thí điểm thu giữ tài sản bảo đảm, ưu tiên thanh toán cho TCTD và bán nợ xấu - cơ chế giúp giảm "
                      "NPL nhanh hơn xử lý thông thường; chấm dứt khi Luật 32/2024/QH15 có hiệu lực."},
-    {"ref": "Luật 74/2025/QH15", "effective_from": "2025-10-15", "effective_to": None,
-     "title": "Luật số 74/2025/QH15 sửa đổi, bổ sung một số điều của Luật Các tổ chức tín dụng",
-     "what_changes": "Sửa Luật 32/2024/QH15 về xử lý nợ xấu: thẩm quyền thu giữ tài sản bảo đảm, chuyển nhượng "
-                     "khoản nợ, phân loại nợ mua lại và lộ trình trích lập - khung pháp lý chính cho NPL từ 2026."},
+    {"ref": "31/2024/TT-NHNN", "effective_from": "2024-07-01", "effective_to": None,
+     "url": "https://congbao.chinhphu.vn/van-ban/thong-tu-so-31-2024-tt-nhnn-42259.htm",
+     "title": "Thông tư 31/2024/TT-NHNN quy định về phân loại tài sản có trong hoạt động của ngân hàng thương mại, "
+              "tổ chức tín dụng phi ngân hàng, chi nhánh ngân hàng nước ngoài",
+     "what_changes": "Khung phân loại tài sản có từ 01/07/2024. Điều 16 làm Thông tư 11/2021 hết hiệu lực cùng ngày, "
+                     "trừ kỳ phân loại tháng 7/2024 cho số dư cuối ngày 30/06/2024."},
+    {"ref": "37/2025/TT-NHNN", "effective_from": "2025-12-15", "effective_to": None,
+     "url": "https://congbao.chinhphu.vn/van-ban/thong-tu-so-37-2025-tt-nhnn-46559.htm",
+     "title": "Thông tư 37/2025/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư 31/2024/TT-NHNN",
+     "what_changes": "Sửa Thông tư 31/2024 về phân loại tài sản có. Điều 7: có hiệu lực từ 15/12/2025 "
+                     "(vanban.chinhphu.vn ghi 15/12/2025; mục lục Công báo ghi 01/11/2025)."},
+    {"ref": "Nghị định 86/2024/NĐ-CP", "effective_from": "2024-07-11", "effective_to": None,
+     "url": "https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-86-2024-nd-cp-42322.htm",
+     "title": "Nghị định 86/2024/NĐ-CP quy định về mức trích, phương pháp trích lập dự phòng rủi ro và việc sử dụng "
+              "dự phòng để xử lý rủi ro trong hoạt động của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài",
+     "what_changes": "Mức trích, phương pháp trích lập và sử dụng dự phòng rủi ro của tổ chức tín dụng, có hiệu lực 11/07/2024."},
+    {"ref": "Luật 96/2025/QH15", "effective_from": "2025-10-15", "effective_to": None,
+     "url": "https://congbao.chinhphu.vn/van-ban/luat-so-96-2025-qh15-45584.htm",
+     "title": "Luật số 96/2025/QH15 sửa đổi, bổ sung một số điều của Luật Các tổ chức tín dụng",
+     "what_changes": "Sửa Luật 32/2024/QH15, có hiệu lực 15/10/2025. Không phải Luật 74/2025/QH15, luật đó là Luật Việc làm."},
 ]
 
 
 def register(retrieved_at=None, status=None):
     """The curated rows as a DataFrame, with per-row URL reachability when the caller verified it."""
     frame = pd.DataFrame(REGISTER)
-    frame["url"] = [LOOKUP.format(ref=row["ref"].replace("/", "%2F")) for _, row in frame.iterrows()]
+    lookup = [LOOKUP.format(ref=ref.replace("/", "%2F")) for ref in frame["ref"]]
+    if "url" not in frame:
+        frame["url"] = lookup
+    else:
+        frame["url"] = frame["url"].fillna(pd.Series(lookup, index=frame.index))
     frame["retrieved_at"] = retrieved_at
     frame["http_status"] = status
     return frame[COLUMNS + ["http_status"]]

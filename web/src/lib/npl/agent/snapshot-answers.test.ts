@@ -34,3 +34,28 @@ test("known questions use the published mechanism, rebound baseline, bank quarte
   assert.equal(detectLang("Cho xem MBB 2025"), "vi")
   assert.equal(answerSnapshot(snapshot, "What is the definition of NPL?", "en"), null)
 })
+
+test("assistant grounds bilingual rank gaps and early-warning comparisons in the published results", async () => {
+  const snapshot = await loadNplSnapshot()
+  const cases = [
+    ["Ngân hàng nào NPL đẹp nhưng chất lượng tổng thể kém?", "vi", "rank_gap"],
+    ["Which banks look better on NPL than on composite asset quality?", "en", "rank_gap"],
+    ["Mô hình cảnh báo sớm có tốt hơn chỉ dùng NPL không?", "vi", "early_warning"],
+    ["Does Group 2 improve early warning?", "en", "early_warning"],
+  ] as const
+  for (const [question, lang, tool] of cases) {
+    const answer = answerSnapshot(snapshot, question, lang)
+    assert.equal(answer?.name, tool, question)
+    assert.deepEqual(guardNplAnswer(answer.text, [answer.output]).flagged, [], question)
+    if (answer.name === "rank_gap") {
+      const expected = snapshot.scorecard?.rank_gaps.latest.filter((row) => row.npl_place < row.composite_place)
+      assert.ok(expected?.length)
+      assert.deepEqual(answer.output.rows.map((row) => row.bank_code), expected.map((row) => row.bank_code))
+      assert.ok(expected.every((row) => answer.text.includes(row.bank_code)))
+    } else if (answer.name === "early_warning") {
+      const fits = snapshot.context?.early_warning?.backtests.rise_in_four.fits
+      assert.ok(fits?.npl_only?.auc)
+      assert.equal(answer.output.fits?.npl_only?.auc?.estimate, fits.npl_only.auc.estimate)
+    }
+  }
+})

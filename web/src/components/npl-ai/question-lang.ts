@@ -6,12 +6,12 @@ const overview: Prompts = {
   vi: [
     "Ngân hàng nào có NPL giảm quý 4/2025 nhưng nợ nhóm 2 tăng?",
     "Vì sao NPL quý 4 giảm?",
-    "Quý 1 có luôn tăng không?",
+    "Ngân hàng nào NPL đẹp nhưng chất lượng tổng thể kém?",
   ],
   en: [
     "Which banks had falling NPL and rising group 2 loans in Q4 2025?",
     "Why does NPL fall in Q4?",
-    "Does NPL always rise in Q1?",
+    "Which banks look better on NPL than on composite credit quality?",
   ],
 }
 
@@ -29,8 +29,8 @@ const pagePrompts: Record<string, Prompts | undefined> = {
     en: ["Are stock returns associated with changes in NPL?", "What period does the market analysis cover?", "How does seasonal adjustment affect the relationship with returns?"],
   },
   "/phuong-phap": {
-    vi: ["Hiệu ứng mùa vụ được ước tính thế nào?", "Khoảng tin cậy của hiệu ứng quý nói lên điều gì?", "Phép kiểm định dự báo nợ xấu được thực hiện thế nào?"],
-    en: ["How are seasonal quarter effects estimated?", "What do the confidence intervals for quarter effects show?", "How is the NPL forecast backtested?"],
+    vi: ["Hiệu ứng mùa vụ được ước tính thế nào?", "Khoảng tin cậy của hiệu ứng quý nói lên điều gì?", "Nợ nhóm 2 có cải thiện cảnh báo sớm không?"],
+    en: ["How are seasonal quarter effects estimated?", "What do the confidence intervals for quarter effects show?", "Does Group 2 improve early warning?"],
   },
   "/du-lieu": {
     vi: ["Dữ liệu nợ xấu bao phủ giai đoạn nào?", "Nguồn của tỷ lệ nợ xấu là gì?", "Dữ liệu tổng quan bao gồm bao nhiêu ngân hàng?"],

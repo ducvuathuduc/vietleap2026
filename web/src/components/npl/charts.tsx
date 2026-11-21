@@ -5,8 +5,39 @@ import { Area, Bar, BarChart, CartesianGrid, ComposedChart, ErrorBar, Line, Refe
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
 import { HowToRead } from "@/components/npl/how-to-read"
 import { formatNumber, type Lang } from "@/lib/npl/view"
+import type { SeasonalRow } from "@/lib/npl/research-types"
 
 type TipItem = { name?: string; value?: number | string; color?: string; dataKey?: string | number }
+
+export function AdjustedNplChart({ rows, lang }: { rows: SeasonalRow[]; lang: Lang }) {
+  const vi = lang === "vi"
+  const reported = vi ? "Công bố" : "Reported"
+  const adjusted = vi ? "Đã điều chỉnh mùa vụ" : "Seasonally adjusted"
+  const config = {
+    reported_npl_pct: { label: reported, color: "var(--chart-5)" },
+    adjusted_npl_pct: { label: adjusted, color: "var(--chart-2)" },
+  } satisfies ChartConfig
+  return (
+    <div className="min-w-0 rounded-xl border border-border px-2 pt-2 pb-3 sm:px-3">
+      <ChartContainer config={config} className="aspect-auto h-56 w-full min-w-0" initialDimension={{ width: 640, height: 224 }}>
+        <ComposedChart data={rows} margin={{ top: 12, right: 18, left: 4, bottom: 0 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="period" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} tick={{ fontSize: 11 }} />
+          <YAxis width={45} tickLine={false} axisLine={false} tick={{ fontSize: 11 }}
+            tickFormatter={(value: number) => `${formatNumber(value, lang, 1)}%`} />
+          <ChartTooltip content={<Tip digits={2} lang={lang} />} />
+          <Line dataKey="reported_npl_pct" name={reported} stroke="var(--color-reported_npl_pct)" dot={false} strokeWidth={2} isAnimationActive={false} />
+          <Line dataKey="adjusted_npl_pct" name={adjusted} stroke="var(--color-adjusted_npl_pct)" dot={false} strokeWidth={2}
+            strokeDasharray="5 3" isAnimationActive={false} />
+        </ComposedChart>
+      </ChartContainer>
+      <ul className="flex flex-wrap gap-4 px-2 text-xs text-muted-foreground">
+        <li className="flex items-center gap-1.5"><span className="w-5 border-b-2 border-chart-5" aria-hidden="true" />{reported}</li>
+        <li className="flex items-center gap-1.5"><span className="w-5 border-b-2 border-dashed border-chart-2" aria-hidden="true" />{adjusted}</li>
+      </ul>
+    </div>
+  )
+}
 
 function axisTick(lang: Lang) {
   return (value: number | string) => formatNumber(Number(value), lang, 2)

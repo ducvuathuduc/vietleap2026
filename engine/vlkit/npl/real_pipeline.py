@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 
 from .decoder import build_decoder
 from .decompose import decompose_screening
+from .early_warning import early_warning
 from .event_windows import window_study
 from .market_model import run as run_market_model
 from .real_data import DEADLINE_SOURCE, OWNERSHIP_SOURCES, RATIOS, clean_calendar, clean_market, clean_quarters, read_silver, write_star
@@ -23,6 +24,8 @@ from .real_models import (
 from .seasonal_review import (
     add_rebound_baseline, adjust_pvalues, loan_size_subgroups, policy_robustness, rebound_baselines, seasonal_hypotheses,
 )
+from .scorecard import build_scorecard, publish_audit
+from .seasonal_adjust import seasonal_adjustment
 from .snapshot_metrics import dashboard_metrics, json_safe
 
 
@@ -515,7 +518,8 @@ def run_real(silver, out):
     m7, adjusted = forecast(main)
     m7["decision_rule"], decisions = decision_rule(main)
     add_rebound_baseline(m7["decision_rule"], rebound_panel, decisions, m3["baselines"])
-    decoder = build_decoder(main, decisions, tables.get("notes_bank_quarter"), screening)
+    regimes = {period for period, active in (m2["policy_robustness"].get("quarter_regime") or {}).items() if active}
+    decoder = build_decoder(main, decisions, tables.get("notes_bank_quarter"), screening, regimes=regimes)
     disclosure = tables.get("disclosure_dates")
     if disclosure is not None and "valid" in getattr(disclosure, "columns", []):
         disclosure = disclosure.loc[disclosure["valid"].map(lambda value: str(value).strip().lower() in {"1", "true", "yes"})]
@@ -538,9 +542,17 @@ def run_real(silver, out):
     for result, ((vi, vi_limit), (en, en_limit)) in zip(models.values(), _readings(models)):
         result.update(reading=vi, what_this_does_not_show=vi_limit,
                       reading_en=en, what_this_does_not_show_en=en_limit)
+    vendor_fit = decoder["regression"]["fiinquant"]
+    if vendor_fit["available"] is not None:
+        m5["reading"] += " " + vendor_fit["reading_vi"]
+        m5["reading_en"] += " " + vendor_fit["reading_en"]
     models["decoder"] = decoder
     models["M8"] = run_market_model(silver)
     models["decomposition"] = decompose_screening(screening, tables.get("notes_bank_quarter"))
+    models["scorecard"] = build_scorecard(main, screening, tables.get("valuation_daily"), tables.get("legal_register"))
+    models["pdf_audit"] = publish_audit(screening, tables.get("notes_bank_quarter"))
+    models["M9"] = early_warning(rebound_panel, screening, models["decomposition"]["quarantine"])
+    models["M10"] = seasonal_adjustment(rebound_panel)
     legacy = m6["regressions"].get("deadline_only", {}).get("terms", {}).get("surprise_d_npl_pct")
     m6["windows"] = window_study(market, events, legacy_surprise=legacy)
     models["multiple_testing"] = adjust_pvalues(models)

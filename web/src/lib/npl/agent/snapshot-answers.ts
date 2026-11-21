@@ -146,12 +146,48 @@ export function coverageEffect(snapshot: Snapshot) {
   }
 }
 
+export function rankGap(snapshot: Snapshot, { period }: { period?: string }) {
+  const gaps = snapshot.meta.publish_bank_series ? snapshot.scorecard?.rank_gaps : undefined
+  const published = gaps?.[period ?? "latest"]
+    ?? (period && gaps?.latest?.[0]?.period === period ? gaps.latest : undefined)
+  const rows = (published ?? []).filter((row) => row.direction === "npl_looks_better")
+  const data_period = period ?? snapshot.meta.period_end
+  const banks = rows.map((row) => row.bank_code).join(", ")
+  return {
+    data_period,
+    rows,
+    count: rows.length,
+    reading_vi: rows.length
+      ? `Trong danh sách chênh lệch đáng chú ý ở ${data_period}, ${rows.length} ngân hàng có hạng theo tỷ lệ nợ xấu tốt hơn hạng chất lượng tín dụng tổng hợp, gồm ${banks}.`
+      : published ? `Bảng công bố cho ${data_period} không có trường hợp chênh lệch theo hướng này.` : `Chưa có bảng chênh lệch thứ hạng được công bố cho ${data_period}.`,
+    reading_en: rows.length
+      ? `Among the notable rank gaps in ${data_period}, ${rows.length} banks ranked better on NPL than on composite credit quality. They were ${banks}.`
+      : published ? `The published ${data_period} table has no gaps in this direction.` : `Published rank gaps are unavailable for ${data_period}.`,
+    citations: source(data_period),
+  }
+}
+
+export function earlyWarning(snapshot: Snapshot) {
+  const early = snapshot.context?.early_warning
+  const event = early?.backtests.rise_in_four
+  return {
+    data_period: snapshot.meta.period_end,
+    fits: event?.fits ?? null,
+    n: event?.n_test ?? null,
+    reading_vi: early?.reading_vi ?? "Chưa có kết quả kiểm tra cảnh báo sớm được công bố.",
+    reading_en: early?.reading_en ?? "Early warning results are unavailable.",
+    citations: source(snapshot.meta.period_end, event?.n_test ?? null),
+  }
+}
+
 export type SnapshotAnswers = {
   screen_declines: ReturnType<typeof screenDeclines>
   q4_drivers: ReturnType<typeof q4Drivers>
   q1_rebound: ReturnType<typeof q1Rebound>
   quarter_breakdown: ReturnType<typeof quarterBreakdown>
   coverage_effect: ReturnType<typeof coverageEffect>
+  rank_gap: ReturnType<typeof rankGap>
+  early_warning: ReturnType<typeof earlyWarning>
 }
 
 export type SnapshotAnswer = { [K in keyof SnapshotAnswers]: {
@@ -170,6 +206,21 @@ export function answerSnapshot(snapshot: Snapshot, question: string, lang: Lang)
   const year = /\b(20\d{2})(?=\b|q4\b)/.exec(plain)?.[1]
   const decimal = (value: number, digits = 2) => formatNumber(value, lang, digits)
 
+  if (npl && /\b(?:ngan hang nao|which banks?|xep hang|thu hang|ranks?|ranking)\b/.test(plain) &&
+    /\b(?:chat luong tong the|chat luong (?:tai san|tin dung) tong hop|composite (?:asset|credit) quality|overall credit quality|rank gaps?)\b/.test(plain)) {
+    const compactPeriod = /\b(20\d{2})\s*q([1-4])\b/.exec(plain)
+    const spokenPeriod = /\b(?:q|quy\s+)([1-4])\s+(20\d{2})\b/.exec(plain)
+    const period = compactPeriod ? `${compactPeriod[1]}Q${compactPeriod[2]}`
+      : spokenPeriod ? `${spokenPeriod[2]}Q${spokenPeriod[1]}` : undefined
+    if (year && !period) return null
+    const input = { period }
+    const output = rankGap(snapshot, input)
+    return { name: "rank_gap", input, output, text: output[`reading_${lang}`] }
+  }
+  if (!year && /\b(?:canh bao som|early[- ]warning)\b/.test(plain)) {
+    const output = earlyWarning(snapshot)
+    return { name: "early_warning", input: {}, output, text: output[`reading_${lang}`] }
+  }
   if (q4 && npl && fell && year && /\b(?:nhom\s*2|group[- ]?2)\b/.test(plain) &&
     /\b(?:tang|rose|ris\w*|increas\w*)\b/.test(plain)) {
     const input = { period: `${year}Q4` }
