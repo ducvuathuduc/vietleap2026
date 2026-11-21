@@ -5,14 +5,17 @@ import { HowToRead } from "@/components/npl/how-to-read"
 import { buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { loadSnapshot } from "@/lib/npl/load"
-import { bankRows, langFromQuery, overviewModel, pageHref, type Ownership } from "@/lib/npl/view"
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale"
+import { bankRows, overviewModel, pageHref, type Ownership } from "@/lib/npl/view"
 import { cn } from "cn"
 
 export const instant = false
 
-export const metadata: Metadata = {
-  title: "Ngân hàng",
-  description: "Trung vị thay đổi NPL quý 4 và quý 1 của từng ngân hàng.",
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await requestLanguage()
+  return lang === "vi"
+    ? localizedMetadata(lang, "Ngân hàng", "Trung vị thay đổi NPL quý 4 và quý 1 của từng ngân hàng.")
+    : localizedMetadata(lang, "Banks", "Compare median Q4 and Q1 NPL changes for each bank.")
 }
 
 type Query = Record<string, string | string[] | undefined>
@@ -22,8 +25,7 @@ function one(value: string | string[] | undefined): string {
 }
 
 export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
-  const query = await searchParams
-  const lang = langFromQuery(query.lang)
+  const [query, lang] = await Promise.all([searchParams, requestLanguage()])
   const own = one(query.own)
   const ownership: Ownership = own === "state" || own === "private" ? own : "all"
   const vi = lang === "vi"

@@ -15,7 +15,7 @@ const COPY = {
     input: "Câu hỏi về dữ liệu",
     send: "Gửi",
     conversation: "Hội thoại",
-    figures: "Số liệu đối chiếu",
+    figures: /^Số liệu toàn nhóm\b/,
     median: /trung vị nợ xấu|nợ xấu trung vị/i,
     open: "Xem trên trang",
   },
@@ -25,7 +25,7 @@ const COPY = {
     input: "Question about the data",
     send: "Send",
     conversation: "Conversation",
-    figures: "Answer evidence",
+    figures: /^Panel figures\b/,
     median: /median NPL|median non-performing loan/i,
     open: "See on the page",
   },
@@ -69,7 +69,7 @@ test.describe("assistant panel @live", () => {
       const reply = conversation.getByRole("paragraph").filter({ hasText: copy.median }).last()
       await expect(reply).toBeVisible()
       await expect(reply).not.toHaveText(copy.question)
-      const figures = conversation.getByRole("figure", { name: copy.figures, exact: true })
+      const figures = conversation.getByRole("figure", { name: copy.figures })
       await expect(figures).toHaveCount(1)
       await expect(figures.getByRole("link", { name: copy.open, exact: true })).toBeVisible()
       await expect(figures.getByText(/FiinQuant \(FiinGroup\)/)).toBeVisible()

@@ -3,20 +3,21 @@ import type { Metadata } from "next"
 import { DecoderTable } from "@/components/npl/decoder-table"
 import { HowToRead } from "@/components/npl/how-to-read"
 import { loadSnapshot } from "@/lib/npl/load"
-import { decoderModel, langFromQuery, pageHref } from "@/lib/npl/view"
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale"
+import { decoderModel, pageHref } from "@/lib/npl/view"
 
 export const instant = false
 
-export const metadata: Metadata = {
-  title: "Giải mã nợ xấu",
-  description: "Cờ nợ xấu của mọi ngân hàng niêm yết, mọi quý đã có số.",
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await requestLanguage()
+  return lang === "vi"
+    ? localizedMetadata(lang, "Giải mã nợ xấu", "Cờ nợ xấu của mọi ngân hàng niêm yết, mọi quý đã có số.")
+    : localizedMetadata(lang, "NPL Decoder", "Review NPL flags by listed bank and reporting quarter.")
 }
 
-type Query = Record<string, string | string[] | undefined>
-
-export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
-  const lang = langFromQuery((await searchParams).lang)
-  const model = decoderModel(await loadSnapshot(), lang, "all")
+export default async function Page() {
+  const [lang, snapshot] = await Promise.all([requestLanguage(), loadSnapshot()])
+  const model = decoderModel(snapshot, lang, "all")
   const vi = lang === "vi"
   return (
     <>

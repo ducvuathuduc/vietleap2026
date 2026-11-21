@@ -1,4 +1,7 @@
+import type { Lang } from "./language.ts"
 import type { MentorRegression, PdfAudit, ResearchContext, Scorecard } from "./research-types.ts"
+
+export type { Lang } from "./language.ts"
 
 export const PAGE_SHELL = "min-h-full overflow-x-hidden bg-background text-foreground"
 export const SERIES_ATTRIBUTION = "Nguồn: FiinQuant (FiinGroup)"
@@ -24,7 +27,6 @@ const BADGE_SENTENCE = {
   missing: { vi: "Thiếu một đầu vào nên không gọi là cải thiện có cơ sở.", en: "An input is missing, so this is not called a supported improvement." },
 } as const
 
-export type Lang = "vi" | "en"
 export const SITE_TITLE = { vi: "Vượt ra ngoài tỷ lệ nợ xấu", en: "Beyond the NPL Ratio" } as const
 
 export function siteSubtitle(lang: Lang, banks: number, firstYear: string, lastYear: string): string {
@@ -155,10 +157,25 @@ export type Snapshot = {
   }
   series: { median_by_period: { period: string; npl_median_pct: number | null; npl_p25_pct: number | null; npl_p75_pct: number | null; coverage_median_pct: number | null; n_banks: number }[] }
   quarter_effects: QuarterEffect[]
+  seasonal_review?: {
+    hypotheses?: {
+      tests: Record<string, { n: number; coefficient?: number; p: number; wild_p?: number; ci95: number[] | null; reading_vi: string; reading_en: string }>
+      reading_vi: string
+      reading_en: string
+    }
+  }
+  multiple_testing?: {
+    q: number
+    n_pvalues: number
+    rows: { test_id: string; bh_adjusted: number | null; reject_at_q: boolean }[]
+    reading_vi: string
+    reading_en: string
+  }
   banks: SnapshotBank[]
   heterogeneity: { pre_period: string; high_banks: string[]; q4_high_npl: Term | null; q4_state: Term | null }
   linkage: { roa_absent: boolean; coverage_q4: Term | null; nim_q4: Term | null; loan_growth_q4: Term | null; roa_q4: Term | null }
   market: {
+    windows?: unknown
     m8?: {
       basket: PublishedPriceForecast
       vnindex: PublishedPriceForecast
@@ -253,11 +270,6 @@ export type DataRow = {
 const ABSENT_WILD = {
   vi: "Phép wild bootstrap theo cụm chưa có trong bản số liệu này.",
   en: "The wild cluster bootstrap is not in these figures.",
-}
-
-export function langFromQuery(value: string | string[] | undefined): Lang {
-  const raw = Array.isArray(value) ? value[0] : value
-  return raw === "en" ? "en" : "vi"
 }
 
 export function nextPeriod(period: string): string {
@@ -1149,7 +1161,7 @@ export function sortDataRows<T extends Record<string, string | number | null | u
 
 export function pageHref(path: string, lang: Lang, params?: Record<string, string | undefined>): string {
   const search = new URLSearchParams()
-  if (lang === "en") search.set("lang", "en")
+  search.set("lang", lang)
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value) search.set(key, value)
   }

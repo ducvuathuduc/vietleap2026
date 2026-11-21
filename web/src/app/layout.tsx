@@ -5,6 +5,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale";
 import { SITE_TITLE } from "@/lib/npl/view";
 
 const geistSans = Geist({
@@ -17,16 +18,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: SITE_TITLE.vi,
-  description: "Khung đánh giá chất lượng tín dụng và cảnh báo rủi ro.",
-  robots: { index: true, follow: true },
-};
+export const instant = false;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await requestLanguage();
+  const description = lang === "vi"
+    ? "Khung đánh giá chất lượng tín dụng và cảnh báo rủi ro."
+    : "A framework for assessing credit quality and early warning signs.";
+  return { ...localizedMetadata(lang, SITE_TITLE[lang], description), robots: { index: true, follow: true } };
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const lang = await requestLanguage();
   return (
     <html
-      lang="vi"
+      lang={lang}
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >

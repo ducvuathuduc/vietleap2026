@@ -3,6 +3,7 @@
 // returns its values together with citations (source, period, n, CI where
 // relevant) so the model can only speak numbers the snapshot carries.
 import { decoderModel, type DecoderSignal, type Snapshot, type Term } from "../view.ts"
+import { bankCheck, publishedBankQuarter, scorecardRanks } from "../research-view.ts"
 
 export interface NplCitation {
   source: string
@@ -97,11 +98,26 @@ export function overview(snapshot: Snapshot) {
 
 export function quarterEffects(snapshot: Snapshot) {
   const data_period = snapshotPeriod(snapshot)
+  const corrections = snapshot.multiple_testing
   return {
     data_period,
     reference_quarter: 1,
     null_effect_pp: 0,
     effects: snapshot.quarter_effects,
+    benchmark: snapshot.kpis.benchmark,
+    robustness: snapshot.robustness,
+    heterogeneity: snapshot.heterogeneity,
+    decision_rule: snapshot.decision_rule,
+    reversal: snapshot.reversal,
+    hypothesis_tests: snapshot.seasonal_review?.hypotheses ?? null,
+    adjusted_significance: corrections ? {
+      q: corrections.q,
+      n_pvalues: corrections.n_pvalues,
+      rows: corrections.rows.filter((row) => row.test_id.startsWith("M2.")),
+      reading_vi: corrections.reading_vi,
+      reading_en: corrections.reading_en,
+    } : null,
+    median_by_period: snapshot.series.median_by_period,
     citations: snapshot.quarter_effects.map((e) => termCitation("quarter effects (Q2/Q3/Q4 vs Q1)", e, `Q${e.quarter}`)),
     note_vi: "Đây là liên hệ trong dữ liệu, không phải nhân quả.",
     note_en: "Association in the data, not causation.",
@@ -110,16 +126,32 @@ export function quarterEffects(snapshot: Snapshot) {
 
 // --- bank_profile ----------------------------------------------------------
 
-export function bankProfile(snapshot: Snapshot, input: { code: string }) {
+function bankQuarter(snapshot: Snapshot, code: string, period: string) {
+  const publicSeries = snapshot.meta.publish_bank_series
+  return {
+    period,
+    evidence: { vi: bankCheck(snapshot, code, period, "vi"), en: bankCheck(snapshot, code, period, "en") },
+    decoder_row: publicSeries ? publishedBankQuarter(snapshot, code, period) ?? null : null,
+    decomposition: publicSeries ? snapshot.decomposition?.rows.find((row) => row.bank_code === code && row.period === period) ?? null : null,
+    scorecard: publicSeries ? snapshot.scorecard?.rows?.find((row) => row.bank_code === code && row.period === period) ?? null : null,
+    seasonal: publicSeries ? snapshot.context?.seasonal_adjustment?.series.find((row) => row.bank_code === code && row.period === period) ?? null : null,
+  }
+}
+
+export function bankProfile(snapshot: Snapshot, input: { code: string; period?: string }) {
   const code = input.code.trim().toUpperCase()
   const bank = snapshot.banks.find((b) => b.code === code)
   if (!bank) return { found: false as const, data_period: null, citations: [] as NplCitation[] }
+  const period = input.period ?? bank.latest?.period ?? bank.quarters.at(-1)?.period
+  const selected = period ? bankQuarter(snapshot, code, period) : null
   return {
     found: true as const,
-    data_period: periodRange(bank.quarters[0]?.period, bank.latest?.period ?? bank.quarters.at(-1)?.period),
+    data_period: input.period ?? periodRange(bank.quarters[0]?.period, period),
     bank,
-    decoder: decoderCell(snapshot, code, bank.latest?.period),
-    citations: [cite("bank profile", bank.latest?.period ?? null, bank.years, null)],
+    selected,
+    scorecard_indicators: snapshot.scorecard?.indicators ?? [],
+    decoder: decoderCell(snapshot, code, period),
+    citations: [cite("FiinQuant (FiinGroup)", period ?? null, input.period ? (bank.quarters.some((row) => row.period === period) ? 1 : null) : bank.years)],
   }
 }
 
@@ -136,7 +168,13 @@ export function adjustedChange(snapshot: Snapshot, input: { code: string; period
     found: true as const,
     data_period: period,
     code,
-    row: row ?? { period: cell!.period, d_npl_pp: cell!.d_npl_pp, adjusted_change_pp: null },
+    watch_list_group: 2,
+    row: {
+      period: period!,
+      d_npl_pp: row?.d_npl_pp ?? cell?.d_npl_pp ?? null,
+      adjusted_change_pp: snapshot.context?.seasonal_adjustment?.series.find((item) => item.bank_code === code && item.period === period)?.adjusted_change_pp
+        ?? row?.adjusted_change_pp ?? null,
+    },
     decoder: cell,
     citations: [cite("adjusted change (bank-quarter)", period, 1)],
   }
@@ -147,6 +185,7 @@ export function decoder(snapshot: Snapshot, input: { code: string; period?: stri
   if (!result.found) return result
   return {
     ...result,
+    selected: result.data_period ? bankQuarter(snapshot, result.code, result.data_period) : null,
     check_count: Object.keys(result.decoder?.checks ?? {}).length,
     monitored_loan_group: 2,
     citations: [cite("NPL decoder (bank-quarter)", result.data_period, 1)],
@@ -155,29 +194,23 @@ export function decoder(snapshot: Snapshot, input: { code: string; period?: stri
 
 // --- compare_banks ---------------------------------------------------------
 
-export function compareBanks(snapshot: Snapshot, input: { codes: string[] }) {
+export function compareBanks(snapshot: Snapshot, input: { codes: string[]; period?: string; trend?: boolean }) {
   if (input.codes.length > 4) throw new Error("compare at most 4 banks")
-  const rows: {
-    code: string
-    name_vi: string
-    name_en: string
-    ownership: "state" | "private"
-    q4_change_median_pp: number | null
-    q1_rebound_median_pp: number | null
-    latest_period: string | null
-    d_npl_pp: number | null
-    adjusted_change_pp: number | null
-    forecast_next: { period: string; npl_pct: number; lo80: number; hi80: number } | null
-  }[] = []
   const missing: string[] = []
-  for (const raw of input.codes) {
-    const code = raw.trim().toUpperCase()
+  const rows = [...new Set(input.codes.map((raw) => raw.trim().toUpperCase()))].flatMap((code) => {
     const bank = snapshot.banks.find((b) => b.code === code)
     if (!bank) {
       missing.push(code)
-      continue
+      return []
     }
-    rows.push({
+    const period = input.period ?? bank.latest?.period ?? null
+    const selected = period ? bankQuarter(snapshot, code, period) : null
+    const series = snapshot.meta.publish_bank_series ? bank.series ?? [] : []
+    const point = series.find((row) => row.period === period)
+    const ranks = period && snapshot.meta.publish_bank_series ? scorecardRanks(snapshot.scorecard?.rows, code, period) : null
+    const quarter = bank.quarters.find((row) => row.period === period)
+    const group2 = selected?.scorecard?.values.group2 ?? selected?.decoder_row?.g2_ratio
+    return [{
       code: bank.code,
       name_vi: bank.name_vi,
       name_en: bank.name_en,
@@ -185,22 +218,31 @@ export function compareBanks(snapshot: Snapshot, input: { codes: string[] }) {
       q4_change_median_pp: bank.q4_change_median_pp,
       q1_rebound_median_pp: bank.q1_rebound_median_pp,
       latest_period: bank.latest?.period ?? null,
-      d_npl_pp: bank.quarters.find((q) => q.period === bank.latest?.period)?.d_npl_pp ?? null,
-      adjusted_change_pp: bank.latest?.adjusted_change_pp ?? null,
+      period,
+      npl_pct: point?.npl_pct ?? selected?.decomposition?.npl_pct ?? null,
+      group2_pct: group2 == null ? null : 100 * group2,
+      coverage_pct: selected?.decoder_row?.coverage_contested ? null : point?.coverage_pct ?? null,
+      denominator_pp: selected?.decomposition?.denominator_pp ?? null,
+      numerator_pp: selected?.decomposition?.numerator_pp ?? null,
+      npl_rank: ranks?.npl ?? null,
+      composite_rank: ranks?.composite ?? null,
+      d_npl_pp: selected?.decomposition?.d_npl_pp ?? quarter?.d_npl_pp ?? null,
+      adjusted_change_pp: selected?.seasonal?.adjusted_change_pp
+        ?? (input.period ? quarter?.adjusted_change_pp : bank.latest?.adjusted_change_pp) ?? null,
       forecast_next: bank.latest?.forecast_next ?? null,
-    })
-  }
+      history: input.trend ? series : [],
+    }]
+  })
+  const periods = rows.flatMap((row) => input.trend ? row.history.map((point) => point.period) : row.period ? [row.period] : []).sort()
   return {
-    data_period: periodRange(...latestPeriodBounds(rows)),
+    data_period: input.period ?? periodRange(periods[0], periods.at(-1)),
+    requested_period: input.period ?? null,
+    bank_count: rows.length,
+    watch_list_group: 2,
     rows,
     missing,
-    citations: rows.map((row) => cite("bank medians and latest changes (FiinQuant panel)", row.latest_period, null)),
+    citations: rows.map((row) => cite("FiinQuant (FiinGroup)", row.period, null)),
   }
-}
-
-function latestPeriodBounds(rows: { latest_period: string | null }[]): [string | undefined, string | undefined] {
-  const periods = rows.flatMap((row) => row.latest_period ? [row.latest_period] : []).sort()
-  return [periods[0], periods.at(-1)]
 }
 
 // --- forecast --------------------------------------------------------------
@@ -218,6 +260,7 @@ export function forecast(snapshot: Snapshot, input: { code: string }) {
     code,
     series,
     forecast: next,
+    watch_list_group: 2,
     mae: snapshot.forecast.mae,
     backtest_period: snapshot.forecast.test_period,
     backtest_note_vi: snapshot.forecast.reading_vi || "Kiểm định trên các quý đã quan sát, so với dự báo giữ nguyên và dự báo mùa vụ.",
@@ -235,10 +278,70 @@ export function marketReaction(snapshot: Snapshot) {
     data_period: periodRange(snapshot.market.period_start, snapshot.market.period_end),
     events_with_car: snapshot.market.events_with_car,
     car_all: snapshot.market.car_by_day.filter((row) => row.group === "all"),
+    windows: snapshot.market.windows ?? null,
+    price_models: snapshot.market.m8 ?? null,
     regressions: snapshot.market.regressions,
     reading_vi: snapshot.market.reading_vi,
     reading_en: snapshot.market.reading_en,
     citations: [cite("market CAR around disclosure events", snapshot.market.period_end ?? null, snapshot.market.events_with_car)],
+  }
+}
+
+export function mentorOls(snapshot: Snapshot) {
+  const { decoder } = snapshot
+  const regression = decoder && !Array.isArray(decoder) ? decoder.regression : undefined
+  const fits = regression?.fiinquant ?? null
+  return {
+    data_period: periodRange(fits?.full.period?.[0], fits?.full.period?.at(-1)) ?? snapshotPeriod(snapshot),
+    fits,
+    regression,
+    specification_en: "Quarterly change in NPL ratio on quarterly write-offs, change in Group 2 ratio, year-over-year loan growth and prior-quarter coverage, with bank fixed effects.",
+    specification_vi: "Hồi quy thay đổi tỷ lệ nợ xấu theo quý trên tỷ lệ xóa nợ, thay đổi nợ nhóm 2, tăng trưởng dư nợ cùng kỳ và bao phủ quý trước, có hiệu ứng cố định theo ngân hàng.",
+    citations: [cite("FiinQuant (FiinGroup)", snapshotPeriod(snapshot), fits?.full.n ?? null)],
+  }
+}
+
+export function seasonalAdjustment(snapshot: Snapshot) {
+  const seasonal = snapshot.context?.seasonal_adjustment
+  return {
+    data_period: snapshotPeriod(snapshot),
+    counts: seasonal?.counts ?? null,
+    reading_vi: seasonal?.reading_vi ?? null,
+    reading_en: seasonal?.reading_en ?? null,
+    baseline: snapshot.decision_rule?.q1_rise_baseline ?? null,
+    holdout: snapshot.decision_rule?.q4_oos ?? null,
+    citations: [cite("FiinQuant (FiinGroup)", snapshotPeriod(snapshot), seasonal?.counts.adjustable ?? null)],
+  }
+}
+
+export function policyWindows(snapshot: Snapshot, { year }: { year?: number }) {
+  const policy = snapshot.context?.policy
+  return {
+    data_period: year ? String(year) : snapshotPeriod(snapshot),
+    policy,
+    requested_year: year ?? null,
+    year_estimate: policy?.q4_by_year.find((row) => row.year === year) ?? null,
+    citations: [cite("Official Gazette and FiinQuant (FiinGroup)", snapshotPeriod(snapshot), policy?.n ?? null)],
+  }
+}
+
+export function largestWriteoffs(snapshot: Snapshot, input: { period: string; measure?: "amount" | "share" }) {
+  const measure = input.measure ?? "amount"
+  const rows = snapshot.meta.publish_bank_series ? snapshot.banks.flatMap(({ code }) => {
+    const row = publishedBankQuarter(snapshot, code, input.period)
+    if (!row?.writeoff_quarter_flow || row.writeoff_vnd_bn == null || (measure === "share" && row.writeoff_ratio == null)) return []
+    return [{ bank: code, amount_vnd_bn: row.writeoff_vnd_bn, share_pct: row.writeoff_ratio == null ? null : 100 * row.writeoff_ratio }]
+  }) : []
+  rows.sort((a, b) => measure === "share" ? b.share_pct! - a.share_pct! : b.amount_vnd_bn - a.amount_vnd_bn)
+  return {
+    data_period: input.period,
+    measure,
+    rows,
+    observed_n: rows.length,
+    panel_banks: snapshot.meta.n_banks,
+    basis_en: "Provisions used as the published proxy for quarterly write-offs. Share uses opening loans.",
+    basis_vi: "Dự phòng đã sử dụng là chỉ báo xóa nợ trong quý. Tỷ lệ tính trên dư nợ đầu quý.",
+    citations: [cite("FiinQuant (FiinGroup) and financial statement notes", input.period, rows.length)],
   }
 }
 
@@ -264,6 +367,7 @@ export function limitations(snapshot: Snapshot) {
     data_period: snapshotPeriod(snapshot),
     items: snapshot.limitations,
     legal: snapshot.legal,
+    bank_quarter_follow_up: ["loan growth", "Group 2 watch-list loans", "write-offs", "provisions and coverage"],
     citations: [cite("snapshot limitations", snapshot.meta.period_end, snapshot.meta.n_bank_quarters)],
   }
 }
@@ -272,8 +376,16 @@ export function limitations(snapshot: Snapshot) {
 
 const GLOSSARY: Record<string, { vi: string; en: string }> = {
   npl: {
-    vi: "Nợ xấu (NPL): khoản cho vay mà người vay không trả được đúng hạn theo chuẩn của Ngân hàng Nhà nước.",
-    en: "NPL: a loan the borrower is not repaying on schedule (non-performing loan).",
+    vi: "Tỷ lệ nợ xấu (NPL) là dư nợ nhóm 3–5 chia tổng dư nợ. Nhóm 2 là nợ cần chú ý và nằm ngoài tử số.",
+    en: "The non-performing loan ratio (NPL ratio) is the balance of loans in Groups 3–5 divided by total loans. Group 2 is on the watch list and sits outside the numerator.",
+  },
+  "loan groups": {
+    vi: "Nhóm 1 là nợ đủ tiêu chuẩn, nhóm 2 là nợ cần chú ý, nhóm 3 là nợ dưới tiêu chuẩn, nhóm 4 là nợ nghi ngờ, và nhóm 5 là nợ có khả năng mất vốn. Tỷ lệ nợ xấu dùng nhóm 3–5 trong tử số.",
+    en: "The five loan groups are standard (1), watch-list (2), substandard (3), doubtful (4), and potential loss (5). The NPL ratio includes Groups 3–5 in its numerator.",
+  },
+  "write-off and recovery": {
+    vi: "Xóa nợ bằng dự phòng đưa khoản nợ ra khỏi số dư nợ xấu trên bảng cân đối, người vay vẫn có nghĩa vụ trả. Thu hồi nợ là thực sự thu được tiền. Hãy xem riêng tiền thu hồi và dự phòng đã dùng nếu cần biết chất lượng tín dụng có cải thiện.",
+    en: "A provision-funded write-off removes the loan from the reported NPL balance, and the borrower still owes the debt. Recovery means cash was actually collected. Check cash recoveries and provisions used separately when assessing improvement.",
   },
   "adjusted change": {
     vi: "Thay đổi NPL sau khi loại bỏ hiệu ứng quý (so với quý 1) — đọc phần thay đổi sau hiệu ứng quý, không phải mức giảm thô.",
@@ -311,6 +423,17 @@ export function glossary(snapshot: Snapshot, input: { term: string }) {
     "nợ xấu": "npl",
     "no xau": "npl",
     "npl": "npl",
+    "npl ratio": "npl",
+    "tỷ lệ nợ xấu": "npl",
+    "loan groups": "loan groups",
+    "five loan groups": "loan groups",
+    "nhóm nợ": "loan groups",
+    "write-off": "write-off and recovery",
+    "write-offs": "write-off and recovery",
+    "write-off and recovery": "write-off and recovery",
+    "recovery": "write-off and recovery",
+    "xóa nợ": "write-off and recovery",
+    "thu hồi nợ": "write-off and recovery",
     "hiệu ứng quý": "quarter effect",
     "quarter effect": "quarter effect",
     "wild bootstrap": "wild bootstrap",
@@ -345,4 +468,8 @@ export type NplToolResults = {
   method: ReturnType<typeof method>
   limitations: ReturnType<typeof limitations>
   glossary: ReturnType<typeof glossary>
+  mentor_ols: ReturnType<typeof mentorOls>
+  seasonal_adjustment: ReturnType<typeof seasonalAdjustment>
+  policy_windows: ReturnType<typeof policyWindows>
+  largest_writeoffs: ReturnType<typeof largestWriteoffs>
 }

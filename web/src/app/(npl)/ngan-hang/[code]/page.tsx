@@ -7,23 +7,22 @@ import { Glossary } from "@/components/npl/glossary"
 import { HowToRead } from "@/components/npl/how-to-read"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { loadSnapshot } from "@/lib/npl/load"
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale"
 import { latestScorecard } from "@/lib/npl/research-view"
-import { bankModel, formatNumber, langFromQuery, pageHref } from "@/lib/npl/view"
+import { bankModel, formatNumber, pageHref } from "@/lib/npl/view"
 
 export const instant = false
 
-type Query = Record<string, string | string[] | undefined>
-
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  const { code } = await params
-  return { title: code.toUpperCase() }
+  const [{ code }, lang] = await Promise.all([params, requestLanguage()])
+  const bank = code.toUpperCase()
+  return lang === "vi"
+    ? localizedMetadata(lang, `${bank} | Hồ sơ ngân hàng`, `Tỷ lệ nợ xấu và bảng điểm tín dụng của ${bank}.`)
+    : localizedMetadata(lang, `${bank} | Bank Profile`, `NPL ratios and credit scorecard for ${bank}.`)
 }
 
-export default async function Page({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<Query> }) {
-  const { code } = await params
-  const query = await searchParams
-  const lang = langFromQuery(query.lang)
-  const study = await loadSnapshot()
+export default async function Page({ params }: { params: Promise<{ code: string }> }) {
+  const [{ code }, lang, study] = await Promise.all([params, requestLanguage(), loadSnapshot()])
   const model = bankModel(study, code, lang)
   if (!model) notFound()
   const vi = lang === "vi"

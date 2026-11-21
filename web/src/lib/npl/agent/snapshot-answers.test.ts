@@ -32,7 +32,19 @@ test("known questions use the published mechanism, rebound baseline, bank quarte
     assert.deepEqual(guardNplAnswer(answer.text, [answer.output]).flagged, [], question)
   }
   assert.equal(detectLang("Cho xem MBB 2025"), "vi")
-  assert.equal(answerSnapshot(snapshot, "What is the definition of NPL?", "en"), null)
+  assert.equal(answerSnapshot(snapshot, "What is the cost of capital?", "en"), null)
+})
+
+test("known definitions and the requested-quarter comparison return grounded answers", async () => {
+  const snapshot = await loadNplSnapshot()
+  const definition = answerSnapshot(snapshot, "What is the NPL ratio?", "en")
+  assert.equal(definition?.name, "glossary")
+  assert.match(definition.text, /Groups 3–5 divided by total loans/)
+  const comparison = answerSnapshot(snapshot, "Compare MBB and VCB in 2025Q4", "en")
+  assert.equal(comparison?.name, "compare_banks")
+  assert.equal(comparison.output.requested_period, "2025Q4")
+  assert.match(comparison.text, /MBB.*1\.29.*VCB.*0\.58/)
+  assert.deepEqual(guardNplAnswer(comparison.text, [comparison.output]).flagged, [])
 })
 
 test("assistant grounds bilingual rank gaps and early-warning comparisons in the published results", async () => {

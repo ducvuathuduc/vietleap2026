@@ -35,7 +35,7 @@ export function messagesForNplModel(messages: readonly HistoryMessage[]): UIMess
 }
 
 const NUMBER = /(?:((?<![\dQ])[-+−]))?(\d+(?:[.,\u00A0\u202F]\d+)*)/gu
-const FALL_BEFORE = /(?:\b(?:fell|falls?|declin(?:e|ed)|dropp?ed|drop|decreas(?:e|ed)|lower|down)\s+(?:(?:by|of)\s+)?(?:(?:about|around)\s+)?|(?:giảm|thấp hơn|ít hơn)\s+(?:quý\s+[1-4]\s+)?(?:(?:khoảng|là)\s+)?)$/iu
+const FALL_BEFORE = /(?:\b(?:fell|falls?|declin(?:e|ed)|dropp?ed|drop|decreas(?:e|ed)|lower|down)\s+(?:(?:by|of)\s+)?(?:(?:about|around)\s+)?|(?:giảm|thấp hơn|ít hơn)\s+(?:(?:quý\s+[1-4]|NPL|tỷ lệ nợ xấu)\s+)?(?:(?:khoảng|là)\s+)?)$/iu
 const FALL_AFTER = /^(?:\s*(?:percentage points?|pp|điểm (?:phần trăm|%)|%))?\s+(?:lower|less|below|thấp hơn|ít hơn)\b/iu
 
 function numericSign(sign: string | undefined): number {
@@ -78,8 +78,8 @@ export function guardNplAnswer(text: string, outputs: unknown[]): GuardResult {
     const direction = numericSign(sign)
     const lastSeparator = Math.max(magnitude.lastIndexOf("."), magnitude.lastIndexOf(","))
     const falling = sign === undefined && (
-      FALL_BEFORE.test(text.slice(Math.max(0, offset - 24), offset))
-      || FALL_AFTER.test(text.slice(offset + token.length))
+      FALL_BEFORE.test(text.slice(Math.max(0, offset - 32), offset).replace(/(?:\*\*|__)+$/, ""))
+      || FALL_AFTER.test(text.slice(offset + token.length).replace(/^(?:\*\*|__)+/, ""))
     )
     const grounded = candidates(magnitude).some((candidate) => {
       const signed = direction * candidate

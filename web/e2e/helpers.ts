@@ -28,8 +28,7 @@ export function isProductionTarget(baseURL: string | undefined) {
 export const LANGS = ["vi", "en"] as const
 
 export function withLang(path: string, lang: Lang): string {
-  if (lang === "vi") return path
-  return path.includes("?") ? `${path}&lang=en` : `${path}?lang=en`
+  return `${path}${path.includes("?") ? "&" : "?"}lang=${lang}`
 }
 
 /** Collect console errors (incl. uncaught page errors) and failed network requests. */
@@ -58,6 +57,6 @@ export async function switchTo(page: Page, lang: Lang) {
   const current = lang === "en" ? "Ngôn ngữ" : "Language"
   const group = page.getByRole("group", { name: current, exact: true })
   await group.getByRole("link", { name: lang.toUpperCase(), exact: true }).click()
-  await page.waitForURL((url) => lang === "en" ? url.searchParams.get("lang") === "en" : !url.searchParams.has("lang"))
+  await page.waitForURL((url) => url.searchParams.get("lang") === lang)
   await expect(page.locator("html")).toHaveAttribute("lang", lang)
 }

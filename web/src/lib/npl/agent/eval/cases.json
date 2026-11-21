@@ -376,5 +376,93 @@
       13.09
     ],
     "published": true
+  },
+  {
+    "id": "b26-compare-period-en",
+    "lang": "en",
+    "question": "Compare MBB and VCB in 2025Q4. What was each bank's reported NPL ratio, and which had the larger loan-denominator contribution to its decline?",
+    "expect_tool": "compare_banks",
+    "expect_numbers": [1.294, 0.580, -0.263],
+    "expect_regex": "(?=.*MBB)(?=.*VCB)(?=.*2025Q4)",
+    "published": true
+  },
+  {
+    "id": "b26-rank-gaps-en",
+    "lang": "en",
+    "question": "Which banks look better on NPL than on overall asset quality? Give BID's two ranks as an example.",
+    "expect_tool": "rank_gap",
+    "expect_numbers": [8, 14],
+    "expect_regex": "BID",
+    "published": true
+  },
+  {
+    "id": "b26-group2-en",
+    "lang": "en",
+    "question": "Does Group 2 predict NPL increases better than NPL alone? Compare their held-out AUCs and give the test sample size.",
+    "expect_tool": "early_warning",
+    "expect_numbers": [0.658, 0.580, 62],
+    "published": true
+  },
+  {
+    "id": "b26-ols-en",
+    "lang": "en",
+    "question": "What does the OLS say about write-offs? How many observations are there in each of its three specifications?",
+    "expect_tool": "mentor_ols",
+    "expect_numbers": [253, 559, 575],
+    "expect_regex": "zero|uncertain|no clear",
+    "published": true
+  },
+  {
+    "id": "b26-coverage-mechanism-en",
+    "lang": "en",
+    "question": "Why is coverage up in Q4? Give its estimate versus Q1 and explain what the denominator does.",
+    "expect_tool": "coverage_effect",
+    "expect_numbers": [13.09],
+    "expect_regex": "denominator|divided by|when .*npl.* fall|when .*bad debt.* fall",
+    "published": true
+  },
+  {
+    "id": "b26-writeoffs-vi",
+    "lang": "vi",
+    "question": "Ngân hàng nào xóa nợ nhiều nhất quý 4/2025 theo giá trị dự phòng đã dùng? Nêu số tiền và số ngân hàng có dữ liệu.",
+    "expect_tool": "largest_writeoffs",
+    "expect_numbers": [10895.78, 22],
+    "expect_regex": "BID",
+    "published": true
+  },
+  {
+    "id": "b26-seasonal-vi",
+    "lang": "vi",
+    "question": "Sau khi điều chỉnh mùa vụ theo từng ngân hàng, bao nhiêu trường hợp giảm nợ xấu quý 4 không còn giảm? Cho biết tổng số trường hợp điều chỉnh được.",
+    "expect_tool": "seasonal_adjustment",
+    "expect_numbers": [21, 65],
+    "published": true
+  },
+  {
+    "id": "b26-policy-vi",
+    "lang": "vi",
+    "question": "Theo các cửa sổ chính sách cơ cấu nợ của nghiên cứu, Thông tư 06/2024 kéo hạn cơ cấu đến khi nào? Có thể quy thay đổi NPL quý 4 cho thông tư không?",
+    "expect_tool": "policy_windows",
+    "expect_numbers": [2024],
+    "expect_regex": "(31[/.-]12|2024-12-31|31 tháng 12)",
+    "published": true
+  },
+  {
+    "id": "b26-recovery-vi",
+    "lang": "vi",
+    "question": "Xóa nợ bằng dự phòng khác thu hồi nợ như thế nào? Người vay còn nghĩa vụ trả không?",
+    "expect_tool": "glossary",
+    "expect_numbers": [],
+    "expect_regex": "vẫn.*(?:nghĩa vụ|phải trả)",
+    "published": true
+  },
+  {
+    "id": "b26-profile-vi",
+    "lang": "vi",
+    "question": "Kiểm tra MBB trong 2025Q4. Nêu thay đổi nợ xấu công bố, phần do mẫu số và giải thích cần xem thêm gì.",
+    "expect_tool": "bank_profile|decoder",
+    "expect_numbers": [-0.576, -0.263],
+    "expect_regex": "MBB",
+    "published": true
   }
 ]

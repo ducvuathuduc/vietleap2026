@@ -4,20 +4,20 @@ import { MarketBands } from "@/components/npl/market-bands"
 import { MarketPricePanel } from "@/components/npl/market-price-panel"
 import { marketPriceModel } from "@/lib/npl/judge-view"
 import { loadSnapshot } from "@/lib/npl/load"
-import { langFromQuery, pageHref } from "@/lib/npl/view"
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale"
+import { pageHref } from "@/lib/npl/view"
 
 export const instant = false
 
-export const metadata: Metadata = {
-  title: "Thị trường",
-  description: "Đối chiếu dự báo giá với giá thực tế và xem P/B theo nhóm nợ xấu.",
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await requestLanguage()
+  return lang === "vi"
+    ? localizedMetadata(lang, "Thị trường", "Đối chiếu dự báo giá với giá thực tế và xem P/B theo nhóm nợ xấu.")
+    : localizedMetadata(lang, "Market", "Compare price forecasts with actual prices and see price-to-book ratios by NPL group.")
 }
 
-type Query = Record<string, string | string[] | undefined>
-
-export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
-  const lang = langFromQuery((await searchParams).lang)
-  const { market } = await loadSnapshot()
+export default async function Page() {
+  const [lang, { market }] = await Promise.all([requestLanguage(), loadSnapshot()])
   const vi = lang === "vi"
   const study = market.m8
   const targets = study ? { basket: marketPriceModel(study.basket), vnindex: marketPriceModel(study.vnindex) } : null

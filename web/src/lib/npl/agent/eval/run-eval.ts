@@ -26,7 +26,7 @@ const FIXTURE_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const DECODER_PATH = path.join(path.dirname(FIXTURE_PATH), "decoder.fixture.json")
 const DATASET_NAME = "npl-eval"
 const CASE_TIMEOUT_MS = 120_000
-const PASS_BAR = 38
+const PASS_RATE = 0.9
 
 interface CaseUsage {
   inputTokens: number
@@ -131,6 +131,7 @@ async function main(): Promise<void> {
   const { decoder } = JSON.parse(readFileSync(DECODER_PATH, "utf8")) as Pick<Snapshot, "decoder">
   snapshot.decoder = decoder
   const cases = JSON.parse(readFileSync(CASES_PATH, "utf8")) as EvalCase[]
+  const passBar = Math.ceil(cases.length * PASS_RATE)
   const published = await loadNplSnapshot()
   const dataFor = (c: EvalCase) => c.published ? published : snapshot
 
@@ -140,6 +141,7 @@ async function main(): Promise<void> {
   const projectKeys = process.env.LANGFUSE_PUBLIC_KEY?.trim() && process.env.LANGFUSE_SECRET_KEY?.trim()
   // Rate-limited providers (Groq free tier: 8000 TPM) need spacing between cases.
   const delayMs = Number(process.env.EVAL_CASE_DELAY_MS ?? "0") || 0
+  const concurrency = Math.min(8, Math.max(1, Math.floor(Number(process.env.EVAL_CONCURRENCY) || 1)))
   const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
   if (projectKeys && !process.argv.includes("--local")) {
@@ -213,17 +215,20 @@ async function main(): Promise<void> {
   }
 
   const completed = new Set(results.map((r) => r.id))
-  for (const c of cases) {
-    if (completed.has(c.id)) continue
+  const remaining = cases.filter((c) => !completed.has(c.id))
+  for (let index = 0; index < remaining.length; index += concurrency) {
     if (delayMs > 0) await sleep(delayMs)
-    const r = await runCase(dataFor(c), chosen.model, c)
-    results.push(r)
-    console.log(describe(r))
+    await Promise.all(remaining.slice(index, index + concurrency).map(async (c) => {
+      const r = await runCase(dataFor(c), chosen.model, c)
+      results.push(r)
+      console.log(describe(r))
+    }))
   }
 
   const mixed = results.filter((r) => r.mixed)
   const publishedIds = new Set(cases.filter((c) => c.published).map((c) => c.id))
   const publishedResults = results.filter((result) => publishedIds.has(result.id))
+  const hardCases = results.filter((result) => result.id.startsWith("b26-"))
   const inputTokens = results.reduce((s, r) => s + r.usage.inputTokens, 0)
   const outputTokens = results.reduce((s, r) => s + r.usage.outputTokens, 0)
   const unguardedNumbers = results.reduce((count, r) => count + r.unguarded.length, 0)
@@ -240,6 +245,7 @@ async function main(): Promise<void> {
     language_matched: rate(results, (r) => r.language_ok),
     mixed_language_matched: rate(mixed, (r) => r.language_ok),
     published_pass: rate(publishedResults, (r) => r.pass),
+    hard_cases_pass: rate(hardCases, (r) => r.pass),
     unguarded_numbers: unguardedNumbers,
     pass: rate(results, (r) => r.pass),
     usage: { inputTokens, outputTokens },
@@ -247,7 +253,7 @@ async function main(): Promise<void> {
     results,
   }
   console.log(
-    `\ntotals: tool choice ${summary.tool_choice}, numbers guard clean ${summary.numbers_guard_clean}, unguarded numbers ${unguardedNumbers}, citations ${summary.citations_present}, answered ${summary.answered}, expected numbers ${summary.expected_numbers_answered}, language ${summary.language_matched}, mixed language ${summary.mixed_language_matched}, PASS ${summary.pass}`,
+    `\ntotals: tool choice ${summary.tool_choice}, numbers guard clean ${summary.numbers_guard_clean}, unguarded numbers ${unguardedNumbers}, citations ${summary.citations_present}, answered ${summary.answered}, expected numbers ${summary.expected_numbers_answered}, language ${summary.language_matched}, mixed language ${summary.mixed_language_matched}, hard cases ${summary.hard_cases_pass}, PASS ${summary.pass}`,
   )
 
   if (outPath) {
@@ -256,9 +262,9 @@ async function main(): Promise<void> {
   }
   if (langfuseShutdown) await langfuseShutdown()
   const passed = results.filter((r) => r.pass).length
-  if (results.length !== cases.length || passed < PASS_BAR || unguardedNumbers !== 0 ||
+  if (results.length !== cases.length || passed < passBar || unguardedNumbers !== 0 ||
     mixed.length !== 6 || mixed.some((r) => !r.language_ok)) {
-    console.error(`eval: acceptance requires ${PASS_BAR}/${cases.length} passes, no unguarded numbers and all six mixed languages matched`)
+    console.error(`eval: acceptance requires ${passBar}/${cases.length} passes, no unguarded numbers and all six mixed languages matched`)
     process.exitCode = 1
   }
 }

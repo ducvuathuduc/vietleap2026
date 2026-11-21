@@ -3,20 +3,20 @@ import type { Metadata } from "next"
 import { DataTable } from "@/components/npl/data-table"
 import { HowToRead } from "@/components/npl/how-to-read"
 import { loadSnapshot } from "@/lib/npl/load"
-import { SERIES_ATTRIBUTION, dataRows, langFromQuery, pageHref } from "@/lib/npl/view"
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale"
+import { SERIES_ATTRIBUTION, dataRows, pageHref } from "@/lib/npl/view"
 
 export const instant = false
 
-export const metadata: Metadata = {
-  title: "Dữ liệu",
-  description: "Bảng ngân hàng theo quý của các số đã tính.",
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await requestLanguage()
+  return lang === "vi"
+    ? localizedMetadata(lang, "Dữ liệu", "Bảng ngân hàng theo quý của các số đã tính.")
+    : localizedMetadata(lang, "Data", "Download and browse the published bank-quarter figures.")
 }
 
-type Query = Record<string, string | string[] | undefined>
-
-export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
-  const lang = langFromQuery((await searchParams).lang)
-  const snapshot = await loadSnapshot()
+export default async function Page() {
+  const [lang, snapshot] = await Promise.all([requestLanguage(), loadSnapshot()])
   const rows = dataRows(snapshot)
   const vi = lang === "vi"
   const raw = snapshot.meta.publish_bank_series

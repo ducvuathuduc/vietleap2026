@@ -9,7 +9,7 @@ const PANEL = {
     ratios: "Bốn tỷ lệ",
     ratioLabels: ["Tỷ lệ nợ xấu N/L", "Tỷ lệ nhóm 2 G2/L", "Bao phủ P/N", "Tỷ lệ xóa nợ W/L quý trước"],
     source: "Nguồn:",
-    disclaimer: "Tool chỉ nêu cờ cần xem xét, không kết luận ngân hàng che giấu nợ xấu",
+    disclaimer: "Cờ vàng nêu những trường hợp cần xem xét thêm.",
   },
   en: {
     inputs: "Five inputs",
@@ -75,7 +75,7 @@ for (const lang of LANGS) {
 }
 
 test("VI/EN toggle changes the decoder filters, legend and decimal separator in the same cell", async ({ page }) => {
-  await page.goto("/giai-ma")
+  await page.goto(withLang("/giai-ma", "vi"))
 
   const viCell = decoderCell(page, "vi")
   await expect(viCell).toBeVisible()

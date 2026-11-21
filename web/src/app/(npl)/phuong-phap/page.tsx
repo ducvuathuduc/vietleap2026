@@ -5,10 +5,10 @@ import { EconometricModels } from "@/components/npl/econometric-models"
 import { HowToRead } from "@/components/npl/how-to-read"
 import { buttonVariants } from "@/components/ui/button"
 import { loadSnapshot } from "@/lib/npl/load"
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale"
 import {
   formatNumber,
   formatStamp,
-  langFromQuery,
   methodModel,
   overviewModel,
   pageHref,
@@ -19,9 +19,11 @@ import { cn } from "cn"
 
 export const instant = false
 
-export const metadata: Metadata = {
-  title: "Phương pháp",
-  description: "Câu kết luận, kiểm tra độ vững, các mô hình, lược đồ và nguồn của bản NPL.",
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await requestLanguage()
+  return lang === "vi"
+    ? localizedMetadata(lang, "Phương pháp", "Câu kết luận, kiểm tra độ vững, các mô hình, lược đồ và nguồn của bản NPL.")
+    : localizedMetadata(lang, "Method", "Review the NPL study conclusions, robustness checks, models, data schema, and sources.")
 }
 
 type Query = Record<string, string | string[] | undefined>
@@ -81,8 +83,7 @@ function sourceSentence(
 }
 
 export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
-  const query = await searchParams
-  const lang = langFromQuery(query.lang)
+  const [query, lang] = await Promise.all([searchParams, requestLanguage()])
   const ownership = ownershipOf(one(query.own))
   const dropEarly = one(query.drop) === "1"
   const snapshot = await loadSnapshot()

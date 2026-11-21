@@ -31,16 +31,20 @@ test("agent exposes the NPL tools including a bank-quarter decoder", async () =>
     "early_warning",
     "forecast",
     "glossary",
+    "largest_writeoffs",
     "limitations",
     "market_reaction",
+    "mentor_ols",
     "method",
     "overview",
+    "policy_windows",
     "q1_rebound",
     "q4_drivers",
     "quarter_breakdown",
     "quarter_effects",
     "rank_gap",
     "screen_declines",
+    "seasonal_adjustment",
   ])
 })
 
@@ -99,6 +103,14 @@ test("the guard recognizes an English decline introduced by down", () => {
   const output = [{ coverage_pct: 243.17, d_coverage_pp: -36.11 }]
   const guarded = assistant.guardNplAnswer("Coverage was 243.17%, down 36.11 percentage points.", output)
   assert.deepEqual(guarded.flagged, [])
+})
+
+test("the guard recognizes Vietnamese declines around emphasized numbers without trusting new values", () => {
+  const outputs = [{ coefficient: -.101887, adjusted_pp: -.35, group2_pp: -.42 }]
+  const answer = "NPL thấp hơn quý 1 **0,101887 điểm phần trăm**, mức giảm **0,35 điểm %**, nợ nhóm 2 giảm **0,42 điểm %**."
+  assert.deepEqual(assistant.guardNplAnswer(answer, [...outputs, { group: 2, quarter: 1 }]).flagged, [])
+  assert.deepEqual(assistant.guardNplAnswer("Giảm NPL 0,101887 điểm phần trăm.", outputs).flagged, [])
+  assert.deepEqual(assistant.guardNplAnswer("NPL giảm **0,99 điểm %**.", outputs).flagged, ["0,99"])
 })
 
 test("the assistant removes private and non-text history before a follow-up", () => {

@@ -5,6 +5,7 @@
 // (covered by src/lib/security-headers.test.ts); this file adds HSTS and the
 // production 404s for legacy pages and APIs unless explicitly enabled.
 import { NextResponse, type NextRequest } from "next/server"
+import { LANGUAGE_COOKIE, LANGUAGE_HEADER, parseLanguage } from "./lib/npl/language.ts"
 
 const LEGACY_PATHS = [
   "/lab", "/print", "/ban-do", "/chinh-sach", "/lai-suat", "/tai-lieu/lai-suat",
@@ -30,7 +31,21 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  const response = NextResponse.next()
+  const explicit = parseLanguage(request.nextUrl.searchParams.get("lang"))
+  const remembered = parseLanguage(request.cookies.get(LANGUAGE_COOKIE)?.value)
+  const headers = new Headers(request.headers)
+  headers.set(LANGUAGE_HEADER, explicit ?? remembered ?? "en")
+  const response = NextResponse.next({ request: { headers } })
+  const prefetch = headers.has("next-router-prefetch") || headers.get("sec-purpose")?.includes("prefetch")
+  if (explicit && explicit !== remembered && request.method === "GET" && !prefetch && !atOrBelow(pathname, "/api")) {
+    response.cookies.set(LANGUAGE_COOKIE, explicit, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      maxAge: 365 * 24 * 60 * 60,
+    })
+  }
   response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
   return response
 }

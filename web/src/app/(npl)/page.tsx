@@ -7,26 +7,21 @@ import { NplHeatmap } from "@/components/npl/npl-heatmap"
 import { QuarterBreakdown } from "@/components/npl/quarter-breakdown"
 import { breakdownModel, heatmapModel } from "@/lib/npl/judge-view"
 import { loadSnapshot } from "@/lib/npl/load"
+import { localizedMetadata, requestLanguage } from "@/lib/npl/locale"
 import { RESEARCH_QUESTION } from "@/lib/npl/research-view"
-import { langFromQuery, pageHref, SITE_TITLE, siteSubtitle } from "@/lib/npl/view"
+import { pageHref, SITE_TITLE, siteSubtitle } from "@/lib/npl/view"
 
 export const instant = false
 
 type Query = Record<string, string | string[] | undefined>
 
-export async function generateMetadata({ searchParams }: { searchParams: Promise<Query> }): Promise<Metadata> {
-  const lang = langFromQuery((await searchParams).lang)
-  const { meta } = await loadSnapshot()
-  return {
-    title: SITE_TITLE[lang],
-    description: siteSubtitle(lang, meta.n_banks, meta.period_start.slice(0, 4), meta.period_end.slice(0, 4)),
-  }
+export async function generateMetadata(): Promise<Metadata> {
+  const [{ meta }, lang] = await Promise.all([loadSnapshot(), requestLanguage()])
+  return localizedMetadata(lang, SITE_TITLE[lang], siteSubtitle(lang, meta.n_banks, meta.period_start.slice(0, 4), meta.period_end.slice(0, 4)))
 }
 
 export default async function Page({ searchParams }: { searchParams: Promise<Query> }) {
-  const query = await searchParams
-  const lang = langFromQuery(query.lang)
-  const snapshot = await loadSnapshot()
+  const [query, lang, snapshot] = await Promise.all([searchParams, requestLanguage(), loadSnapshot()])
   const vi = lang === "vi"
   const { decomposition } = snapshot
   const heatmap = heatmapModel(snapshot, decomposition?.rows)

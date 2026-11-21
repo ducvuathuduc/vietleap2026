@@ -42,3 +42,21 @@ test("legacy routes remain available with ENABLE_LAB=1 or outside production", (
     process.env = original
   }
 })
+
+test("an unsupported query language leaves the remembered language in effect", () => {
+  const response = proxy(new NextRequest("http://localhost/?lang=fr", {
+    headers: { cookie: "npl_lang=vi" },
+  }))
+
+  assert.equal(response.headers.get("x-middleware-request-x-npl-lang"), "vi")
+  assert.equal(response.cookies.get("npl_lang"), undefined)
+})
+
+test("prefetching another language does not change the preference cookie", () => {
+  const response = proxy(new NextRequest("http://localhost/?lang=vi", {
+    headers: { cookie: "npl_lang=en", "next-router-prefetch": "1" },
+  }))
+
+  assert.equal(response.headers.get("x-middleware-request-x-npl-lang"), "vi")
+  assert.equal(response.cookies.get("npl_lang"), undefined)
+})

@@ -1,5 +1,6 @@
 import { decoderCells, formatNumber, nextPeriod, type DecoderSignal, type Lang, type Snapshot } from "../view.ts"
 import type { NplCitation } from "./tools.ts"
+import { compareBanks, glossary, largestWriteoffs } from "./tools.ts"
 
 function source(period: string | null, n: number | null = null): NplCitation[] {
   return [{ source: "FiinQuant (FiinGroup)", period, n, ci95: null }]
@@ -88,6 +89,7 @@ export function q4Drivers(snapshot: Snapshot) {
   return {
     data_period: snapshot.meta.period_end,
     quarter: 4,
+    watch_list_group: 2,
     mean_change_pp: net,
     loan_growth_part_pp: loan,
     share_of_mean_decline_pct: share,
@@ -107,6 +109,7 @@ export function q1Rebound(snapshot: Snapshot) {
     quarter: 1,
     previous_quarter: 4,
     rates: snapshot.reversal?.baselines ?? null,
+    holdout: snapshot.decision_rule?.q4_oos ?? null,
     citations: source(snapshot.meta.period_end, snapshot.reversal?.baselines?.any_q4.n ?? null),
   }
 }
@@ -123,6 +126,7 @@ export function quarterBreakdown(snapshot: Snapshot, input: { code: string; year
     data_period: period,
     bank,
     year: input.year,
+    watch_list_group: 2,
     q3_period: quarter ? `${input.year}Q3` : null,
     q1_period: next?.period ?? null,
     q3_pct: q4 != null && change != null ? q4 - change : null,
@@ -137,11 +141,15 @@ export function quarterBreakdown(snapshot: Snapshot, input: { code: string; year
 
 export function coverageEffect(snapshot: Snapshot) {
   const effect = snapshot.linkage.coverage_q4
+  const q4 = snapshot.decomposition?.by_quarter.find((row) => row.quarter === "Q4")
   return {
     data_period: snapshot.meta.period_end,
     quarter: 4,
     reference_quarter: 1,
     effect,
+    bad_debt_component_pp: q4?.mean_numerator_pp ?? null,
+    mechanism_en: "Coverage is provisions divided by the bad-debt balance. A smaller bad-debt denominator can raise coverage even with unchanged provisions. Check the provisions-to-loans ratio and the actual provision balance.",
+    mechanism_vi: "Bao phủ là dự phòng chia cho số dư nợ xấu. Số dư nợ xấu giảm có thể làm tỷ lệ tăng dù dự phòng giữ nguyên. Hãy kiểm tra dự phòng trên dư nợ và số dư dự phòng.",
     citations: source(snapshot.meta.period_end, effect?.n ?? null),
   }
 }
@@ -174,6 +182,11 @@ export function earlyWarning(snapshot: Snapshot) {
     data_period: snapshot.meta.period_end,
     fits: event?.fits ?? null,
     n: event?.n_test ?? null,
+    events: event?.test_events ?? null,
+    threshold_pp: early?.event_threshold_pp ?? null,
+    train_through: early?.train_through ?? null,
+    test_origins: event?.test_origins ?? null,
+    model_details: early ?? null,
     reading_vi: early?.reading_vi ?? "Chưa có kết quả kiểm tra cảnh báo sớm được công bố.",
     reading_en: early?.reading_en ?? "Early warning results are unavailable.",
     citations: source(snapshot.meta.period_end, event?.n_test ?? null),
@@ -188,6 +201,9 @@ export type SnapshotAnswers = {
   coverage_effect: ReturnType<typeof coverageEffect>
   rank_gap: ReturnType<typeof rankGap>
   early_warning: ReturnType<typeof earlyWarning>
+  compare_banks: ReturnType<typeof compareBanks>
+  glossary: ReturnType<typeof glossary>
+  largest_writeoffs: ReturnType<typeof largestWriteoffs>
 }
 
 export type SnapshotAnswer = { [K in keyof SnapshotAnswers]: {
@@ -197,29 +213,93 @@ export type SnapshotAnswer = { [K in keyof SnapshotAnswers]: {
   output: SnapshotAnswers[K]
 } }[keyof SnapshotAnswers]
 
+function periodIn(question: string): string | undefined {
+  const compact = /\b(20\d{2})\s*q([1-4])\b/.exec(question)
+  if (compact) return `${compact[1]}Q${compact[2]}`
+  const spoken = /\b(?:q\s*|quy\s+|quarter\s+)([1-4])\s*(?:[/,-]\s*|of\s+)?(20\d{2})\b/.exec(question)
+  return spoken ? `${spoken[2]}Q${spoken[1]}` : undefined
+}
+
 export function answerSnapshot(snapshot: Snapshot, question: string, lang: Lang): SnapshotAnswer | null {
   const vi = lang === "vi"
   const plain = question.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d").trim()
   const q4 = /\b(?:(?:20\d{2})?q4|quy\s+4|fourth quarter)\b/.test(plain)
   const npl = /\b(?:npl|no xau|bad debt|non-performing loans?)\b/.test(plain)
   const fell = /\b(?:giam|fell|fall\w*|decreas\w*|declin\w*|drop\w*)\b/.test(plain)
-  const year = /\b(20\d{2})(?=\b|q4\b)/.exec(plain)?.[1]
+  const year = /\b(20\d{2})(?=\b|q[1-4]\b)/.exec(plain)?.[1]
+  const period = periodIn(plain)
   const decimal = (value: number, digits = 2) => formatNumber(value, lang, digits)
 
+  const term = /\b(?:write[- ]offs?|xoa no)\b/.test(plain) && /\b(?:recover(?:y|ies)|thu hoi)\b/.test(plain)
+    ? "write-off and recovery"
+    : /^(?:what (?:is|are)|define|explain) (?:the )?(?:five )?loan groups\b|(?:cac|nam|5) nhom no la gi/.test(plain)
+      ? "loan groups"
+      : /^(?:what (?:is|does) (?:the )?(?:definition of )?npl(?: ratio)?(?: mean)?|(?:ty le )?no xau la gi)[.?!]?$/.test(plain)
+        ? "npl" : null
+  if (term && !year) {
+    const input = { term }
+    const output = glossary(snapshot, input)
+    if (output.found) return { name: "glossary", input, output, text: output.entry[lang] }
+  }
+  if (period && /\b(?:compare|so sanh)\b/.test(plain) &&
+    [...plain.matchAll(/\b20\d{2}/g)].length === 1 && !/\b(?:trend|over time|xu huong)\b/.test(plain)) {
+    const tokens = new Set(question.toUpperCase().match(/\b[A-Z]{3}\b/g))
+    const codes = snapshot.banks.map((bank) => bank.code).filter((code) => tokens.has(code))
+      .sort((a, b) => question.toUpperCase().indexOf(a) - question.toUpperCase().indexOf(b))
+    if (codes.length >= 2 && codes.length <= 4) {
+      const input = { codes, period }
+      const output = compareBanks(snapshot, input)
+      const ratios = output.rows.filter((row) => row.npl_pct != null)
+        .map((row) => `${row.code} ${decimal(row.npl_pct!)}%`)
+      const effects = output.rows.filter((row) => row.denominator_pp != null)
+        .map((row) => `${row.code} ${decimal(row.denominator_pp!)} ${vi ? "điểm %" : "pp"}`)
+      if (ratios.length === codes.length) {
+        const lead = vi ? `Tỷ lệ nợ xấu công bố trong ${period} là ${ratios.join(", ")}.`
+          : `In ${period}, reported NPL ratios were ${ratios.join(", ")}.`
+        const detail = !effects.length ? "" : vi
+          ? `Thay đổi dư nợ đóng góp ${effects.join(", ")} vào tỷ lệ nợ xấu.`
+          : `The change in loans contributed ${effects.join(", ")} to the change in NPL.`
+        const next = vi ? "Xem thêm thay đổi số dư nợ xấu, nợ nhóm 2 và dự phòng để đánh giá chất lượng tín dụng của từng ngân hàng."
+          : "Check the change in bad-debt balances, Group 2 loans and provisions to assess the credit quality of each bank."
+        return { name: "compare_banks", input, output, text: [lead, detail, next].filter(Boolean).join(" ") }
+      }
+    }
+  }
+  if (period && /\b(?:write[- ]offs?|xoa no|du phong da dung)\b/.test(plain)
+    && /\b(?:largest|highest|most|top|nhieu nhat|cao nhat|xep hang)\b/.test(plain)) {
+    const measure = /\b(?:share|ratio|ty le)\b/.test(plain) ? "share" as const : "amount" as const
+    const input = { period, measure }
+    const output = largestWriteoffs(snapshot, input)
+    const top = output.rows[0]
+    if (top) {
+      const value = measure === "share" && top.share_pct != null ? `${decimal(top.share_pct)}%`
+        : `${decimal(top.amount_vnd_bn)} ${vi ? "tỷ đồng" : "billion VND"}`
+      const text = vi
+        ? `${top.bank} đứng đầu trong ${output.observed_n} ngân hàng có số liệu ${period}, với ${value}. ${output.basis_vi} Đọc cùng tiền thực thu hồi và biến động dư nợ để hiểu mức giảm nợ xấu.`
+        : `${top.bank} ranked first among ${output.observed_n} banks with ${period} data, at ${value}. ${output.basis_en} Check cash recoveries and loan growth to interpret the NPL decline.`
+      return { name: "largest_writeoffs", input, output, text }
+    }
+  }
   if (npl && /\b(?:ngan hang nao|which banks?|xep hang|thu hang|ranks?|ranking)\b/.test(plain) &&
-    /\b(?:chat luong tong the|chat luong (?:tai san|tin dung) tong hop|composite (?:asset|credit) quality|overall credit quality|rank gaps?)\b/.test(plain)) {
-    const compactPeriod = /\b(20\d{2})\s*q([1-4])\b/.exec(plain)
-    const spokenPeriod = /\b(?:q|quy\s+)([1-4])\s+(20\d{2})\b/.exec(plain)
-    const period = compactPeriod ? `${compactPeriod[1]}Q${compactPeriod[2]}`
-      : spokenPeriod ? `${spokenPeriod[2]}Q${spokenPeriod[1]}` : undefined
+    /\b(?:chat luong tong the|chat luong (?:tai san|tin dung) tong hop|(?:composite|overall) (?:asset|credit) quality|rank gaps?)\b/.test(plain)) {
     if (year && !period) return null
     const input = { period }
     const output = rankGap(snapshot, input)
-    return { name: "rank_gap", input, output, text: output[`reading_${lang}`] }
+    const example = output.rows.find((row) => new RegExp(`\\b${row.bank_code.toLowerCase()}\\b`).test(plain)) ?? output.rows[0]
+    const reading = output[`reading_${lang}`]
+    const text = !example ? reading : vi
+      ? `${reading} Ví dụ, ${example.bank_code} xếp thứ ${example.npl_place} theo tỷ lệ nợ xấu và thứ ${example.composite_place} theo điểm tổng hợp. Hãy đối chiếu các nhóm nợ, mức dự phòng và tỷ lệ bao phủ để hiểu chênh lệch.`
+      : `${reading} For example, ${example.bank_code} ranked ${example.npl_place} on NPL and ${example.composite_place} on composite credit quality. Compare its loan groups, provisions and coverage to see what drove the gap.`
+    return { name: "rank_gap", input, output, text }
   }
-  if (!year && /\b(?:canh bao som|early[- ]warning)\b/.test(plain)) {
+  if (!year && (/\b(?:canh bao som|early[- ]warning)\b/.test(plain) ||
+    (npl && /\b(?:nhom 2|group 2)\b/.test(plain) && /\b(?:du bao|predict\w*)\b/.test(plain)))) {
     const output = earlyWarning(snapshot)
-    return { name: "early_warning", input: {}, output, text: output[`reading_${lang}`] }
+    const sample = output.n && output.train_through ? vi
+      ? `Mô hình dùng dữ liệu đến ${output.train_through} và được kiểm tra trên ${output.n} quan sát giữ lại.`
+      : `The models use data through ${output.train_through} and are tested on ${output.n} held-out observations.` : ""
+    const text = [output[`reading_${lang}`], sample].filter(Boolean).join(" ")
+    return { name: "early_warning", input: {}, output, text }
   }
   if (q4 && npl && fell && year && /\b(?:nhom\s*2|group[- ]?2)\b/.test(plain) &&
     /\b(?:tang|rose|ris\w*|increas\w*)\b/.test(plain)) {
@@ -229,7 +309,10 @@ export function answerSnapshot(snapshot: Snapshot, question: string, lang: Lang)
   }
   if (q4 && npl && fell && /\b(?:why|vi sao|tai sao|giai thich)\b/.test(plain) && !year) {
     const output = q4Drivers(snapshot)
-    const text = output[`reading_${lang}`]
+    const reading = output[`reading_${lang}`]
+    const text = reading && (vi
+      ? `${reading} Khi xem một ngân hàng cụ thể, đối chiếu nợ nhóm 2 và tiền thực thu hồi với phần do dư nợ.`
+      : `${reading} For a specific bank, check Group 2 loans and actual cash recoveries alongside the loan-growth contribution.`)
     return text ? { name: "q4_drivers", input: {}, output, text } : null
   }
   if (/\b(?:q1|quy\s+1|first quarter)\b/.test(plain) && /\b(?:luon|always)\b/.test(plain)) {
@@ -262,7 +345,7 @@ export function answerSnapshot(snapshot: Snapshot, question: string, lang: Lang)
     const note = lo == null || hi == null ? "" : vi
       ? `Khoảng ước tính từ ${decimal(lo)} đến ${decimal(hi)} điểm %. Đây là kết quả chung của mẫu ngân hàng.`
       : `The estimated range is ${decimal(lo)} to ${decimal(hi)} pp. This is a panel-wide result.`
-    return { name: "coverage_effect", input: {}, output, text: `${lead} ${note}`.trim() }
+    return { name: "coverage_effect", input: {}, output, text: [lead, note, output[`mechanism_${lang}`]].filter(Boolean).join(" ") }
   }
   return null
 }

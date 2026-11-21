@@ -1,4 +1,5 @@
 import type { NplDecoderCell, NplToolResults } from "../../lib/npl/agent/tools.ts"
+import type { SnapshotAnswers } from "../../lib/npl/agent/snapshot-answers.ts"
 import { BADGE_LABEL, formatNumber, pageHref, type Lang } from "../../lib/npl/view.ts"
 
 export const TOOL_LABELS = {
@@ -13,11 +14,26 @@ export const TOOL_LABELS = {
   glossary: { vi: "Giải thích thuật ngữ", en: "Glossary" },
   adjusted_change: { vi: "Thay đổi đã điều chỉnh", en: "Adjusted change" },
   decoder: { vi: "Kiểm tra nợ xấu", en: "NPL decoder" },
-} satisfies Record<keyof NplToolResults, Record<Lang, string>>
+  largest_writeoffs: { vi: "Xếp hạng xóa nợ", en: "Write-off rankings" },
+} satisfies Partial<Record<keyof NplToolResults, Record<Lang, string>>>
 
-type Name = keyof NplToolResults
+type Name = keyof typeof TOOL_LABELS
 type Successful<K extends Name> = Exclude<NplToolResults[K], { found: false }>
 type Result = { [K in Name]: { name: K; output: Successful<K> } }[Name]
+const STUDY_LABELS = {
+  screen_declines: { vi: "Nợ xấu giảm, nợ nhóm 2 tăng", en: "Falling NPL, rising Group 2" },
+  q4_drivers: { vi: "Yếu tố làm thay đổi nợ xấu quý 4", en: "Drivers of Q4 NPL change" },
+  q1_rebound: { vi: "Tỷ lệ nợ xấu tăng lại vào quý 1", en: "Frequency of a Q1 NPL rebound" },
+  quarter_breakdown: { vi: "Tỷ lệ nợ xấu quanh quý 4", en: "NPL around Q4" },
+  coverage_effect: { vi: "Thay đổi tỷ lệ bao phủ quý 4", en: "Q4 coverage change" },
+  rank_gap: { vi: "Chênh lệch thứ hạng tín dụng", en: "Credit-quality rank gaps" },
+  early_warning: { vi: "Kiểm tra cảnh báo sớm", en: "Early warning comparison" },
+} satisfies Partial<Record<keyof SnapshotAnswers, Record<Lang, string>>>
+
+type StudyName = keyof typeof STUDY_LABELS
+type StudyResult = { [K in StudyName]: { name: K; output: SnapshotAnswers[K] } }[StudyName]
+export type ListedTool = { id: string; name: string; input: unknown; output: unknown }
+type CanvasResult = (StudyResult | Result) & { tool: ListedTool }
 export type ForecastResult = Successful<"forecast">
 export type CompareResult = Successful<"compare_banks">
 export type CsvCell = string | number | null
@@ -30,7 +46,84 @@ export function readResult(name: string, output: unknown): Result | null {
 }
 
 export function toolLabel(name: string, lang: Lang): string {
+  if (Object.hasOwn(STUDY_LABELS, name)) return STUDY_LABELS[name as StudyName][lang]
   return Object.hasOwn(TOOL_LABELS, name) ? TOOL_LABELS[name as Name][lang] : lang === "vi" ? "Phép tính" : "Calculation"
+}
+
+function readStudy(tool: ListedTool): StudyResult | null {
+  if (!Object.hasOwn(STUDY_LABELS, tool.name)) return null
+  if (!tool.output || typeof tool.output !== "object" || !("citations" in tool.output)) return null
+  return { name: tool.name, output: tool.output } as StudyResult
+}
+
+export function bankCanvasMode(output: Successful<"bank_profile">, input: unknown): "trend" | "checks" | null {
+  const explicitPeriod = Boolean(input && typeof input === "object" && "period" in input && typeof input.period === "string")
+  if (!explicitPeriod && output.bank?.series?.some((row) => row.npl_pct != null || row.coverage_pct != null)) return "trend"
+  return hasBankChecks(output.selected) ? "checks" : null
+}
+
+export function hasBankChecks(selected: Successful<"bank_profile">["selected"] | undefined): boolean {
+  return Boolean(selected?.evidence.en.checks.length &&
+    (selected.decoder_row || selected.decomposition || selected.scorecard || selected.seasonal || selected.evidence.en.reportedChange != null))
+}
+
+function hasFigures(result: StudyResult | Result, input: unknown): boolean {
+  switch (result.name) {
+    case "screen_declines":
+    case "rank_gap":
+    case "largest_writeoffs": return Boolean(result.output.rows?.length)
+    case "compare_banks": return hasComparisonHistory(result.output) || (result.output.rows ?? []).some((row) =>
+      row.npl_pct != null || row.group2_pct != null || row.d_npl_pp != null || row.adjusted_change_pp != null ||
+      (result.output.requested_period != null && row.denominator_pp != null))
+    case "early_warning": return Object.values(result.output.fits ?? {}).some((fit) => fit?.auc?.estimate != null)
+    case "q4_drivers": return result.output.loan_growth_part_pp != null || result.output.bad_debt_part_pp != null
+    case "q1_rebound": return Object.values(result.output.rates ?? {}).some((rate) => rate.share_pct != null)
+    case "quarter_breakdown": return result.output.q4_pct != null
+    case "coverage_effect": return result.output.effect?.coef_pp != null
+    case "overview": return Boolean(result.output.level && result.output.benchmark && result.output.trend)
+    case "quarter_effects": return Boolean(result.output.effects?.length)
+    case "bank_profile": return bankCanvasMode(result.output, input) != null
+    case "decoder": return hasBankChecks(result.output.selected) || result.output.row?.d_npl_pp != null || result.output.row?.adjusted_change_pp != null
+    case "adjusted_change": return result.output.row?.d_npl_pp != null || result.output.row?.adjusted_change_pp != null
+    case "forecast": return result.output.forecast?.npl_pct != null
+    case "market_reaction": return result.output.car_all?.some((row) => row.mean_car_pct != null) ?? false
+    default: return false
+  }
+}
+
+export function findAnswerCanvas(tools: ListedTool[]): CanvasResult | null {
+  let fallback: CanvasResult | null = null
+  for (const tool of tools) {
+    const study = readStudy(tool)
+    if (study && hasFigures(study, tool.input)) return { ...study, tool }
+    if (fallback) continue
+    const result = readResult(tool.name, tool.output)
+    if (result && hasFigures(result, tool.input)) fallback = { ...result, tool }
+  }
+  return fallback
+}
+
+export function sortEvidenceRows<T>(rows: T[], value: (row: T) => CsvCell, descending: boolean, lang: Lang): T[] {
+  return [...rows].sort((left, right) => {
+    const a = value(left)
+    const b = value(right)
+    if (a === null || b === null) return Number(a === null) - Number(b === null)
+    const difference = typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b), lang)
+    return descending ? -difference : difference
+  })
+}
+
+export function hasComparisonHistory(output: CompareResult): boolean {
+  return !output.requested_period && Boolean(output.rows?.some((row) => row.history?.some((point) => point.npl_pct != null)))
+}
+
+export function comparisonHistory(rows: { code: string; history?: { period: string; npl_pct: number | null }[] }[]) {
+  const series = rows.map(({ code, history }) => ({ code, values: new Map(history?.map((row) => [row.period, row.npl_pct])) }))
+  const periods = [...new Set(series.flatMap(({ values }) => [...values.keys()]))].sort()
+  return periods.map((period) => ({
+    period,
+    ...Object.fromEntries(series.map(({ code, values }) => [code, values.get(period) ?? null])),
+  }))
 }
 
 export function formatValue(value: number | null | undefined, lang: Lang, suffix = "", digits = 2): string {
@@ -102,7 +195,7 @@ export function openPage(name: string, input: unknown, lang: Lang): string {
   if (name === "market_reaction") return pageHref("/thi-truong", lang)
   if (name === "method" || name === "limitations" || name === "glossary") return pageHref("/phuong-phap", lang)
   if (name === "decoder" || name === "adjusted_change") return pageHref("/giai-ma", lang)
-  if (name === "compare_banks") return pageHref("/ngan-hang", lang)
+  if (name === "compare_banks" || name === "largest_writeoffs") return pageHref("/ngan-hang", lang)
   if ((name === "bank_profile" || name === "forecast") && input && typeof input === "object" && "code" in input && typeof input.code === "string") {
     return pageHref(`/ngan-hang/${encodeURIComponent(input.code.trim().toUpperCase())}`, lang)
   }
@@ -149,7 +242,9 @@ export function csvRows(result: Result | null, lang: Lang): CsvCell[][] {
       ]
     }
     case "compare_banks":
-      return [["bank", "period", "change_pp", "adjusted_change_pp"], ...result.output.rows.map((row): CsvCell[] => [row.code, row.latest_period, row.d_npl_pp, row.adjusted_change_pp])]
+      return [["bank", "period", "change_pp", "adjusted_change_pp"], ...result.output.rows.map((row): CsvCell[] => [row.code, row.period ?? row.latest_period, row.d_npl_pp, row.adjusted_change_pp])]
+    case "largest_writeoffs":
+      return [["bank", "period", "amount_vnd_bn", "share_pct"], ...result.output.rows.map((row): CsvCell[] => [row.bank, result.output.data_period, row.amount_vnd_bn, row.share_pct])]
     case "adjusted_change":
     case "decoder": {
       const { code, row, decoder } = result.output

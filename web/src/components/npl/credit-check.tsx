@@ -25,7 +25,7 @@ export function CreditCheck({ snapshot, bank, period, lang }: {
           </p>
         </div>
         <form action="/#bank-check" method="get" className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 sm:w-auto">
-          {!vi && <input type="hidden" name="lang" value="en" />}
+          <input type="hidden" name="lang" value={lang} />
           <label className="grid gap-1 text-xs font-medium">
             {vi ? "Ngân hàng" : "Bank"}
             <select className={selectStyle} name="bank" defaultValue={bank}>

@@ -19,6 +19,7 @@ import {
   type NplCitation,
 } from "./tools.ts"
 import * as tools from "./tools.ts"
+import { loadNplSnapshot } from "./snapshot.ts"
 
 // The fixture is read directly (load.ts uses a bundler-only JSON import).
 const snapshot = JSON.parse(
@@ -198,4 +199,33 @@ test("decoder and adjustments return the selected public bank-quarter checks", (
   assert.deepEqual(bankProfile(published, { code: "VCB" }).decoder, result.decoder)
   assert.deepEqual(adjustedChange(published, { code: "VCB" }).decoder, result.decoder)
   assert.equal(tools.decoder(published, { code: "VCB", period: "2020Q1" }).found, false)
+})
+
+test("public bank profiles and comparisons return the requested quarter and deeper evidence", async () => {
+  const published = await loadNplSnapshot()
+  const profile = bankProfile(published, { code: "MBB", period: "2025Q4" })
+  assert.equal(profile.data_period, "2025Q4")
+  assert.equal(profile.selected?.period, "2025Q4")
+  assert.equal(profile.selected?.evidence.en.checks.length, 5)
+  assert.ok(profile.selected?.decoder_row?.layers && profile.selected.scorecard && profile.selected.decomposition)
+  const compared = compareBanks(published, { codes: ["MBB", "VCB"], period: "2025Q4" })
+  assert.equal(compared.requested_period, "2025Q4")
+  assert.ok(compared.rows.every((row) => row.period === "2025Q4" && row.npl_pct != null && row.npl_rank != null))
+  assert.equal(compared.rows[0].d_npl_pp?.toFixed(3), "-0.576")
+  const trend = compareBanks(published, { codes: ["MBB", "VCB"], trend: true })
+  assert.equal(trend.data_period, "2021Q1–2026Q3")
+  assert.ok(trend.rows.every((row) => row.history.length > 10))
+  const quarters = quarterEffects(published)
+  assert.ok(quarters.hypothesis_tests?.tests.q4_below_zero)
+  assert.ok(quarters.adjusted_significance?.rows.some((row) => row.test_id === "M2.baseline.terms.Q4" && row.reject_at_q))
+})
+
+test("quarter write-off ranking uses observed quarterly flows and the study exposes all three OLS fits", async () => {
+  const published = await loadNplSnapshot()
+  const writeoffs = tools.largestWriteoffs(published, { period: "2025Q4" })
+  assert.ok(writeoffs.rows.length > 15)
+  assert.ok(writeoffs.rows.every((row, i, rows) => i === 0 || rows[i - 1].amount_vnd_bn >= row.amount_vnd_bn))
+  const regression = tools.mentorOls(published)
+  assert.deepEqual([regression.fits?.full.n, regression.fits?.without_writeoff?.n, regression.fits?.available?.n], [253, 559, 575])
+  assertCitations(regression.citations)
 })

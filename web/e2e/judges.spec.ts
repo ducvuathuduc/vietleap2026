@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test"
 import { NPL_BANK_CODES } from "./helpers"
 
 test("home explains the Q4 pattern and links the heatmap to banks", async ({ page }) => {
-  await page.goto("/")
+  await page.goto("/?lang=vi")
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Khi tỷ lệ nợ xấu được báo cáo giảm, cần xem thêm bằng chứng gì trước khi kết luận chất lượng tín dụng thực sự cải thiện?")
   const chart = page.getByRole("table", { name: "Thay đổi tỷ lệ nợ xấu theo quý và ngân hàng" })
   await expect(chart.getByRole("rowheader")).toHaveCount(NPL_BANK_CODES.length)
@@ -14,11 +14,11 @@ test("home explains the Q4 pattern and links the heatmap to banks", async ({ pag
   await expect(next).toBeFocused()
   await expect(next).toHaveAccessibleName(/ABB, .*Nợ xấu .* đến .* Thay đổi/)
   await next.click()
-  await expect(page).toHaveURL(/\/ngan-hang\/ABB$/)
+  await expect(page).toHaveURL(/\/ngan-hang\/ABB\?lang=vi$/)
 })
 
 test("the home bank check updates the five rows and preserves the selected quarter", async ({ page }) => {
-  await page.goto("/")
+  await page.goto("/?lang=vi")
   const check = page.getByRole("region", { name: "Kiểm tra một ngân hàng" })
   await expect(check.locator("dl dt")).toHaveText([
     "Thời điểm và mùa vụ", "Mẫu số dư nợ", "Xóa nợ", "Nợ nhóm 2", "Bao phủ và dự phòng",
@@ -26,15 +26,15 @@ test("the home bank check updates the five rows and preserves the selected quart
   await check.getByRole("combobox", { name: "Ngân hàng", exact: true }).selectOption("BID")
   await check.getByRole("combobox", { name: "Quý", exact: true }).selectOption("2025Q4")
   await check.getByRole("button", { name: "Xem kết quả" }).click()
-  await expect(page).toHaveURL(/[?]bank=BID&period=2025Q4#bank-check$/)
+  await expect(page).toHaveURL(/[?]lang=vi&bank=BID&period=2025Q4#bank-check$/)
   await expect(check.getByRole("combobox", { name: "Ngân hàng", exact: true })).toHaveValue("BID")
   await expect(check).toContainText("Sau điều chỉnh mùa vụ")
   await expect(check).toContainText(/Hạng theo nợ xấu \d+\/\d+/)
-  await expect(check.getByRole("link", { name: "Xem hồ sơ BID" })).toHaveAttribute("href", "/ngan-hang/BID")
+  await expect(check.getByRole("link", { name: "Xem hồ sơ BID" })).toHaveAttribute("href", "/ngan-hang/BID?lang=vi")
 })
 
 test("home lets a judge pick a bank and year for the Q4 breakdown", async ({ page }) => {
-  await page.goto("/")
+  await page.goto("/?lang=vi")
   await page.getByRole("link", { name: "Thử một ngân hàng" }).click()
   const breakdown = page.getByRole("region", { name: "Mổ xẻ một lần NPL giảm" })
   await expect(breakdown).toBeVisible()
@@ -72,7 +72,7 @@ test("the bank and method pages use the published scorecard and model results", 
 })
 
 test("market switches the price comparison to VNINDEX", async ({ page }) => {
-  await page.goto("/thi-truong")
+  await page.goto("/thi-truong?lang=vi")
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Biết nợ xấu chưa giúp dự báo giá tốt hơn")
   const group = page.getByRole("group", { name: "Chọn nhóm cổ phiếu" })
   await expect(group.getByRole("button", { name: "Rổ cổ phiếu ngân hàng" })).toHaveAttribute("aria-pressed", "true")

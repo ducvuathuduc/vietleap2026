@@ -1,40 +1,31 @@
 "use client"
 
 import { usePathname, useSearchParams } from "next/navigation"
-import { useEffect } from "react"
 
 import { NplAskDock } from "@/components/npl-ai/assistant"
 import { buttonVariants } from "@/components/ui/button"
 import { NPL_NAV } from "@/lib/nav"
-import { SITE_TITLE, siteSubtitle } from "@/lib/npl/view"
+import { SITE_TITLE, siteSubtitle, type Lang } from "@/lib/npl/view"
 import { cn } from "cn"
 
-export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; yearStart: string; yearEnd: string }) {
+export function SiteBar({ lang, bankCount, yearStart, yearEnd }: { lang: Lang; bankCount: number; yearStart: string; yearEnd: string }) {
   const pathname = usePathname()
   const search = useSearchParams()
-  const vi = search.get("lang") !== "en"
-  const lang = vi ? "vi" : "en"
+  const vi = lang === "vi"
   const subtitle = siteSubtitle(lang, bankCount, yearStart, yearEnd)
-  useEffect(() => {
-    document.documentElement.lang = vi ? "vi" : "en"
-  }, [vi])
 
-  function hrefFor(path: string, next: "vi" | "en", stripOwn: boolean) {
+  function hrefFor(path: string, stripOwn: boolean) {
     const params = new URLSearchParams(search.toString())
     if (stripOwn) params.delete("own")
     params.delete("drop")
-    if (next === "en") params.set("lang", "en")
-    else params.delete("lang")
-    const query = params.toString()
-    return query ? `${path}?${query}` : path
+    params.set("lang", lang)
+    return `${path}?${params}`
   }
 
-  function langHref(next: "vi" | "en") {
+  function langHref(next: Lang) {
     const params = new URLSearchParams(search.toString())
-    if (next === "en") params.set("lang", "en")
-    else params.delete("lang")
-    const query = params.toString()
-    return query ? `${pathname}?${query}` : pathname
+    params.set("lang", next)
+    return `${pathname}?${params}`
   }
 
   function sections(block: boolean) {
@@ -43,7 +34,7 @@ export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; 
       return (
         <a
           key={item.url}
-          href={hrefFor(item.url, vi ? "vi" : "en", item.url === "/")}
+          href={hrefFor(item.url, item.url === "/")}
           className={cn(buttonVariants({ variant: active ? "secondary" : "ghost", size: "sm" }), "min-h-11", block && "w-full justify-start")}
           aria-current={active ? "page" : undefined}
         >
@@ -76,7 +67,7 @@ export function SiteBar({ bankCount, yearStart, yearEnd }: { bankCount: number; 
             </nav>
           </details>
           <div className="shrink-0">
-            <NplAskDock />
+            <NplAskDock lang={lang} />
           </div>
           <div className="flex shrink-0 rounded-lg border border-border p-0.5" role="group" aria-label={vi ? "Ngôn ngữ" : "Language"}>
             <a href={langHref("vi")} className={cn(buttonVariants({ variant: vi ? "secondary" : "ghost", size: "sm" }), "min-h-11 min-w-11")} aria-current={vi ? "true" : undefined}>

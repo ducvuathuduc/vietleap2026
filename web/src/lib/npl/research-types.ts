@@ -57,6 +57,8 @@ type Metric = { estimate: number | null; ci95: number[] | null }
 export type ForecastComparison = {
   n_test: number
   test_events?: number
+  n_train?: number
+  test_origins?: string[] | null
   fits: Partial<Record<"npl_only" | "npl_group2" | "full", { auc?: Metric; brier?: Metric; mae?: Metric }>>
 }
 
@@ -64,6 +66,8 @@ export type EarlyWarning = {
   event_threshold_pp: number
   train_through: string
   backtests: { rise_in_four: ForecastComparison }
+  outcome_horizons?: Record<string, number>
+  method?: unknown
   reading_vi: string
   reading_en: string
 }
@@ -71,6 +75,15 @@ export type EarlyWarning = {
 export type ResearchContext = {
   early_warning?: EarlyWarning
   seasonal_adjustment?: SeasonalAdjustment
+  policy?: {
+    timeline: { ref: string; title: string; effective_from: string; restructuring_until: string | null; url: string }[]
+    q4_by_year: (PanelFit & { year: number })[]
+    n: number
+    reading_vi: string
+    reading_en: string
+    does_not_show_vi: string
+    does_not_show_en: string
+  }
 }
 
 export type PdfAudit = {
@@ -84,6 +97,9 @@ export type MentorRegression = {
   full: PanelFit
   without_writeoff?: PanelFit | null
   available: PanelFit | null
+  sample_banks?: Record<"full" | "without_writeoff" | "available", string[]> | null
+  n_by_field?: Record<string, number>
+  growth_measure?: string
   does_not_show_vi?: string
   does_not_show_en?: string
 }

@@ -1,17 +1,27 @@
-"use client"
+﻿"use client"
 
-import { useState, type ReactNode } from "react"
+import { useId, useState } from "react"
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "lucide-react"
 
-import { MarketChart, QuarterChart } from "@/components/npl/charts"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import type { bankCheck } from "@/lib/npl/research-view"
 import { pageHref, type Lang } from "@/lib/npl/view"
-import type { ScreeningRow, SnapshotAnswers } from "@/lib/npl/agent/snapshot-answers"
-import { BankCanvasChart, CompareCanvasChart, ForecastCanvasChart } from "./canvas-charts"
-import { formatValue, openPage, overviewFigures, points, readResult } from "./canvas-data"
+import {
+  BankCanvasChart, CompareCanvasChart, ForecastCanvasChart, MarketCanvasChart, MetricBarsChart, QuarterNplChart,
+} from "./canvas-charts"
+import {
+  bankCanvasMode, comparisonHistory, findAnswerCanvas, formatValue, hasBankChecks, hasComparisonHistory, openPage, overviewFigures, points,
+  sortEvidenceRows, toolLabel, type CsvCell, type ListedTool,
+} from "./canvas-data"
 
-export type ListedTool = { id: string; name: string; input: unknown; output: unknown }
-type Result = NonNullable<ReturnType<typeof readResult>>
-type SortKey = "bank" | "npl_pp" | "group2_pp" | "writeoff_pct" | "coverage_pp" | "flags"
+export type { ListedTool } from "./canvas-data"
+type CanvasResult = NonNullable<ReturnType<typeof findAnswerCanvas>>
+type Column<T> = {
+  label: string
+  value: (row: T) => CsvCell
+  numeric?: boolean
+  digits?: number
+}
 
 const FLAG_LABELS = {
   S1: { vi: "Nhóm 2", en: "Group 2" },
@@ -26,141 +36,132 @@ function bankLink(bank: string, period: string, waterfall: boolean, lang: Lang) 
     : pageHref(`/ngan-hang/${encodeURIComponent(bank)}`, lang)
 }
 
-function BanksTable({ rows, period, lang }: { rows: ScreeningRow[]; period: string; lang: Lang }) {
-  const vi = lang === "vi"
-  const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({ key: "bank", descending: false })
-  const headings: [SortKey, string][] = [
-    ["bank", vi ? "Mã" : "Bank"],
-    ["npl_pp", vi ? "Nợ xấu" : "NPL"],
-    ["group2_pp", vi ? "Nhóm 2" : "Group 2"],
-    ["writeoff_pct", vi ? "Xóa nợ %" : "Write-offs %"],
-    ["coverage_pp", vi ? "Bao phủ" : "Coverage"],
-    ["flags", vi ? "Cờ vàng" : "Flags"],
-  ]
-  const sorted = [...rows].sort((left, right) => {
-    const a = sort.key === "flags" ? left.flags.length : left[sort.key]
-    const b = sort.key === "flags" ? right.flags.length : right[sort.key]
-    if (a == null || b == null) return a === b ? left.bank.localeCompare(right.bank) : a == null ? 1 : -1
-    const difference = typeof a === "string" ? a.localeCompare(String(b)) : a - Number(b)
-    return difference ? (sort.descending ? -difference : difference) : left.bank.localeCompare(right.bank)
-  })
-  if (!rows.length) return null
-  const cell = (value: number | null, digits = 2) => value == null
-    ? <span aria-label={vi ? "Thiếu dữ liệu" : "Data unavailable"}>—</span>
-    : formatValue(value, lang, "", digits)
-
+function EvidenceTable<T>({
+  label, lang, rows, columns, rowKey, rowLink, sortable = false, initialSort = 0, initialDescending = false,
+}: {
+  label: string
+  lang: Lang
+  rows: T[]
+  columns: Column<T>[]
+  rowKey: (row: T) => string
+  rowLink?: (row: T) => string
+  sortable?: boolean
+  initialSort?: number
+  initialDescending?: boolean
+}) {
+  const [sort, setSort] = useState({ column: initialSort, descending: initialDescending })
+  const sorted = sortable ? sortEvidenceRows(rows, columns[sort.column].value, sort.descending, lang) : rows
   return (
-    <>
-      <div className="overflow-x-auto">
-        <table aria-label={vi ? "Ngân hàng phù hợp" : "Matching banks"} className="w-full border-collapse text-left text-[11px] leading-snug">
-          <thead className="bg-muted/60">
-            <tr>
-              {headings.map(([key, label]) => {
-                const active = sort.key === key
-                const Indicator = active ? sort.descending ? ArrowDownIcon : ArrowUpIcon : ArrowUpDownIcon
+    <Table aria-label={label} className="text-sm">
+      <TableHeader className="bg-muted/50">
+        <TableRow>
+          {columns.map(({ label, numeric }, index) => {
+            const active = sortable && sort.column === index
+            const Indicator = active ? (sort.descending ? ArrowDownIcon : ArrowUpIcon) : ArrowUpDownIcon
+            return (
+              <TableHead key={label} scope="col"
+                className={`h-10 px-3 text-xs normal-case tracking-normal ${numeric ? "text-right" : ""}`}
+                aria-sort={active ? (sort.descending ? "descending" : "ascending") : undefined}>
+                {sortable ? (
+                  <button type="button" onClick={() => setSort({ column: index, descending: active && !sort.descending })}
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-sm underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                    {label}
+                    <Indicator className={`size-3.5 shrink-0 ${active ? "text-foreground" : "text-muted-foreground"}`} aria-hidden="true" />
+                  </button>
+                ) : label}
+              </TableHead>
+            )
+          })}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {sorted.map((row) => {
+          const name = columns[0].value(row)
+          return (
+            <TableRow key={rowKey(row)}>
+              <th scope="row" className="min-w-20 px-3 py-2.5 text-left align-top font-semibold whitespace-nowrap">
+                {rowLink ? <a className="underline underline-offset-2" href={rowLink(row)}>{name}</a> : name}
+              </th>
+              {columns.slice(1).map(({ label, value, numeric, digits }) => {
+                const cell = value(row)
+                const precision = digits ?? (typeof cell === "number" && cell !== 0 && Math.abs(cell) < 0.01 ? 3 : 2)
                 return (
-                  <th scope="col" key={key} className="px-1 py-1.5 font-medium"
-                    aria-sort={active ? sort.descending ? "descending" : "ascending" : undefined}>
-                    <button type="button" onClick={() => setSort({ key, descending: active && !sort.descending })}
-                      className="inline-flex min-h-6 items-center gap-0.5 text-left underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
-                      {label}<Indicator className="size-2.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    </button>
-                  </th>
+                  <TableCell key={label} className={`px-3 py-2.5 align-top ${numeric ? "text-right tabular-nums" : "whitespace-pre-line"}`}>
+                    {cell == null ? <span aria-label={lang === "vi" ? "Thiếu dữ liệu" : "Data unavailable"}>—</span>
+                      : typeof cell === "number" ? formatValue(cell, lang, "", precision) : cell}
+                  </TableCell>
                 )
               })}
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((row) => (
-              <tr key={row.bank} className="border-t border-border align-top">
-                <th scope="row" className="px-1 py-2 font-semibold">
-                  <a className="underline underline-offset-2" href={bankLink(row.bank, period, row.waterfall, lang)}>{row.bank}</a>
-                </th>
-                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.npl_pp)}</td>
-                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.group2_pp, row.group2_pp != null && Math.abs(row.group2_pp) < .01 ? 3 : 2)}</td>
-                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.writeoff_pct)}</td>
-                <td className="px-1 py-2 whitespace-nowrap tabular-nums">{cell(row.coverage_pp)}</td>
-                <td className="px-1 py-2 text-[10px]">{row.flags.map((flag) => FLAG_LABELS[flag][lang]).join(", ") || "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="px-2 pt-1.5 text-[11px] text-muted-foreground">
-        {vi ? "Thay đổi tính bằng điểm %. Xóa nợ được ước tính từ dự phòng sử dụng trên dư nợ."
-          : "Changes are in pp. Write-offs use provisions used as a share of loans."}
-      </p>
-    </>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }
 
-function Bars({ rows, unit, lang }: {
-  rows: { label: string; value: number | null }[]
-  unit: string
-  lang: Lang
-}) {
-  const max = Math.max(...rows.map((row) => Math.abs(row.value ?? 0)), .01)
-  return (
-    <dl className="grid gap-2 p-2 text-xs">
-      {rows.map(({ label, value }) => (
-        <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(2rem,0.8fr)_auto] items-center gap-2">
-          <dt>{label}</dt>
-          <dd aria-hidden="true" className="h-2 rounded-sm bg-muted">
-            {value != null && <div className="h-2 rounded-sm bg-chart-3" style={{ width: `${Math.abs(value) / max * 100}%` }} />}
-          </dd>
-          <dd className="text-right font-semibold whitespace-nowrap tabular-nums">{formatValue(value, lang, unit)}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
-type StudyResult = { [K in keyof SnapshotAnswers]: { name: K; output: SnapshotAnswers[K] } }[keyof SnapshotAnswers]
-
-function readStudy(tool: ListedTool): StudyResult | null {
-  if (!["screen_declines", "q4_drivers", "q1_rebound", "quarter_breakdown", "coverage_effect", "rank_gap", "early_warning"].includes(tool.name)) return null
-  if (!tool.output || typeof tool.output !== "object" || !("citations" in tool.output)) return null
-  return { name: tool.name, output: tool.output } as StudyResult
-}
-
-function ComparisonTable({ label, headings, rows }: {
-  label: string
-  headings: string[]
-  rows: { name: string; href?: string; values: string[] }[]
-}) {
-  if (!rows.length) return null
-  return (
-    <table aria-label={label} className="w-full border-collapse text-left text-xs">
-      <thead className="bg-muted/60">
-        <tr>{headings.map((heading) => <th key={heading} scope="col" className="px-2 py-1.5 font-medium">{heading}</th>)}</tr>
-      </thead>
-      <tbody>{rows.map(({ name, href, values }) => (
-        <tr key={name} className="border-t">
-          <th scope="row" className="px-2 py-1.5 font-medium">
-            {href ? <a href={href} className="underline underline-offset-2">{name}</a> : name}
-          </th>
-          {values.map((value, index) => <td key={headings[index + 1]} className="px-2 py-1.5 tabular-nums">{value}</td>)}
-        </tr>
-      ))}</tbody>
-    </table>
-  )
-}
-
-function studyBody(result: StudyResult, lang: Lang): { body: ReactNode; href?: string } {
+function BankChecksTable({ evidence, label, lang }: { evidence: ReturnType<typeof bankCheck>; label: string; lang: Lang }) {
   const vi = lang === "vi"
+  return (
+    <EvidenceTable label={label} lang={lang} rows={evidence.checks} rowKey={(row) => row.id} columns={[
+      { label: vi ? "Chỉ báo" : "Indicator", value: (row) => row.label },
+      { label: vi ? "Giá trị" : "Value", value: (row) => row.value },
+      { label: vi ? "Đánh giá" : "Assessment", value: (row) => row.verdict },
+    ]} />
+  )
+}
+
+function EvidenceBody({ result, lang }: { result: CanvasResult; lang: Lang }) {
+  const vi = lang === "vi"
+  const label = toolLabel(result.name, lang)
+  const bankHeading = vi ? "Ngân hàng" : "Bank"
+  const pp = points(lang).trim()
   switch (result.name) {
     case "screen_declines":
-      return { body: <BanksTable rows={result.output.rows} period={result.output.data_period} lang={lang} /> }
+      return (
+        <>
+          <EvidenceTable label={label} lang={lang} rows={result.output.rows} rowKey={(row) => row.bank}
+            rowLink={(row) => bankLink(row.bank, result.output.data_period, row.waterfall, lang)} sortable
+            columns={[
+              { label: bankHeading, value: (row) => row.bank },
+              { label: `${vi ? "Δ Nợ xấu" : "Δ NPL"} (${pp})`, value: (row) => row.npl_pp, numeric: true },
+              { label: `${vi ? "Δ Nợ nhóm 2" : "Δ Group 2"} (${pp})`, value: (row) => row.group2_pp, numeric: true },
+              { label: vi ? "Xóa nợ (% dư nợ)" : "Write-offs (% of loans)", value: (row) => row.writeoff_pct, numeric: true },
+              { label: `${vi ? "Δ Bao phủ" : "Δ Coverage"} (${pp})`, value: (row) => row.coverage_pp, numeric: true },
+              { label: vi ? "Tín hiệu" : "Flags", value: (row) => row.flags.map((flag) => FLAG_LABELS[flag][lang]).join(", ") || null },
+            ]} />
+          <p className="px-3 py-2 text-xs text-muted-foreground">
+            {vi ? "Xóa nợ được ước tính từ dự phòng đã sử dụng." : "Write-offs are estimated from provisions used."}
+          </p>
+        </>
+      )
     case "rank_gap":
-      return { body: <ComparisonTable
-        label={vi ? "Chênh lệch thứ hạng tín dụng" : "Credit-quality rank gaps"}
-        headings={vi ? ["Ngân hàng", "Hạng nợ xấu", "Hạng tổng hợp"] : ["Bank", "NPL rank", "Composite rank"]}
-        rows={result.output.rows.map((row) => ({
-          name: row.bank_code,
-          href: bankLink(row.bank_code, row.period, false, lang),
-          values: [String(row.npl_place), String(row.composite_place)],
-        }))}
-      /> }
+      return (
+        <EvidenceTable label={label} lang={lang} rows={result.output.rows} rowKey={(row) => row.bank_code}
+          rowLink={(row) => bankLink(row.bank_code, row.period, false, lang)} sortable initialSort={3} initialDescending
+          columns={[
+            { label: bankHeading, value: (row) => row.bank_code },
+            { label: vi ? "Hạng nợ xấu" : "NPL rank", value: (row) => row.npl_place, numeric: true, digits: 0 },
+            { label: vi ? "Hạng tổng hợp" : "Composite rank", value: (row) => row.composite_place, numeric: true, digits: 0 },
+            { label: vi ? "Chênh lệch hạng" : "Rank gap", value: (row) => row.composite_place - row.npl_place, numeric: true, digits: 0 },
+          ]} />
+      )
+    case "largest_writeoffs":
+      return (
+        <>
+          <EvidenceTable label={label} lang={lang} rows={result.output.rows} rowKey={(row) => row.bank}
+            rowLink={(row) => bankLink(row.bank, result.output.data_period, false, lang)} sortable
+            initialSort={result.output.measure === "share" ? 2 : 1} initialDescending
+            columns={[
+              { label: bankHeading, value: (row) => row.bank },
+              { label: vi ? "Xóa nợ (tỷ VND)" : "Write-offs (VND bn)", value: (row) => row.amount_vnd_bn, numeric: true, digits: 1 },
+              { label: vi ? "% dư nợ đầu quý" : "% of opening loans", value: (row) => row.share_pct, numeric: true },
+            ]} />
+          <p className="px-3 py-2 text-xs text-muted-foreground">
+            {vi ? "Xóa nợ được ước tính từ dự phòng đã sử dụng." : "Write-offs are estimated from provisions used."}
+          </p>
+        </>
+      )
     case "early_warning": {
       const labels = [
         ["npl_only", vi ? "Chỉ tỷ lệ nợ xấu" : "NPL only"],
@@ -169,108 +170,191 @@ function studyBody(result: StudyResult, lang: Lang): { body: ReactNode; href?: s
       ] as const
       const rows = labels.flatMap(([key, name]) => {
         const auc = result.output.fits?.[key]?.auc?.estimate
-        return auc == null ? [] : [{ name, values: [formatValue(auc, lang, "", 3)] }]
+        return auc == null ? [] : [{ name, auc }]
       })
-      return {
-        body: <ComparisonTable label={vi ? "Kiểm tra cảnh báo sớm" : "Early warning comparison"}
-          headings={[vi ? "Chỉ báo dùng để dự báo" : "Indicators used", "AUC"]} rows={rows} />,
-        href: pageHref("/phuong-phap", lang) + "#early-warning",
-      }
+      return (
+        <EvidenceTable label={label} lang={lang} rows={rows} rowKey={(row) => row.name} columns={[
+          { label: vi ? "Chỉ báo dự báo" : "Predictors", value: (row) => row.name },
+          { label: "AUC", value: (row) => row.auc, numeric: true, digits: 3 },
+        ]} />
+      )
     }
-    case "q4_drivers": {
-      const { loan_growth_part_pp, bad_debt_part_pp } = result.output
-      const rows = [
-        { label: vi ? "Do dư nợ" : "Loan growth", value: loan_growth_part_pp },
-        { label: vi ? "Do số dư nợ xấu" : "Bad-debt change", value: bad_debt_part_pp },
-      ]
-      return { body: <Bars rows={rows} lang={lang} unit={points(lang)} />, href: pageHref("/", lang) + "#q4-breakdown" }
-    }
+    case "q4_drivers":
+      return (
+        <MetricBarsChart lang={lang} metric={vi ? "Đóng góp vào thay đổi" : "Contribution to NPL change"} unit={points(lang)} rows={[
+          { label: vi ? "Dư nợ" : "Loan growth", value: result.output.loan_growth_part_pp },
+          { label: vi ? "Số dư nợ xấu" : "Bad-debt balance", value: result.output.bad_debt_part_pp },
+        ]} />
+      )
     case "q1_rebound": {
       const { rates } = result.output
-      if (!rates) return { body: null }
-      return { body: <Bars lang={lang} unit="%" rows={[
-        { label: vi ? "Sau mọi quý 4" : "After any Q4", value: rates.any_q4.share_pct },
-        { label: vi ? "Sau quý 4 giảm" : "After Q4 fell", value: rates.q4_fell.share_pct },
-        { label: vi ? "Sau quý 4 không giảm" : "After Q4 did not fall", value: rates.q4_not_fell.share_pct },
-      ]} />, href: pageHref("/phuong-phap", lang) + "#seasonal-models" }
+      return rates && (
+        <MetricBarsChart lang={lang} metric={vi ? "Tỷ lệ trường hợp tăng lại" : "Share that rebounded"} unit="%" rows={[
+          { label: vi ? "Mọi Q4" : "All Q4s", value: rates.any_q4.share_pct },
+          { label: vi ? "Q4 giảm" : "Q4 fell", value: rates.q4_fell.share_pct },
+          { label: vi ? "Q4 không giảm" : "Q4 did not fall", value: rates.q4_not_fell.share_pct },
+        ]} />
+      )
     }
     case "quarter_breakdown": {
-      const { bank, data_period, change_pp, q3_pct, q4_pct, q1_pct, loan_growth_part_pp, bad_debt_part_pp } = result.output
-      const href = bankLink(bank, data_period, change_pp != null && change_pp < 0 && loan_growth_part_pp != null &&
-        bad_debt_part_pp != null && q4_pct != null, lang)
-      return { href, body: q4_pct == null ? null : <Bars lang={lang} unit="%" rows={[
-        { label: "Q3", value: q3_pct }, { label: "Q4", value: q4_pct },
-        { label: vi ? "Q1 năm sau" : "Next Q1", value: q1_pct },
-      ]} /> }
+      const { data_period, q3_period, q1_period, q3_pct, q4_pct, q1_pct } = result.output
+      const rows = [
+        ...(q3_period ? [{ period: q3_period, value: q3_pct }] : []),
+        { period: data_period, value: q4_pct },
+        ...(q1_period ? [{ period: q1_period, value: q1_pct }] : []),
+      ]
+      return <QuarterNplChart lang={lang} rows={rows} />
     }
-    case "coverage_effect": {
-      const e = result.output.effect
-      return { body: e && <QuarterChart lang={lang} bars={[{
-        quarter: 4, coef: e.coef_pp, lo: e.ci95[0] ?? null, hi: e.ci95[1] ?? null,
-      }]} /> }
+    case "coverage_effect":
+    case "quarter_effects": {
+      const effects = result.name === "quarter_effects" ? result.output.effects : result.output.effect ? [{ ...result.output.effect, quarter: 4 }] : []
+      return (
+        <MetricBarsChart lang={lang} metric={result.name === "coverage_effect" ? (vi ? "Thay đổi bao phủ" : "Coverage change") : (vi ? "Thay đổi nợ xấu" : "NPL change")}
+          unit={points(lang)} zeroLabel={vi ? "So với quý 1" : "Versus Q1"}
+          rows={effects.map(({ quarter, coef_pp, ci95: [lo, hi] }) => ({
+            label: `Q${quarter}`, value: coef_pp,
+            interval: lo != null && hi != null ? [lo, hi] : undefined,
+          }))} />
+      )
     }
-  }
-}
-
-function resultBody(result: Result, lang: Lang): ReactNode {
-  const vi = lang === "vi"
-  switch (result.name) {
     case "overview":
-      return <dl className="grid gap-1.5 p-2 text-xs">{overviewFigures(result.output, lang).map(({ label, value }) => (
-        <div className="flex items-baseline justify-between gap-2" key={label}>
-          <dt>{label}</dt><dd className="font-semibold tabular-nums">{value}</dd>
-        </div>
-      ))}</dl>
-    case "quarter_effects":
-      return <QuarterChart lang={lang} bars={result.output.effects.map((row) => ({
-        quarter: row.quarter, coef: row.coef_pp, lo: row.ci95[0] ?? null, hi: row.ci95[1] ?? null,
-      }))} />
-    case "bank_profile":
-      return result.output.bank.series?.length ? <BankCanvasChart lang={lang} rows={result.output.bank.series} /> : null
-    case "compare_banks":
-      return result.output.rows.length ? <CompareCanvasChart lang={lang} rows={result.output.rows} /> : null
+      return (
+        <EvidenceTable label={label} lang={lang} rows={overviewFigures(result.output, lang)} rowKey={(row) => row.label} columns={[
+          { label: vi ? "Chỉ số" : "Metric", value: (row) => row.label },
+          { label: vi ? "Giá trị" : "Value", value: (row) => row.value, numeric: true },
+          { label: vi ? "Kỳ" : "Period", value: (row) => row.period == null ? result.output.data_period : String(row.period) },
+        ]} />
+      )
+    case "bank_profile": {
+      const mode = bankCanvasMode(result.output, result.tool.input)
+      if (mode === "trend" && result.output.bank.series) return <BankCanvasChart lang={lang} rows={result.output.bank.series} />
+      const evidence = result.output.selected?.evidence[lang]
+      return evidence && <BankChecksTable evidence={evidence} label={label} lang={lang} />
+    }
+    case "compare_banks": {
+      const { rows, requested_period } = result.output
+      if (hasComparisonHistory(result.output)) return <CompareCanvasChart lang={lang} rows={rows} />
+      return (
+        <EvidenceTable label={label} lang={lang} rows={rows} rowKey={(row) => row.code}
+          rowLink={(row) => bankLink(row.code, row.period ?? "", false, lang)} sortable columns={[
+            { label: bankHeading, value: (row) => row.code },
+            ...(!requested_period ? [{ label: vi ? "Kỳ" : "Period", value: (row: (typeof rows)[number]) => row.period ?? row.latest_period }] : []),
+            { label: vi ? "Nợ xấu (%)" : "NPL (%)", value: (row) => row.npl_pct ?? null, numeric: true },
+            { label: vi ? "Nhóm 2 (%)" : "Group 2 (%)", value: (row) => row.group2_pct ?? null, numeric: true },
+            { label: `${vi ? "Δ Nợ xấu" : "Δ NPL"} (${pp})`, value: (row) => row.d_npl_pp, numeric: true },
+            { label: `${vi ? "Δ Sau điều chỉnh" : "Adjusted Δ"} (${pp})`, value: (row) => row.adjusted_change_pp, numeric: true },
+            ...(requested_period ? [{ label: `${vi ? "Do dư nợ" : "Loan contribution"} (${pp})`,
+              value: (row: (typeof rows)[number]) => row.denominator_pp, numeric: true }] : []),
+          ]} />
+      )
+    }
     case "decoder":
+      if (result.output.selected && hasBankChecks(result.output.selected)) {
+        return <BankChecksTable evidence={result.output.selected.evidence[lang]} label={label} lang={lang} />
+      }
+      return <ReportedChangeChart row={result.output.row} lang={lang} />
     case "adjusted_change":
-      return <Bars lang={lang} unit={points(lang)} rows={[
-        { label: vi ? "Thay đổi công bố" : "Reported change", value: result.output.row.d_npl_pp },
-        { label: vi ? "Sau điều chỉnh mùa vụ" : "After seasonal adjustment", value: result.output.row.adjusted_change_pp },
-      ]} />
+      return <ReportedChangeChart row={result.output.row} lang={lang} />
     case "forecast":
       return <ForecastCanvasChart lang={lang} output={result.output} />
     case "market_reaction":
-      return result.output.car_all.length ? <MarketChart lang={lang} rows={result.output.car_all.map((row) => ({
-        day: row.day, all: row.mean_car_pct, allLo: row.ci95?.[0] ?? null, allHi: row.ci95?.[1] ?? null,
-        q4: null, q4Lo: null, q4Hi: null,
-      }))} /> : null
+      return <MarketCanvasChart lang={lang} rows={result.output.car_all} />
     default:
       return null
   }
 }
 
-export function AnswerEvidence({ tools, lang }: { tools: ListedTool[]; lang: Lang }) {
+function ReportedChangeChart({ row, lang }: { row: { d_npl_pp: number | null; adjusted_change_pp: number | null }; lang: Lang }) {
   const vi = lang === "vi"
-  const study = tools.map(readStudy).find((result) => result != null)
-  const matched = tools.flatMap((tool) => {
-    const result = readResult(tool.name, tool.output)
-    return result ? [{ tool, result }] : []
-  })
-  const chosen = matched.find(({ result }) => !["method", "glossary", "limitations"].includes(result.name)) ?? matched[0]
-  if (!study && !chosen) return null
-
-  const figure = study ? studyBody(study, lang) : null
-  const legacy = chosen?.result
-  const body = figure ? figure.body : legacy ? resultBody(legacy, lang) : null
-  const period = study?.output.data_period ?? legacy?.output.data_period
-  const methodological = !study && legacy && ["method", "glossary", "limitations"].includes(legacy.name)
-  const href = figure?.href ?? (!study && chosen ? openPage(chosen.tool.name, chosen.tool.input, lang) : null)
-  const source = methodological ? vi ? "Phương pháp nghiên cứu" : "Study methodology" : "FiinQuant (FiinGroup)"
-
   return (
-    <figure aria-label={vi ? "Số liệu đối chiếu" : "Answer evidence"} className="min-w-0 overflow-hidden rounded-lg border border-border">
-      {body}
-      <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-2 py-2 text-[11px] text-muted-foreground">
-        <span>{vi ? "Nguồn" : "Source"} {source}{period ? ` (${period})` : ""}</span>
-        {href && <a href={href} className="font-medium text-foreground underline underline-offset-2">{vi ? "Xem trên trang" : "See on the page"}</a>}
+    <MetricBarsChart lang={lang} metric={vi ? "Thay đổi tỷ lệ nợ xấu" : "Change in NPL ratio"} unit={points(lang)} rows={[
+      { label: vi ? "Công bố" : "Reported", value: row.d_npl_pp },
+      { label: vi ? "Đã điều chỉnh" : "Seasonally adjusted", value: row.adjusted_change_pp },
+    ]} />
+  )
+}
+
+function evidenceCaption(result: CanvasResult, lang: Lang) {
+  const vi = lang === "vi"
+  let title = toolLabel(result.name, lang)
+  let period = result.output.data_period
+  let href = openPage(result.name, result.tool.input, lang)
+  const range = (start: string | null | undefined, end: string | null | undefined) =>
+    start && end && start !== end ? `${start}–${end}` : start ?? end ?? period
+  const through = () => period && /^\d{4}Q[1-4]$/.test(period) ? `${vi ? "Dữ liệu đến" : "Data through"} ${period}` : period
+
+  switch (result.name) {
+    case "q4_drivers":
+      period = through()
+      href += "#q4-breakdown"
+      break
+    case "quarter_breakdown": {
+      const { bank, data_period, q3_period, q1_period, change_pp, loan_growth_part_pp, bad_debt_part_pp } = result.output
+      title = `${bank}: ${title}`
+      period = range(q3_period ?? data_period, q1_period ?? data_period)
+      href = bankLink(bank, data_period, change_pp != null && change_pp < 0 && loan_growth_part_pp != null && bad_debt_part_pp != null, lang)
+      break
+    }
+    case "q1_rebound":
+      period = through()
+      href = pageHref("/phuong-phap", lang) + "#seasonal-models"
+      break
+    case "coverage_effect":
+      period = through()
+      break
+    case "early_warning":
+      period = through()
+      href = pageHref("/phuong-phap", lang) + "#early-warning"
+      break
+    case "bank_profile":
+      title = `${result.output.bank.code}: ${title}`
+      if (bankCanvasMode(result.output, result.tool.input) === "trend") {
+        period = range(result.output.bank.series?.[0]?.period, result.output.bank.series?.at(-1)?.period)
+      } else {
+        period = result.output.selected?.period ?? period
+      }
+      break
+    case "forecast":
+    case "decoder":
+    case "adjusted_change":
+      title = `${result.output.code}: ${title}`
+      break
+    case "compare_banks": {
+      if (hasComparisonHistory(result.output)) {
+        const timeline = comparisonHistory(result.output.rows)
+        title = vi ? "So sánh tỷ lệ nợ xấu qua các quý" : "NPL comparison by quarter"
+        period = range(timeline[0].period, timeline.at(-1)?.period)
+      }
+      break
+    }
+  }
+  return { title, period, href }
+}
+
+export function hasAnswerCanvas(tools: ListedTool[]): boolean {
+  return findAnswerCanvas(tools) != null
+}
+
+export function AnswerEvidence({ tools, lang }: { tools: ListedTool[]; lang: Lang }) {
+  const titleId = useId()
+  const result = findAnswerCanvas(tools)
+  if (!result) return null
+
+  const vi = lang === "vi"
+  const { title, period, href } = evidenceCaption(result, lang)
+  const source = result.name === "largest_writeoffs"
+    ? (vi ? "FiinQuant (FiinGroup) và thuyết minh báo cáo tài chính" : "FiinQuant (FiinGroup) and financial statement notes")
+    : "FiinQuant (FiinGroup)"
+  return (
+    <figure aria-labelledby={titleId} className="min-w-0 overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
+      <div id={titleId} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b px-3 py-2.5">
+        <span className="text-sm font-semibold leading-snug">{title}</span>
+        {period && <span className="text-xs font-medium text-muted-foreground tabular-nums">{period}</span>}
+      </div>
+      <EvidenceBody key={result.tool.id} result={result} lang={lang} />
+      <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t px-3 py-2.5 text-xs text-muted-foreground">
+        <span>{vi ? "Nguồn" : "Source"}: {source}</span>
+        <a href={href} className="font-medium text-foreground underline underline-offset-2">{vi ? "Xem trên trang" : "See on the page"}</a>
       </figcaption>
     </figure>
   )
